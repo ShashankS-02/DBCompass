@@ -1,0 +1,20 @@
+name: Internal tool, 10 TPS, Tier 3, tight budget
+status: from_doc_05
+input:
+  answers:
+    app.tier: tier_3
+    app.type: internal_tool
+    data.shape: [relational]
+    wl.pattern: oltp
+    wl.read_write_ratio: "70_30"
+    wl.peak_tps: 10
+    wl.latency_p99_ms: lt_100ms
+    vol.current_gb: 10
+    tx.consistency: strong
+    ops.skills: [postgresql]
+  priorities: {cost: 100, performance: 30, reliability: 30, simplicity: 70, portability: 20}
+expect:
+  top1:
+    family_in: [relational]
+    engine_in: [postgresql, mysql, mariadb]
+    ha_topology_contains: Single-AZ

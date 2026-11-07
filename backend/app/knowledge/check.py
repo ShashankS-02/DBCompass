@@ -16,9 +16,11 @@ from pydantic import BaseModel
 from app.config import get_settings
 from app.knowledge.catalog import AnswerError, validate_answer
 from app.knowledge.loader import (
+    HARDWARE_FILE,
     QUESTIONS_FILE,
     REGIONS_FILE,
     RULES_FILE,
+    SCORING_FILE,
     SERVICES_DIR,
     SIZING_FILE,
     KnowledgeBaseError,
@@ -29,8 +31,10 @@ from app.knowledge.loader import (
 from app.models.knowledge import (
     Condition,
     Engine,
+    HardwareProfiles,
     RegionCatalog,
     RuleSet,
+    ScoringConfig,
     ServiceEntry,
     ServicePredicate,
     SizingConstants,
@@ -269,6 +273,68 @@ def check_sizing(sizing: SizingConstants, catalog: QuestionCatalog) -> list[str]
     return problems
 
 
+# ---------- hardware and scoring ----------
+
+
+def check_service_hardware(service: ServiceEntry, hardware: HardwareProfiles) -> list[str]:
+    """Instance families and storage options exist in hardware_profiles.yaml for the right CSP."""
+    problems: list[str] = []
+    for family_name in service.instance_families:
+        if family_name in hardware.unsized_families:
+            continue
+        family = hardware.families.get(family_name)
+        if family is None:
+            problems.append(f"{service.id}: instance family '{family_name}' not in hardware_profiles.yaml")
+        elif family.csp != service.csp:
+            problems.append(f"{service.id}: instance family '{family_name}' belongs to {family.csp}")
+    for tier_name in service.storage_options:
+        tier = hardware.storage_tiers.get(tier_name)
+        if tier is None:
+            problems.append(f"{service.id}: storage option '{tier_name}' not in hardware_profiles.yaml")
+        elif tier.csp != service.csp:
+            problems.append(f"{service.id}: storage option '{tier_name}' belongs to {tier.csp}")
+    return problems
+
+
+def check_hardware(hardware: HardwareProfiles) -> list[str]:
+    """Every family points at an existing ladder, and ladders grow monotonically."""
+    problems: list[str] = []
+    for family_name, family in hardware.families.items():
+        if family.ladder not in hardware.ladders:
+            problems.append(f"hardware family '{family_name}': unknown ladder '{family.ladder}'")
+    for ladder_name, steps in hardware.ladders.items():
+        for previous, current in zip(steps, steps[1:]):
+            if current.vcpu < previous.vcpu or current.memory_gb < previous.memory_gb:
+                problems.append(f"ladder '{ladder_name}' is not ordered smallest first at '{current.size}'")
+    return problems
+
+
+def expect_keys(label: str, actual: set, expected: set) -> list[str]:
+    """Report when a table's keys differ from the catalog options it is keyed by."""
+    if actual == expected:
+        return []
+    return [f"scoring {label}: keys {sorted(actual)} must equal {sorted(expected)}"]
+
+
+def check_scoring(scoring: ScoringConfig, sizing: SizingConstants, catalog: QuestionCatalog) -> list[str]:
+    """Scoring tables are keyed by the catalog's option values."""
+    questions = catalog.questions_by_id()
+    problems: list[str] = []
+    problems += expect_keys("latency_fit", set(scoring.latency_fit), set(questions["wl.latency_p99_ms"].option_values()))
+    problems += expect_keys("write_share", set(scoring.write_share), set(questions["wl.read_write_ratio"].option_values()))
+    problems += expect_keys("rpo_seconds", set(scoring.rpo_seconds), set(questions["ha.rpo"].option_values()))
+    problems += expect_keys("management_fit", set(scoring.management_fit), set(questions["ops.managed_pref"].option_values()))
+    problems += expect_keys("shape_engine_preference", set(scoring.shape_engine_preference), set(questions["data.shape"].option_values()))
+    if scoring.default_management_pref not in scoring.management_fit:
+        problems.append("scoring default_management_pref must be a management_fit key")
+    if sizing.default_app_type not in questions["app.type"].option_values():
+        problems.append(f"sizing default_app_type '{sizing.default_app_type}' is not an app.type option")
+    for dimension, parts in scoring.dimension_parts.items():
+        if abs(sum(parts.values()) - 1) > 0.001:
+            problems.append(f"scoring dimension_parts.{dimension} must sum to 1")
+    return problems
+
+
 # ---------- entry point ----------
 
 
@@ -280,6 +346,8 @@ def run_all_checks(kb_dir: Path) -> list[str]:
         rules = load_model(kb_dir / RULES_FILE, RuleSet)
         regions = load_model(kb_dir / REGIONS_FILE, RegionCatalog)
         sizing = load_model(kb_dir / SIZING_FILE, SizingConstants)
+        scoring = load_model(kb_dir / SCORING_FILE, ScoringConfig)
+        hardware = load_model(kb_dir / HARDWARE_FILE, HardwareProfiles)
     except KnowledgeBaseError as error:
         return str(error).split("\n")
 
@@ -287,8 +355,11 @@ def run_all_checks(kb_dir: Path) -> list[str]:
     problems.extend(check_engine_vocabulary(catalog))
     for service in services.values():
         problems.extend(check_service_references(service, regions))
+        problems.extend(check_service_hardware(service, hardware))
     problems.extend(check_rules(rules, catalog))
     problems.extend(check_sizing(sizing, catalog))
+    problems.extend(check_hardware(hardware))
+    problems.extend(check_scoring(scoring, sizing, catalog))
     return problems
 
 

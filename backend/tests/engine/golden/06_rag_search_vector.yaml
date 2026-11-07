@@ -1,0 +1,19 @@
+name: RAG application with documents, full-text and vector search
+status: draft
+input:
+  answers:
+    app.tier: tier_2
+    app.type: ml_ai
+    data.shape: [document]
+    wl.pattern: oltp
+    wl.read_write_ratio: "90_10"
+    wl.peak_tps: 300
+    wl.latency_p99_ms: lt_100ms
+    wl.query_types: [point_lookup, full_text, vector_similarity]
+    vol.current_gb: 200
+    tx.consistency: read_your_writes
+    eco.vector: true
+expect:
+  top1:
+    family_in: [document]
+    roles_include: [search]

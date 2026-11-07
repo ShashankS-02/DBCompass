@@ -1,0 +1,17 @@
+name: Read-heavy OLTP needing sub-millisecond reads
+status: draft
+input:
+  answers:
+    app.tier: tier_1
+    app.type: web_api
+    data.shape: [relational]
+    wl.pattern: oltp
+    wl.read_write_ratio: "90_10"
+    wl.peak_tps: 30000
+    wl.latency_p99_ms: lt_1ms
+    vol.current_gb: 400
+    tx.consistency: strong
+expect:
+  top1:
+    family_in: [relational]
+    roles_include: [cache]

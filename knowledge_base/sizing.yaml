@@ -5,6 +5,7 @@ last_verified: 2026-11-07
 source: "DBCompass heuristics (docs/02_REQUIREMENTS_CATALOG.md, derivation rules); pending DBA tuning"
 
 projection_months: 36   # vol.projected_3y_gb = current + growth * projection_months
+default_app_type: web_api   # used for app_type_defaults when app.type is unknown
 
 iops:                   # hw.iops ≈ peak_tps × (reads_per_txn × cache_miss_ratio + writes_per_txn × write_amplification)
   reads_per_txn: 4

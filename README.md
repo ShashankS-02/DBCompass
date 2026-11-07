@@ -31,6 +31,7 @@ npm install && npm run dev
 ## Knowledge base
 Service entries, rules and sizing constants live in `knowledge_base/` (see docs/04). After editing
 any YAML, run `python -m app.knowledge.check` from `backend/` (with the venv active).
+Golden recommendation cases live in `backend/tests/engine/golden/` — add one YAML file per case.
 
 ## Auth
 - Local dev: `DEV_AUTH_BYPASS=true` (backend) and `VITE_DEV_AUTH_BYPASS=true` (frontend). Every

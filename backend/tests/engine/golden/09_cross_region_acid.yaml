@@ -1,0 +1,22 @@
+name: Cross-region ACID, active-active, Tier 0
+status: draft
+input:
+  answers:
+    app.tier: tier_0
+    app.type: web_api
+    data.shape: [relational]
+    wl.pattern: oltp
+    wl.read_write_ratio: "50_50"
+    wl.peak_tps: 20000
+    wl.latency_p99_ms: lt_10ms
+    vol.current_gb: 5000
+    tx.consistency: strong
+    tx.acid_scope: cross_region
+    ha.multi_region: active_active
+    geo.user_regions: [us, eu, apac]
+expect:
+  top1:
+    family_in: [distributed_sql]
+  excluded:
+    aws.aurora_postgresql: R-ACID-001
+    azure.sql_database: R-ACID-001

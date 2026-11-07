@@ -1,0 +1,19 @@
+name: IoT telemetry, write-heavy time series
+status: draft
+input:
+  answers:
+    app.tier: tier_2
+    app.type: event_iot
+    data.shape: [time_series]
+    wl.pattern: oltp
+    wl.read_write_ratio: write_heavy
+    wl.peak_tps: 40000
+    wl.latency_p99_ms: lt_100ms
+    vol.current_gb: 3000
+    vol.growth_gb_month: 300
+    tx.consistency: eventual
+expect:
+  top1:
+    family_in: [time_series, wide_column]
+  excluded:
+    aws.rds_mysql: SHAPE-FILTER

@@ -1,0 +1,19 @@
+name: OLTP with BI dashboards
+status: from_doc_05
+input:
+  answers:
+    app.tier: tier_2
+    app.type: web_api
+    data.shape: [relational]
+    data.joins: complex
+    wl.pattern: oltp
+    wl.read_write_ratio: "70_30"
+    wl.peak_tps: 1500
+    wl.latency_p99_ms: lt_10ms
+    vol.current_gb: 500
+    tx.consistency: strong
+    eco.analytics: bi_dashboards
+expect:
+  top1:
+    family_in: [relational]
+    roles_include: [analytics]

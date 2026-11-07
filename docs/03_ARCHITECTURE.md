@@ -50,12 +50,14 @@ dbcompass/
         questions.py         # QuestionCatalog, Question, QuestionSchema
         knowledge.py         # ServiceEntry, RuleSet, RegionCatalog, SizingConstants
         requirements.py      # RequirementsInput, ValidationReport
-        results.py           # AssessmentResult, Recommendation, Trace
+        results.py           # AssessmentResult, Recommendation, Trace, SizingResult
         migration.py         # MigrationInput, MigrationPlan
       engine/
         defaults.py
         weights.py           # priority sliders -> dimension weights
         validation.py        # builds ValidationReport
+        rules.py             # condition / predicate evaluation
+        assess.py            # runs the pipeline, ranks, builds AssessmentOutcome
         filters.py
         scorer.py
         combiner.py
@@ -84,14 +86,15 @@ dbcompass/
         runbook.py
       knowledge/loader.py, knowledge/catalog.py   # YAML loading; answer validation
       knowledge/check.py   # `python -m app.knowledge.check` cross-checks the KB
-      db/session.py, db/tables.py
-    tests/                 # pytest suite, run from backend/
+      db/session.py, db/tables.py, db/assessments.py
+    tests/                 # pytest suite, run from backend/; tests/engine/golden/*.yaml = golden cases
   knowledge_base/
     databases/aws_*.yaml, gcp_*.yaml, azure_*.yaml
     questions.yaml           # requirements catalog (machine-readable doc 02)
     rules.yaml
     regions.yaml             # geography -> region ids per CSP
     sizing.yaml
+    scoring.yaml             # scoring tables, relative cost, combination settings
     hardware_profiles.yaml
     design_patterns.yaml
     migration_tools.yaml
@@ -105,8 +108,9 @@ dbcompass/
 ## API contracts
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| POST | /api/assessments | RequirementsInput | AssessmentResult |
-| GET | /api/assessments/{id} | | AssessmentResult |
+| POST | /api/assessments | RequirementsInput | AssessmentResult (201); 422 with ValidationReport in `detail` when input is invalid |
+| GET | /api/assessments | ?limit=1..100 | list[AssessmentSummary] — caller's own, newest first |
+| GET | /api/assessments/{id} | | AssessmentResult; 404 if missing or not the caller's (dba_admin can read all) |
 | POST | /api/assessments/{id}/whatif | partial RequirementsInput | AssessmentResult (not stored) |
 | POST | /api/repo/analyze | {repo_url, branch?, token?} | InferredRequirements |
 | POST | /api/migrations/plan | MigrationInput | MigrationPlan |
@@ -150,6 +154,25 @@ class Trace(BaseModel):
     rules_fired: list[str]
     assumed_fields: list[str]
 ```
+
+## Engine as implemented (M3)
+`engine/assess.py::run_assessment` is a pure function (no clock, randomness or LLM):
+1. Validate against the catalog; invalid input raises and the API returns 422.
+2. `defaults.resolve_requirements`: answers → tier defaults → app-type defaults (sizing.yaml) →
+   derived fields. Everything filled is listed in `trace.assumed_fields`.
+3. `rules.fired_rules` evaluates `when` on the resolved values.
+4. `filters.filter_services` twice: primaries (shape filter + every fired rule) and add-on
+   components (only `scope: all_components` rules). Every removal is a `FilterReason`.
+5. `sizer.size_service` for every service, once as primary and once as component (an in-memory
+   primary holds the whole dataset; a cache holds the working set).
+6. `scorer.score_all`: 7 dimensions, weighted, plus rule boosts/penalties, clipped to 0–100.
+   Cost uses relative cost units until M4 pricing.
+7. `combiner.build_combination` for the best `primaries_considered` primaries.
+8. Rank by score, then lower relative cost, then service id. Top 3 become `Recommendation`s.
+
+`Trace` holds `rules_fired`, `filtered_out` (service, rule id, message — every service not
+scored has at least one), `assumed_fields`, `dimension_weights`, `scores` (per-dimension
+breakdown and adjustments for every scored primary) and `combination_notes`.
 
 ## Persistence (app DB)
 Tables: users, assessments (input JSON, result JSON, created_by, created_at),

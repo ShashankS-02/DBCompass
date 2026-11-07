@@ -1,0 +1,78 @@
+# Scoring tables for engine/scorer.py and engine/combiner.py (docs/05 §2–3).
+# Heuristics for the DBA team to tune, not vendor facts. Every score is 0–100.
+version: 1
+last_verified: 2026-11-07
+source: "DBCompass scoring heuristics (docs/05_SCORING_AND_COST.md); pending DBA tuning"
+
+# How each dimension is built from its parts (weights inside a dimension sum to 1).
+dimension_parts:
+  performance: {latency: 0.5, writes: 0.3, reads: 0.2}
+  reliability: {sla: 0.5, rpo: 0.25, regions: 0.25}
+  ops: {complexity: 0.4, management: 0.3, skills: 0.3}
+  portability: {engine: 0.6, lock_in: 0.4}
+
+# Points when a service has no published value for something a score needs.
+unknown_points: 50
+
+# wl.latency_p99_ms target -> service latency_class -> points
+latency_fit:
+  lt_1ms: {sub_ms: 100, low_ms: 60, tens_ms: 20, seconds: 0}
+  lt_10ms: {sub_ms: 100, low_ms: 100, tens_ms: 50, seconds: 10}
+  lt_100ms: {sub_ms: 100, low_ms: 100, tens_ms: 90, seconds: 30}
+  seconds_ok: {sub_ms: 100, low_ms: 100, tens_ms: 100, seconds: 100}
+
+# Share of peak TPS that is writes, per wl.read_write_ratio.
+write_share: {"90_10": 0.1, "70_30": 0.3, "50_50": 0.5, write_heavy: 0.7}
+# Write TPS one primary node handles comfortably before horizontal write scaling matters.
+single_node_write_tps: 10000
+# Read replicas are added when reads dominate and peak TPS is at least this.
+read_replica_min_tps: 2000
+max_auto_read_replicas: 2
+
+# ha.rpo option -> seconds of acceptable data loss.
+rpo_seconds: {zero: 0, lt_1min: 60, lt_15min: 900, lt_24h: 86400}
+
+complexity_points: {low: 100, medium: 65, high: 30}
+lock_in_points: {low: 100, medium: 60, high: 20}
+default_management_pref: managed
+management_fit:
+  fully_managed: {serverless: 100, managed: 85, iaas: 20}
+  managed: {serverless: 90, managed: 100, iaas: 40}
+  self_managed_ok: {serverless: 100, managed: 100, iaas: 100}
+skills_points: {match: 100, no_match: 40, unknown: 60}
+
+# For multi-engine (self-managed) entries: which engine to run for each data shape, in order.
+shape_engine_preference:
+  relational: [postgresql, mysql, mariadb, oracle, sql_server, db2]
+  document: [mongodb, postgresql]
+  key_value: [cassandra, redis, valkey, postgresql]
+  wide_column: [cassandra]
+  graph: [gremlin, postgresql]
+  time_series: [influxdb, cassandra, postgresql]
+  vector: [postgresql, opensearch]
+  full_text: [opensearch, postgresql]
+
+# Engines counted as open for the portability score.
+open_engines: [postgresql, mysql, mariadb, cassandra, valkey, redis, memcached, influxdb, opensearch]
+
+# Relative cost until real pricing lands in M4 (OPEN_QUESTIONS #21):
+#   units = sized vCPU × license multiplier × deployment factor × service factor × node count
+cost:
+  license_multiplier: {oracle: 3.0, sql_server: 2.0, db2: 2.5}
+  deployment_factor: {serverless: 1.0, managed: 1.0, iaas: 0.9}   # cheaper infra, offset by DBA effort
+  service_factors:        # fnmatch patterns on service id; first match wins
+    "*.oracle_database_at_*": 5.0
+    "gcp.bare_metal_solution_oracle": 4.0
+    "gcp.spanner": 3.0
+    "aws.redshift": 2.0
+    "azure.synapse_analytics": 2.0
+    "gcp.bigquery": 1.5
+    "azure.fabric_warehouse": 1.5
+    "aws.aurora_*": 1.2
+
+combination:
+  primaries_considered: 10
+  max_components: 3
+  component_penalty: 4          # per component added (operational overhead)
+  simplicity_bonus: 5           # single database that covers every need
+  missing_component_penalty: 10 # need that no same-CSP service can cover

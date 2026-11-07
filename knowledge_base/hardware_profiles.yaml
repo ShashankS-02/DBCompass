@@ -1,0 +1,158 @@
+# Instance size ladders, instance families and storage tiers used by engine/sizer.py.
+# Draft values for DBA review. EBS gp3 / io2 Block Express limits were checked on 2026-11-07
+# (ebs-volume-types page); the rest are drafts. RDS may cap gp3 lower than EBS (OPEN_QUESTIONS).
+version: 1
+last_verified: 2026-11-07
+source_urls:
+  - https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
+  - https://aws.amazon.com/rds/instance-types/
+  - https://cloud.google.com/sql/docs/postgres/instance-settings
+  - https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/overview
+
+# Size ladders: ordered smallest first. `size` fills {size} in a family's name pattern.
+ladders:
+  aws_r:
+    - {size: large, vcpu: 2, memory_gb: 16}
+    - {size: xlarge, vcpu: 4, memory_gb: 32}
+    - {size: 2xlarge, vcpu: 8, memory_gb: 64}
+    - {size: 4xlarge, vcpu: 16, memory_gb: 128}
+    - {size: 8xlarge, vcpu: 32, memory_gb: 256}
+    - {size: 12xlarge, vcpu: 48, memory_gb: 384}
+    - {size: 16xlarge, vcpu: 64, memory_gb: 512}
+  aws_m:
+    - {size: large, vcpu: 2, memory_gb: 8}
+    - {size: xlarge, vcpu: 4, memory_gb: 16}
+    - {size: 2xlarge, vcpu: 8, memory_gb: 32}
+    - {size: 4xlarge, vcpu: 16, memory_gb: 64}
+    - {size: 8xlarge, vcpu: 32, memory_gb: 128}
+    - {size: 12xlarge, vcpu: 48, memory_gb: 192}
+    - {size: 16xlarge, vcpu: 64, memory_gb: 256}
+  aws_t:
+    - {size: medium, vcpu: 2, memory_gb: 4}
+    - {size: large, vcpu: 2, memory_gb: 8}
+    - {size: xlarge, vcpu: 4, memory_gb: 16}
+    - {size: 2xlarge, vcpu: 8, memory_gb: 32}
+  aws_x2iedn:
+    - {size: xlarge, vcpu: 4, memory_gb: 128}
+    - {size: 2xlarge, vcpu: 8, memory_gb: 256}
+    - {size: 4xlarge, vcpu: 16, memory_gb: 512}
+    - {size: 8xlarge, vcpu: 32, memory_gb: 1024}
+    - {size: 16xlarge, vcpu: 64, memory_gb: 2048}
+    - {size: 32xlarge, vcpu: 128, memory_gb: 4096}
+  aws_ra3:
+    - {size: xlplus, vcpu: 4, memory_gb: 32}
+    - {size: 4xlarge, vcpu: 12, memory_gb: 96}
+    - {size: 16xlarge, vcpu: 48, memory_gb: 384}
+  vcpu_8gb:
+    - {size: "2", vcpu: 2, memory_gb: 16}
+    - {size: "4", vcpu: 4, memory_gb: 32}
+    - {size: "8", vcpu: 8, memory_gb: 64}
+    - {size: "16", vcpu: 16, memory_gb: 128}
+    - {size: "32", vcpu: 32, memory_gb: 256}
+    - {size: "48", vcpu: 48, memory_gb: 384}
+    - {size: "64", vcpu: 64, memory_gb: 512}
+    - {size: "96", vcpu: 96, memory_gb: 672}
+  vcpu_4gb:
+    - {size: "2", vcpu: 2, memory_gb: 8}
+    - {size: "4", vcpu: 4, memory_gb: 16}
+    - {size: "8", vcpu: 8, memory_gb: 32}
+    - {size: "16", vcpu: 16, memory_gb: 64}
+    - {size: "32", vcpu: 32, memory_gb: 128}
+    - {size: "48", vcpu: 48, memory_gb: 192}
+    - {size: "64", vcpu: 64, memory_gb: 256}
+    - {size: "96", vcpu: 96, memory_gb: 384}
+  gcp_cloudsql_custom:
+    - {size: "2-13312", vcpu: 2, memory_gb: 13}
+    - {size: "4-26624", vcpu: 4, memory_gb: 26}
+    - {size: "8-53248", vcpu: 8, memory_gb: 52}
+    - {size: "16-106496", vcpu: 16, memory_gb: 104}
+    - {size: "32-212992", vcpu: 32, memory_gb: 208}
+    - {size: "64-425984", vcpu: 64, memory_gb: 416}
+    - {size: "96-638976", vcpu: 96, memory_gb: 624}
+  gcp_m3:
+    - {size: megamem-64, vcpu: 64, memory_gb: 976}
+    - {size: megamem-128, vcpu: 128, memory_gb: 1952}
+  azure_b:
+    - {size: B2s, vcpu: 2, memory_gb: 4}
+    - {size: B2ms, vcpu: 2, memory_gb: 8}
+    - {size: B4ms, vcpu: 4, memory_gb: 16}
+    - {size: B8ms, vcpu: 8, memory_gb: 32}
+    - {size: B12ms, vcpu: 12, memory_gb: 48}
+    - {size: B16ms, vcpu: 16, memory_gb: 64}
+  azure_vcore:
+    - {size: "2", vcpu: 2, memory_gb: 10.2}
+    - {size: "4", vcpu: 4, memory_gb: 20.4}
+    - {size: "8", vcpu: 8, memory_gb: 40.8}
+    - {size: "16", vcpu: 16, memory_gb: 81.6}
+    - {size: "24", vcpu: 24, memory_gb: 122.4}
+    - {size: "32", vcpu: 32, memory_gb: 163.2}
+    - {size: "40", vcpu: 40, memory_gb: 204}
+    - {size: "80", vcpu: 80, memory_gb: 408}
+  azure_m:
+    - {size: "208", vcpu: 208, memory_gb: 2850}
+    - {size: "416", vcpu: 416, memory_gb: 5700}
+
+# Instance families referenced by service entries. name_pattern placeholders: {family} {size}.
+families:
+  db.r7g: {csp: aws, ladder: aws_r, name_pattern: "{family}.{size}"}
+  db.r6g: {csp: aws, ladder: aws_r, name_pattern: "{family}.{size}"}
+  db.r7i: {csp: aws, ladder: aws_r, name_pattern: "{family}.{size}"}
+  db.m7g: {csp: aws, ladder: aws_m, name_pattern: "{family}.{size}"}
+  db.m7i: {csp: aws, ladder: aws_m, name_pattern: "{family}.{size}"}
+  db.t4g: {csp: aws, ladder: aws_t, name_pattern: "{family}.{size}"}
+  db.x2iedn: {csp: aws, ladder: aws_x2iedn, name_pattern: "{family}.{size}"}
+  cache.r7g: {csp: aws, ladder: aws_r, name_pattern: "{family}.{size}"}
+  cache.m7g: {csp: aws, ladder: aws_m, name_pattern: "{family}.{size}"}
+  cache.t4g: {csp: aws, ladder: aws_t, name_pattern: "{family}.{size}"}
+  r7g.search: {csp: aws, ladder: aws_r, name_pattern: "r7g.{size}.search"}
+  m7g.search: {csp: aws, ladder: aws_m, name_pattern: "m7g.{size}.search"}
+  or1.search: {csp: aws, ladder: aws_r, name_pattern: "or1.{size}.search"}
+  ra3: {csp: aws, ladder: aws_ra3, name_pattern: "ra3.{size}"}
+  r7i: {csp: aws, ladder: aws_r, name_pattern: "r7i.{size}"}
+  r7g: {csp: aws, ladder: aws_r, name_pattern: "r7g.{size}"}
+  m7i: {csp: aws, ladder: aws_m, name_pattern: "m7i.{size}"}
+  x2iedn: {csp: aws, ladder: aws_x2iedn, name_pattern: "x2iedn.{size}"}
+  db-perf-optimized-N: {csp: gcp, ladder: vcpu_8gb, name_pattern: "db-perf-optimized-N-{size}"}
+  db-custom: {csp: gcp, ladder: gcp_cloudsql_custom, name_pattern: "db-custom-{size}"}
+  n2: {csp: gcp, ladder: vcpu_8gb, name_pattern: "n2-highmem-{size}"}
+  n4: {csp: gcp, ladder: vcpu_8gb, name_pattern: "n4-highmem-{size}"}
+  c4: {csp: gcp, ladder: vcpu_8gb, name_pattern: "c4-highmem-{size}"}
+  m3: {csp: gcp, ladder: gcp_m3, name_pattern: "m3-{size}"}
+  Eds_v5: {csp: azure, ladder: vcpu_8gb, name_pattern: "Standard_E{size}ds_v5"}
+  Edsv5: {csp: azure, ladder: vcpu_8gb, name_pattern: "Standard_E{size}ds_v5"}
+  Ebdsv5: {csp: azure, ladder: vcpu_8gb, name_pattern: "Standard_E{size}bds_v5"}
+  Dds_v5: {csp: azure, ladder: vcpu_4gb, name_pattern: "Standard_D{size}ds_v5"}
+  Ddsv5: {csp: azure, ladder: vcpu_4gb, name_pattern: "Standard_D{size}ds_v5"}
+  B: {csp: azure, ladder: azure_b, name_pattern: "Standard_{size}"}
+  Mv2: {csp: azure, ladder: azure_m, name_pattern: "Standard_M{size}ms_v2"}
+  general_purpose: {csp: azure, ladder: azure_vcore, name_pattern: "GP_Gen5_{size}"}
+  next_gen_general_purpose: {csp: azure, ladder: azure_vcore, name_pattern: "GP_Gen5_{size} (Next-gen)"}
+  business_critical: {csp: azure, ladder: azure_vcore, name_pattern: "BC_Gen5_{size}"}
+  hyperscale: {csp: azure, ladder: azure_vcore, name_pattern: "HS_Gen5_{size}"}
+
+# Families sized by capacity units or contract, not by instance ladder.
+unsized_families: [db.serverless, serverless, exadata_x11m, exadata_x9m, exadata, exascale, autonomous]
+
+# Storage tiers. max_iops / max_throughput_mbps null = managed by the service (no ceiling to pick).
+storage_tiers:
+  gp3: {csp: aws, max_iops: 80000, max_throughput_mbps: 2000, relative_cost: 1.0}
+  io2: {csp: aws, max_iops: 256000, max_throughput_mbps: 4000, relative_cost: 2.5}
+  io2_block_express: {csp: aws, max_iops: 256000, max_throughput_mbps: 4000, relative_cost: 2.5}
+  aurora_standard: {csp: aws, max_iops: null, max_throughput_mbps: null, relative_cost: 1.0}
+  aurora_io_optimized: {csp: aws, max_iops: null, max_throughput_mbps: null, relative_cost: 1.3}
+  pd_ssd: {csp: gcp, max_iops: 100000, max_throughput_mbps: 1200, relative_cost: 1.0}
+  hyperdisk_balanced: {csp: gcp, max_iops: 160000, max_throughput_mbps: 2400, relative_cost: 1.0}
+  hyperdisk_extreme: {csp: gcp, max_iops: 350000, max_throughput_mbps: 5000, relative_cost: 2.5}
+  premium_ssd: {csp: azure, max_iops: 20000, max_throughput_mbps: 900, relative_cost: 1.0}
+  premium_ssd_v2: {csp: azure, max_iops: 80000, max_throughput_mbps: 1200, relative_cost: 1.0}
+  ultra_disk: {csp: azure, max_iops: 400000, max_throughput_mbps: 10000, relative_cost: 3.0}
+
+# Where meeting a higher SLA needs a specific edition or deployment option (OPEN_QUESTIONS #18).
+edition_requirements:
+  - {service_pattern: "gcp.cloudsql_*", above_sla: 99.95, edition: "Enterprise Plus edition with HA"}
+  - {service_pattern: "aws.opensearch", above_sla: 99.9, edition: "Multi-AZ with Standby"}
+  - {service_pattern: "aws.redshift", above_sla: 99.9, edition: "Multi-AZ cluster"}
+  - {service_pattern: "azure.sql_database", above_sla: 99.99, edition: "zone-redundant deployment"}
+  - {service_pattern: "azure.sql_managed_instance", above_sla: 99.99, edition: "zone-redundant deployment"}
+  - {service_pattern: "azure.postgresql_flexible", above_sla: 99.95, edition: "zone-redundant HA"}
+  - {service_pattern: "azure.mysql_flexible", above_sla: 99.95, edition: "zone-redundant HA"}

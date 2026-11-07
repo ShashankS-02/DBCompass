@@ -1,0 +1,25 @@
+name: Tier 1 OLTP, heavy PL/SQL, India residency
+status: from_doc_05
+input:
+  migrating: true
+  answers:
+    app.tier: tier_1
+    app.type: web_api
+    data.shape: [relational]
+    data.proc_code: heavy
+    wl.pattern: oltp
+    wl.read_write_ratio: "70_30"
+    wl.peak_tps: 2000
+    wl.latency_p99_ms: lt_10ms
+    vol.current_gb: 2000
+    tx.consistency: strong
+    geo.residency: india_dpdp
+    app.existing_db: {engine: oracle, version: 19c}
+    sec.compliance: [pci_dss]
+expect:
+  top1:
+    family_in: [relational]
+    engine_in: [oracle]
+  excluded:
+    aws.dynamodb: SHAPE-FILTER
+    aws.timestream_liveanalytics: R-LIFE-001

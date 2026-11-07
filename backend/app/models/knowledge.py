@@ -261,9 +261,14 @@ class Effects(StrictModel):
 
 
 class Rule(StrictModel):
-    """A declarative rule. All `when` conditions must match (AND); an empty list always fires."""
+    """A declarative rule. All `when` conditions must match (AND); an empty list always fires.
+
+    `scope: primary` rules judge the primary database only. `scope: all_components` rules
+    (residency, compliance, lifecycle, ...) also apply to caches, search and analytics add-ons.
+    """
 
     id: str = Field(pattern=r"^R-[A-Z]+(-[A-Z]+)?-\d{3}$")
+    scope: Literal["primary", "all_components"] = "primary"
     when: list[Condition]
     effects: Effects
     message: str
@@ -339,7 +344,93 @@ class SizingConstants(StrictModel):
     last_verified: date
     source: str
     projection_months: int = Field(gt=0)
+    default_app_type: str
     iops: IopsConstants
     memory: MemoryConstants
     compute: ComputeConstants
     app_type_defaults: dict[str, dict[str, Any]]
+
+
+# ---------- scoring ----------
+
+
+class CostConfig(StrictModel):
+    """Relative cost units until real pricing (M4)."""
+
+    license_multiplier: dict[str, float]
+    deployment_factor: dict[Deployment, float]
+    service_factors: dict[str, float]
+
+
+class CombinationConfig(StrictModel):
+    primaries_considered: int = Field(ge=1)
+    max_components: int = Field(ge=1)
+    component_penalty: float = Field(ge=0)
+    simplicity_bonus: float = Field(ge=0)
+    missing_component_penalty: float = Field(ge=0)
+
+
+class ScoringConfig(StrictModel):
+    """Contents of knowledge_base/scoring.yaml."""
+
+    version: int
+    last_verified: date
+    source: str
+    dimension_parts: dict[str, dict[str, float]]
+    unknown_points: float
+    latency_fit: dict[str, dict[LatencyClass, float]]
+    write_share: dict[str, float]
+    single_node_write_tps: float = Field(gt=0)
+    read_replica_min_tps: float = Field(ge=0)
+    max_auto_read_replicas: int = Field(ge=0)
+    rpo_seconds: dict[str, int]
+    complexity_points: dict[Level, float]
+    lock_in_points: dict[Level, float]
+    default_management_pref: str
+    management_fit: dict[str, dict[Deployment, float]]
+    skills_points: dict[Literal["match", "no_match", "unknown"], float]
+    shape_engine_preference: dict[str, list[Engine]]
+    open_engines: list[Engine]
+    cost: CostConfig
+    combination: CombinationConfig
+
+
+# ---------- hardware ----------
+
+
+class SizeStep(StrictModel):
+    size: str
+    vcpu: int = Field(gt=0)
+    memory_gb: float = Field(gt=0)
+
+
+class InstanceFamily(StrictModel):
+    csp: Csp
+    ladder: str
+    name_pattern: str
+
+
+class StorageTier(StrictModel):
+    csp: Csp
+    max_iops: int | None
+    max_throughput_mbps: int | None
+    relative_cost: float = Field(gt=0)
+
+
+class EditionRequirement(StrictModel):
+    service_pattern: str
+    above_sla: float
+    edition: str
+
+
+class HardwareProfiles(StrictModel):
+    """Contents of knowledge_base/hardware_profiles.yaml."""
+
+    version: int
+    last_verified: date
+    source_urls: list[str]
+    ladders: dict[str, list[SizeStep]]
+    families: dict[str, InstanceFamily]
+    unsized_families: list[str]
+    storage_tiers: dict[str, StorageTier]
+    edition_requirements: list[EditionRequirement]

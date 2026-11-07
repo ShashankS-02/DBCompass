@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { createAssessment } from "../api/assessments";
 import {
   describeValue,
   fetchQuestions,
@@ -173,8 +175,6 @@ function ReportPanel({
         </p>
       </div>
 
-      <p className="text-xs text-slate-500">Recommendations will appear here once the engine lands (M3).</p>
-
       <details>
         <summary className="cursor-pointer text-xs text-slate-500">Normalised input (JSON)</summary>
         <pre className="mt-2 max-h-64 overflow-auto rounded bg-slate-50 p-2 text-xs">
@@ -187,6 +187,7 @@ function ReportPanel({
 
 export default function NewAssessment() {
   const { getAccessToken } = useAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<FormMode>("quick");
   const [schema, setSchema] = useState<QuestionSchema | null>(null);
   const [expertSchema, setExpertSchema] = useState<QuestionSchema | null>(null);
@@ -287,9 +288,14 @@ export default function NewAssessment() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await validateRequirements({ mode, migrating, answers, priorities }, getAccessToken);
+      const input = { mode, migrating, answers, priorities };
+      const result = await validateRequirements(input, getAccessToken);
       setReport(result);
       setReportStale(false);
+      if (result.valid) {
+        const assessment = await createAssessment(input, getAccessToken);
+        navigate(`/assessments/${assessment.id}`);
+      }
     } catch (error) {
       setSubmitError((error as Error).message);
     } finally {
@@ -362,7 +368,7 @@ export default function NewAssessment() {
             disabled={submitting}
             className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
           >
-            {submitting ? "Checking…" : "Validate requirements"}
+            {submitting ? "Working…" : "Get recommendations"}
           </button>
           {submitError && <p className="text-sm text-rose-600">Could not validate: {submitError}</p>}
           {report && (

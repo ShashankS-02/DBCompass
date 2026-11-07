@@ -7,6 +7,8 @@
 #          Service predicates use dotted paths into a service entry (e.g. supports.vector) and
 #          compare with a literal `value` or with a requirement field via `value_from`.
 #          Predicates in one list are ANDed. A null service value never matches a comparison.
+# scope:   primary (default) judges the primary database only; all_components also applies to
+#          add-on components (cache, search, analytics, vector, time_series).
 # Derived requirement fields (computed by engine/defaults.py, never asked):
 #   vol.projected_3y_gb      = vol.current_gb + vol.growth_gb_month * 36
 #   ha.sla_percent           = numeric form of ha.sla (sla_99_95 -> 99.95)
@@ -31,6 +33,7 @@ family_compatibility:
 rules:
   # ---------- hard filters ----------
   - id: R-LIFE-001
+    scope: all_components
     when: []
     effects:
       exclude_where:
@@ -95,6 +98,7 @@ rules:
     message: "Cross-region DR needs a service that can replicate to another region."
 
   - id: R-RES-IN-001
+    scope: all_components
     when:
       - {field: geo.residency, op: eq, value: india_dpdp}
     effects:
@@ -102,6 +106,7 @@ rules:
     message: "India residency: only services available in Indian regions considered."
 
   - id: R-RES-EU-001
+    scope: all_components
     when:
       - {field: geo.residency, op: eq, value: eu_gdpr}
     effects:
@@ -109,6 +114,7 @@ rules:
     message: "EU residency: only services available in EU regions considered."
 
   - id: R-RES-US-001
+    scope: all_components
     when:
       - {field: geo.residency, op: eq, value: us_only}
     effects:
@@ -116,6 +122,7 @@ rules:
     message: "US-only residency: only services available in US regions considered."
 
   - id: R-COMP-001
+    scope: all_components
     when:
       - {field: sec.compliance, op: not_contains, value: none}
     effects:
@@ -132,6 +139,7 @@ rules:
     message: "Maximum storage is below the 3-year projected data size."
 
   - id: R-CSP-001
+    scope: all_components
     when:
       - {field: pref.csp_mandated, op: eq, value: true}
       - {field: pref.csp, op: in, value: [aws, gcp, azure]}
@@ -141,6 +149,7 @@ rules:
     message: "Cloud provider is mandated by the organisation."
 
   - id: R-EXCL-001
+    scope: all_components
     when:
       - {field: pref.excluded, op: is_set}
     effects:
@@ -149,6 +158,7 @@ rules:
     message: "Excluded by the user."
 
   - id: R-CMK-001
+    scope: all_components
     when:
       - {field: sec.cmk, op: eq, value: true}
     effects:
@@ -157,6 +167,7 @@ rules:
     message: "Customer-managed keys required."
 
   - id: R-NET-001
+    scope: all_components
     when:
       - {field: sec.network, op: in, value: [private_only, private_vpn]}
     effects:
@@ -165,6 +176,15 @@ rules:
     message: "Private-only access needs PrivateLink / Private Endpoint / Private Service Connect."
 
   # ---------- boosts and penalties ----------
+  - id: R-SOR-001
+    when: []
+    effects:
+      penalise:
+        where:
+          - {field: avoid_when, op: contains, value: system_of_record}
+        by: 30
+    message: "Caches and search engines are not meant to be the system of record."
+
   - id: R-CSP-002
     when:
       - {field: pref.csp, op: in, value: [aws, gcp, azure]}
@@ -234,6 +254,16 @@ rules:
           - {field: deployment, op: eq, value: iaas}
         by: 25
     message: "Fully managed preferred: self-managed options penalised."
+
+  - id: R-MGD-002
+    when:
+      - {field: ops.managed_pref, op: eq, value: managed}
+    effects:
+      penalise:
+        where:
+          - {field: deployment, op: eq, value: iaas}
+        by: 10
+    message: "Managed service preferred: self-managed options penalised."
 
   - id: R-DBA-001
     when:
@@ -428,12 +458,12 @@ rules:
 
   - id: R-ANA-001
     when:
-      - {field: eco.analytics, op: eq, value: data_lake_warehouse}
+      - {field: eco.analytics, op: in, value: [bi_dashboards, data_lake_warehouse]}
     effects:
       require_component:
         role: analytics
         family: analytics
-    message: "Downstream warehouse: add an analytics store fed by CDC."
+    message: "BI dashboards or a warehouse downstream: add an analytics store fed by CDC."
 
   - id: R-HTAP-001
     when:

@@ -1,0 +1,26 @@
+name: Azure mandated, heavy T-SQL from SQL Server
+status: draft
+input:
+  migrating: true
+  answers:
+    app.tier: tier_1
+    app.type: web_api
+    data.shape: [relational]
+    data.proc_code: heavy
+    wl.pattern: oltp
+    wl.read_write_ratio: "70_30"
+    wl.peak_tps: 3000
+    wl.latency_p99_ms: lt_10ms
+    vol.current_gb: 1500
+    tx.consistency: strong
+    pref.csp: azure
+    pref.csp_mandated: true
+    mig.source_engine: {engine: sql_server, version: "2019"}
+    ops.skills: [sql_server]
+expect:
+  top1:
+    csp_in: [azure]
+    engine_in: [sql_server]
+  excluded:
+    aws.rds_sqlserver: R-CSP-001
+    gcp.cloudsql_sqlserver: R-CSP-001

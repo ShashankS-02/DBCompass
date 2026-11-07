@@ -126,6 +126,9 @@ ANDed; empty = always), `effects`, `message`. Implemented grammar:
 - Effects: `exclude_where`, `boost` / `penalise` (`{where, by}`), `require_component`
   (`{role, family, satisfied_by_primary}`), `add_guidance`, `region_filter: {geo}`.
 - Derived requirement fields: `vol.projected_3y_gb`, `ha.sla_percent`, `mig.source_engine_family`.
+- `scope: primary` (default) rules judge the primary only; `scope: all_components` rules (lifecycle,
+  residency, compliance, mandated CSP, exclusions, CMK, private network) also filter add-on components.
+  Without this, e.g. the strong-consistency rule would remove every cache.
 - `family_compatibility` maps each `data.shape` option to the families that can be the primary store.
 The doc's original shorthand (`engines_contains: oracle`) is written in this explicit form.
 ### regions.yaml
@@ -134,6 +137,10 @@ Geography (india, eu, us, apac) → region ids per CSP. Used by `region_filter` 
 ### sizing.yaml
 Constants for the derivation formulas in doc 02 (tps_per_vcpu defaults, cache miss ratio, etc.)
 and `app_type_defaults`: workload values assumed per `app.type` when unanswered (OPEN_QUESTIONS #7).
+### scoring.yaml
+Tables behind the 7 score dimensions (latency fit, write share, RPO seconds, management fit, …),
+the engine choice per data shape for multi-engine entries, relative cost factors used until M4
+pricing, and combination settings (component penalty, simplicity bonus, max components).
 ### hardware_profiles.yaml
 Instance families per CSP grouped as general / memory-optimised / compute / burstable, with
 vCPU, memory and network; storage tiers with IOPS/throughput ceilings

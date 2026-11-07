@@ -1,6 +1,7 @@
 """Load knowledge base YAML files into validated models."""
 
 import logging
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import TypeVar
@@ -9,7 +10,14 @@ import yaml
 from pydantic import BaseModel
 
 from app.config import get_settings
-from app.models.knowledge import RegionCatalog, RuleSet, ServiceEntry, SizingConstants
+from app.models.knowledge import (
+    HardwareProfiles,
+    RegionCatalog,
+    RuleSet,
+    ScoringConfig,
+    ServiceEntry,
+    SizingConstants,
+)
 from app.models.questions import QuestionCatalog
 
 logger = logging.getLogger(__name__)
@@ -18,6 +26,8 @@ QUESTIONS_FILE = "questions.yaml"
 RULES_FILE = "rules.yaml"
 REGIONS_FILE = "regions.yaml"
 SIZING_FILE = "sizing.yaml"
+SCORING_FILE = "scoring.yaml"
+HARDWARE_FILE = "hardware_profiles.yaml"
 SERVICES_DIR = "databases"
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
@@ -100,3 +110,41 @@ def get_sizing() -> SizingConstants:
     """Return the cached sizing constants."""
     return load_model(knowledge_base_dir() / SIZING_FILE, SizingConstants)
 
+
+
+@lru_cache
+def get_scoring() -> ScoringConfig:
+    """Return the cached scoring tables."""
+    return load_model(knowledge_base_dir() / SCORING_FILE, ScoringConfig)
+
+
+@lru_cache
+def get_hardware_profiles() -> HardwareProfiles:
+    """Return the cached hardware profiles."""
+    return load_model(knowledge_base_dir() / HARDWARE_FILE, HardwareProfiles)
+
+
+@dataclass(frozen=True)
+class KnowledgeBundle:
+    """Everything the engine reads from the knowledge base, loaded once."""
+
+    catalog: QuestionCatalog
+    services: list[ServiceEntry]
+    rules: RuleSet
+    regions: RegionCatalog
+    sizing: SizingConstants
+    scoring: ScoringConfig
+    hardware: HardwareProfiles
+
+
+def get_knowledge() -> KnowledgeBundle:
+    """FastAPI dependency: the cached knowledge base."""
+    return KnowledgeBundle(
+        catalog=get_question_catalog(),
+        services=get_services(),
+        rules=get_rules(),
+        regions=get_regions(),
+        sizing=get_sizing(),
+        scoring=get_scoring(),
+        hardware=get_hardware_profiles(),
+    )

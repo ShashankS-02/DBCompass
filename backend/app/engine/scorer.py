@@ -1,0 +1,211 @@
+"""Score candidates on 7 dimensions (docs/05 §2). Tables live in knowledge_base/scoring.yaml.
+
+Each dimension is 0–100. The weighted sum uses the user's priority weights; rule boosts and
+penalties are added afterwards and the total is clipped to 0–100.
+"""
+
+from typing import Any
+
+from app.engine.rules import all_predicates_match
+from app.models.knowledge import Rule, ScoringConfig, ServiceEntry
+from app.models.results import DIMENSIONS, AppliedAdjustment, ServiceScore, SizingResult
+
+SCORE_DECIMALS = 2
+GOOD = 100.0
+POOR = 30.0
+
+
+def blend(parts: dict[str, float], part_scores: dict[str, float]) -> float:
+    """Weighted mix of a dimension's parts (weights from scoring.yaml dimension_parts)."""
+    total = 0.0
+    for part_name, part_weight in parts.items():
+        total += part_weight * part_scores[part_name]
+    return total
+
+
+def score_performance(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig) -> float:
+    """Latency class vs target, write scaling vs write load, read headroom vs read load."""
+    latency_table = scoring.latency_fit.get(values.get("wl.latency_p99_ms"), {})
+    latency = latency_table.get(service.latency_class, scoring.unknown_points)
+
+    write_share = scoring.write_share.get(values.get("wl.read_write_ratio"), 0.3)
+    write_tps = values.get("wl.peak_tps", 0) * write_share
+    if service.horizontal_write_scaling or write_tps <= scoring.single_node_write_tps * 0.5:
+        writes = GOOD
+    elif write_tps <= scoring.single_node_write_tps:
+        writes = 70.0
+    else:
+        writes = POOR
+
+    read_heavy = write_share <= 0.3
+    if not read_heavy or service.horizontal_write_scaling:
+        reads = GOOD
+    else:
+        reads = min(GOOD, 50 + service.read_replicas_max * 10)
+    parts = {"latency": latency, "writes": writes, "reads": reads}
+    return blend(scoring.dimension_parts["performance"], parts)
+
+
+def score_reliability(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig) -> float:
+    """SLA headroom, RPO capability vs need, multi-region capability vs need."""
+    required_sla = values.get("ha.sla_percent") or 0
+    best_sla = service.best_sla_percent
+    if best_sla is None:
+        sla = scoring.unknown_points
+    else:
+        sla = min(GOOD, 70 + max(0.0, best_sla - required_sla) * 300)
+
+    needed_rpo = scoring.rpo_seconds.get(values.get("ha.rpo"), 86400)
+    capability = service.rpo_capability_seconds
+    if capability is None:
+        rpo = scoring.unknown_points
+    else:
+        rpo = GOOD if capability <= needed_rpo else POOR
+
+    multi_region_need = values.get("ha.multi_region", "none")
+    if multi_region_need == "none":
+        regions = GOOD
+    elif multi_region_need == "active_active":
+        regions = GOOD if service.multi_region == "active_active" else 0.0
+    else:
+        regions = GOOD if service.multi_region != "none" else 0.0
+    parts = {"sla": sla, "rpo": rpo, "regions": regions}
+    return blend(scoring.dimension_parts["reliability"], parts)
+
+
+def score_ops(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig, engine: str) -> float:
+    """Operational complexity, management preference fit, team skills fit."""
+    complexity = scoring.complexity_points[service.ops_complexity]
+    preference = values.get("ops.managed_pref", scoring.default_management_pref)
+    management = scoring.management_fit[preference][service.deployment]
+    skills_answer = values.get("ops.skills")
+    if not skills_answer:
+        skills = scoring.skills_points["unknown"]
+    elif engine in skills_answer:
+        skills = scoring.skills_points["match"]
+    else:
+        skills = scoring.skills_points["no_match"]
+    parts = {"complexity": complexity, "management": management, "skills": skills}
+    return blend(scoring.dimension_parts["ops"], parts)
+
+
+def score_ecosystem(service: ServiceEntry, values: dict[str, Any]) -> float:
+    """Average of the integration needs that apply: CDC, vector, analytics feed, licenses."""
+    checks: list[float] = []
+    if values.get("eco.cdc"):
+        checks.append(GOOD if service.supports.cdc else POOR)
+    if values.get("eco.vector"):
+        checks.append(GOOD if service.supports.vector else POOR)
+    if values.get("eco.analytics") in ("bi_dashboards", "data_lake_warehouse"):
+        checks.append(GOOD if service.supports.cdc or service.family == "analytics" else POOR)
+    licenses = values.get("eco.licenses") or []
+    if "oracle_byol" in licenses:
+        checks.append(GOOD if "oracle" in service.engines else 60.0)
+    if not checks:
+        return 70.0
+    return sum(checks) / len(checks)
+
+
+def score_compliance(service: ServiceEntry, values: dict[str, Any]) -> float:
+    """Share of required security features supported (all five when none are required)."""
+    identity = values.get("sec.identity") or []
+    feature_needed = {
+        "cmk_encryption": bool(values.get("sec.cmk")),
+        "audit": bool(values.get("sec.audit")),
+        "private_endpoint": values.get("sec.network") in ("private_only", "private_vpn"),
+        "iam_auth": "iam" in identity or "entra_id" in identity,
+        "masking_rls": bool(values.get("sec.masking_rls")),
+    }
+    features_to_check = [name for name, needed in feature_needed.items() if needed] or list(feature_needed)
+    supported = 0
+    for feature in features_to_check:
+        if getattr(service.supports, feature):
+            supported += 1
+    return GOOD * supported / len(features_to_check)
+
+
+def score_portability(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig, engine: str) -> float:
+    """Open engine, and proprietary lock-in measured against the user's tolerance."""
+    engine_points = GOOD if engine in scoring.open_engines else 20.0
+    if values.get("pref.lock_in") == "high":
+        lock_in = GOOD
+    else:
+        lock_in = scoring.lock_in_points[service.proprietary_lock_in]
+    parts = {"engine": engine_points, "lock_in": lock_in}
+    return blend(scoring.dimension_parts["portability"], parts)
+
+
+def score_cost(units: float, cheapest_units: float) -> float:
+    """Inverse of relative cost, normalised so the cheapest candidate scores 100."""
+    if units <= 0:
+        return GOOD
+    return GOOD * cheapest_units / units
+
+
+def rule_adjustments(service: ServiceEntry, rules: list[Rule], values: dict[str, Any]) -> list[AppliedAdjustment]:
+    """Boosts and penalties from fired rules whose `where` matches this service."""
+    adjustments: list[AppliedAdjustment] = []
+    for rule in rules:
+        boost = rule.effects.boost
+        penalty = rule.effects.penalise
+        if boost is not None and all_predicates_match(boost.where, service, values):
+            adjustments.append(AppliedAdjustment(rule_id=rule.id, points=boost.by, message=rule.message))
+        if penalty is not None and all_predicates_match(penalty.where, service, values):
+            adjustments.append(AppliedAdjustment(rule_id=rule.id, points=-penalty.by, message=rule.message))
+    return adjustments
+
+
+def score_service(
+    service: ServiceEntry,
+    sizing: SizingResult,
+    cheapest_units: float,
+    resolved_values: dict[str, Any],
+    weights: dict[str, float],
+    rules: list[Rule],
+    scoring: ScoringConfig,
+) -> ServiceScore:
+    """All seven dimensions, the weighted score, adjustments and the clipped total."""
+    engine = sizing.engine
+    dimension_scores = {
+        "performance": score_performance(service, resolved_values, scoring),
+        "cost": score_cost(sizing.relative_cost_units, cheapest_units),
+        "reliability": score_reliability(service, resolved_values, scoring),
+        "ops": score_ops(service, resolved_values, scoring, engine),
+        "ecosystem": score_ecosystem(service, resolved_values),
+        "compliance": score_compliance(service, resolved_values),
+        "portability": score_portability(service, resolved_values, scoring, engine),
+    }
+    weighted_score = 0.0
+    for dimension in DIMENSIONS:
+        dimension_scores[dimension] = round(dimension_scores[dimension], SCORE_DECIMALS)
+        weighted_score += weights.get(dimension, 0.0) * dimension_scores[dimension]
+    adjustments = rule_adjustments(service, rules, resolved_values)
+    adjustment_total = sum(adjustment.points for adjustment in adjustments)
+    total = min(GOOD, max(0.0, weighted_score + adjustment_total))
+    return ServiceScore(
+        service_id=service.id,
+        dimension_scores=dimension_scores,
+        weighted_score=round(weighted_score, SCORE_DECIMALS),
+        adjustments=adjustments,
+        total_score=round(total, SCORE_DECIMALS),
+    )
+
+
+def score_all(
+    services: list[ServiceEntry],
+    sizings: dict[str, SizingResult],
+    resolved_values: dict[str, Any],
+    weights: dict[str, float],
+    rules: list[Rule],
+    scoring: ScoringConfig,
+) -> dict[str, ServiceScore]:
+    """Score every service; cost is normalised against the cheapest in this group."""
+    if not services:
+        return {}
+    cheapest_units = min(sizings[service.id].relative_cost_units for service in services)
+    scores: dict[str, ServiceScore] = {}
+    for service in services:
+        scores[service.id] = score_service(
+            service, sizings[service.id], cheapest_units, resolved_values, weights, rules, scoring
+        )
+    return scores

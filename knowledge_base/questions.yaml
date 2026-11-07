@@ -516,6 +516,7 @@ sections:
           - {value: fully_managed, label: Fully managed / serverless}
           - {value: managed, label: Managed}
           - {value: self_managed_ok, label: Self-managed on VMs OK}
+        tier_defaults: {tier_0: managed, tier_1: managed, tier_2: managed, tier_3: managed}
       - id: ops.dba_support
         label: DBA support available
         type: single_select

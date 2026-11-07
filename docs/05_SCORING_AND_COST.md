@@ -82,6 +82,18 @@ Rank by total score. Ties broken by Balanced cost. The explainer prompt receives
 user priorities, top 3 with dimension scores, rules fired, filtered-out list, assumptions.
 System prompt: "Explain only using the data provided. Do not add services, prices or limits."
 
+## Implementation notes (M3)
+- Order is Filter → Size → Score → Combine → Rank: sizing runs before scoring so the cost dimension
+  has something to compare (OPEN_QUESTIONS #3). Until M4 that is relative cost units
+  (vCPU × license × deployment × service factor × nodes, see scoring.yaml), not dollars.
+  The budget-cap filter waits for real prices.
+- Dimension formulas live in `engine/scorer.py`; every number they use lives in `scoring.yaml`.
+- Combination score = primary total − component_penalty × components − missing_component_penalty ×
+  uncovered needs (+ simplicity_bonus when the primary covers every need), clipped to 0–100.
+- HA topology: the lowest of single-AZ / multi-AZ / multi-region whose published SLA meets the target;
+  zero RPO forces multi-AZ, active-active forces multi-region. Edition requirements (e.g. Cloud SQL
+  Enterprise Plus for 99.99%) come from hardware_profiles.yaml.
+
 ## Test cases (tests/engine/)
 Create 10 golden cases with the DBA team, for example:
 1. Tier 1 OLTP, 2k TPS, strong consistency, heavy PL/SQL, India residency → Oracle-compatible managed option ranks first.
@@ -89,3 +101,5 @@ Create 10 golden cases with the DBA team, for example:
 3. Internal tool, 10 TPS, Tier 3, tight budget → small managed PostgreSQL / MySQL, single AZ.
 4. OLTP + BI dashboards → relational primary + warehouse via CDC.
 Assert top-1 family and that eliminated services carry the expected rule id.
+Implemented as `backend/tests/engine/golden/*.yaml` (10 cases: 4 from this doc, 6 drafts marked
+`status: draft` for DBA review). Add a case by adding a YAML file; see the README there.

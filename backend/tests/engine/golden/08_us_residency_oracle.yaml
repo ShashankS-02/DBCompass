@@ -1,0 +1,23 @@
+name: US-only residency, Oracle source with light PL/SQL
+status: draft
+input:
+  migrating: true
+  answers:
+    app.tier: tier_2
+    app.type: web_api
+    data.shape: [relational]
+    data.proc_code: light
+    wl.pattern: oltp
+    wl.read_write_ratio: "70_30"
+    wl.peak_tps: 800
+    wl.latency_p99_ms: lt_10ms
+    vol.current_gb: 300
+    tx.consistency: strong
+    geo.residency: us_only
+    mig.source_engine: {engine: oracle, version: 19c}
+expect:
+  top1:
+    family_in: [relational]
+  excluded:
+    gcp.oracle_database_at_google_cloud: R-RES-US-001
+    azure.oracle_database_at_azure: R-RES-US-001

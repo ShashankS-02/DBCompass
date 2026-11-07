@@ -1,8 +1,10 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthProvider";
+import History from "./pages/History";
 import Home from "./pages/Home";
 import NewAssessment from "./pages/NewAssessment";
 import Placeholder from "./pages/Placeholder";
+import Results from "./pages/Results";
 
 const NAV_ITEMS = [
   { to: "/", label: "Home" },
@@ -66,7 +68,8 @@ export default function App() {
           <Route path="/assessments/new" element={<NewAssessment />} />
           <Route path="/repo" element={<Placeholder title="Analyze repo" milestone="M5" />} />
           <Route path="/migrations/new" element={<Placeholder title="Migration plan" milestone="M6" />} />
-          <Route path="/history" element={<Placeholder title="History" milestone="M3" />} />
+          <Route path="/assessments/:id" element={<Results />} />
+          <Route path="/history" element={<History />} />
         </Routes>
       </main>
     </div>

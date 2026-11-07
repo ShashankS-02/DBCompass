@@ -1,0 +1,21 @@
+name: Global user profile store, 50k reads/s, eventual consistency, key-value
+status: from_doc_05
+input:
+  answers:
+    app.tier: tier_1
+    app.type: web_api
+    data.shape: [key_value]
+    wl.pattern: oltp
+    wl.read_write_ratio: "90_10"
+    wl.peak_tps: 50000
+    wl.latency_p99_ms: lt_10ms
+    vol.current_gb: 800
+    tx.consistency: eventual
+    ha.multi_region: active_active
+    geo.user_regions: [global]
+expect:
+  top1:
+    family_in: [key_value, wide_column, document]
+  excluded:
+    aws.rds_postgresql: SHAPE-FILTER
+    aws.aurora_postgresql: R-HA-001
