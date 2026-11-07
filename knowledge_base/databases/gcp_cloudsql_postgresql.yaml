@@ -1,0 +1,90 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: gcp.cloudsql_postgresql
+csp: gcp
+name: Cloud SQL for PostgreSQL
+family: relational
+secondary_families:
+- vector
+engines:
+- postgresql
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: 64000
+horizontal_write_scaling: false
+read_replicas_max: 10
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: null
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: plpgsql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: low
+ops_complexity: low
+tps_per_vcpu: 800
+pricing_ref:
+  provider_api: gcp_catalog
+  service_code: Cloud SQL
+  filters:
+    engine: postgresql
+instance_families:
+- db-perf-optimized-N
+- db-custom
+storage_options:
+- pd_ssd
+- hyperdisk_balanced
+regions:
+- asia-south1
+- asia-south2
+- europe-west1
+- europe-west3
+- europe-west4
+- us-central1
+- us-east1
+- asia-southeast1
+- asia-northeast1
+good_for:
+- oltp
+- web_backends
+avoid_when: []
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://cloud.google.com/sql
+verification:
+  verified_fields:
+  - sla_by_topology
+  - max_storage_gb
+  - read_replicas_max
+  - regions
+  sources:
+  - https://cloud.google.com/sql/sla
+  - https://docs.cloud.google.com/sql/docs/quotas
+  - https://docs.cloud.google.com/sql/docs/postgres/replication
+  - https://docs.cloud.google.com/sql/docs/postgres/locations
+  notes:
+  - 'Covered only with HA: Enterprise Plus 99.99%, Enterprise 99.95%. Single-zone instances have no SLA.'
+  - Max storage 64 TB (dedicated core).

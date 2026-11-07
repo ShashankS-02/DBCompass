@@ -1,0 +1,28 @@
+# Open Questions
+
+Items found while reading docs 01–08. On 2026-11-07 the project owner accepted the working
+assumptions below as decisions; they can be revisited if the DBA team disagrees.
+New questions go at the bottom with status "Open".
+
+| # | Question | Affects | Decision | Status |
+|---|---|---|---|---|
+| 1 | `docs/03` puts `tests/` at repo root, but CLAUDE.md runs `cd backend && pytest -q`. | Repo layout | Tests live in `backend/tests/`. | Decided |
+| 2 | PRD has 5 priority sliders (Performance, Cost, Reliability, Simplicity, Portability); doc 05 scores 7 dimensions. How do sliders map to weights? | M1 form, M3 scorer | Slider → dimension: Performance → performance, Cost → cost, Reliability → reliability, Simplicity → ops, Portability → portability. These five share 0.80 of the weight in proportion to slider values (0–100). Ecosystem and compliance stay fixed at 0.10 each. Default slider positions 80/80/80/60/20 reproduce the doc 05 default weights exactly. `cost.priority` in the catalog is the Cost slider, not a separate field. | Decided |
+| 3 | The budget filter and the cost score need prices, but pricing runs after sizing. | M3, M4 | Run a cheap pre-size + price pass for filtering/scoring, then full three-tier pricing for the final top 3. | Decided |
+| 4 | Residency filter needs per-service region lists; SLA filter needs SLA per topology. The KB entry schema has neither. | M2 KB schema | Add `regions: [...]` and `sla_by_topology: {single_az, multi_az, multi_region}` to the schema. | Decided |
+| 5 | Rule `R-PLSQL-001` uses `mig.source_engine_family`, not in the catalog. Enum encoding unclear (`"<1"` vs `"<1 ms"`). Multi-select condition semantics undefined. | M1 enums, M2 rules | Option values are stable snake_case strings (e.g. `lt_1ms`, `tier_1`, `pci_dss`); labels are display-only. Field ids keep the catalog's dotted form. Derived fields such as `mig.source_engine_family` are computed by `engine/defaults.py`, never asked. A rule condition on a multi-select field means "contains". | Decided |
+| 6 | `Recommendation.csp` is a single value, so cross-CSP combinations and on-prem "retain" cannot be represented. | M3 models | Combinations are same-CSP only for MVP; "retain on-prem" appears only in the migration planner. | Decided |
+| 7 | Tier defaults cover only HA and audit fields; workload fields have no defaults. | M1, M3 | Add an `app_type_defaults` table to `knowledge_base/sizing.yaml` (peak TPS, read/write ratio, latency, size per app type) and apply it after tier defaults, marking fields assumed. The form never blocks on an empty field. | Decided |
+| 8 | Budget can be USD or INR; no conversion source. | M1, M4 | Engine works in USD; INR converted with a rate in config, shown in the UI with its date. | Decided |
+| 9 | Catalog marks 15 Quick-mode fields; PRD says ~12. | M1 | Keep all 15. | Decided |
+| 10 | No schema migration tool named for the app DB. | M0+ | `create_all` at startup for the hackathon; adopt Alembic if tables start changing. | Decided |
+| 11 | Entra app registration details (tenant, client IDs, scopes, role claims) not yet provided. | Auth | Env vars `ENTRA_TENANT_ID`, `ENTRA_API_CLIENT_ID` (+ `VITE_ENTRA_*`); dev bypass on locally. | Waiting on values |
+| 12 | Tier defaults depend on `app.tier`, but what if the tier itself is unknown? | M1, M3 | Assume `tier_2` (`default_tier` in questions.yaml) and mark `app.tier` as assumed. | Decided |
+| 13 | Doc 02 packs two inputs into `vol.retention` and `eco.cdc`. | M1 catalog | Split into `vol.retention_period` + `vol.archive_allowed`, and `eco.cdc` + `eco.cdc_target`. Recorded in doc 02. | Decided |
+| 14 | No SLA % found for Oracle Database@AWS / @Google Cloud / @Azure, Bare Metal Solution, Cosmos DB for MongoDB vCore. | M2 KB, M3 SLA filter | `sla_by_topology` left null. A null never matches a rule comparison, so these services are not removed by the SLA filter; M3 should mark that in the trace as "SLA not published". DBA to confirm figures from Oracle/CSP contracts. | Open |
+| 15 | RDS for SQL Server max storage: AWS storage page states 16 TiB, 64 TiB and 256 TiB (with extra volumes) in different places. | M2 KB | 16 TiB used (most conservative). | Open |
+| 16 | Compliance eligibility (PCI-DSS, HIPAA, SOX) per service was not checked; lists are drafts. Aurora DSQL is limited to gdpr/dpdp and Vertex AI Search to gdpr until checked. | M2 KB, R-COMP-001 | DBA / security team to verify against AWS, GCP and Azure compliance scope pages. | Open |
+| 17 | Not found on fetched pages: DynamoDB item size limit (draft 400 KB), per-engine RDS read replica counts (draft 15), Neptune replica count, PostgreSQL flexible server max storage (draft 64 TiB), Keyspaces / MemoryDB / ElastiCache limits. | M2 KB | Draft values kept, flagged in each entry's verification notes. | Open |
+| 18 | Cloud SQL SLA depends on edition: Enterprise Plus HA 99.99%, Enterprise HA 99.95%, single-zone none. The KB holds one `multi_az` value (99.99). | M3 sizer, M4 pricing | Sizer must pick Enterprise Plus when the target SLA is above 99.95%, and price accordingly. Same pattern for Redshift (multi-AZ vs multi-node) and OpenSearch (standby). | Decided |
+| 19 | Region lists outside the verified ones are drafts based on broad availability. Oracle Database@Google Cloud and @Azure US regions were not itemised. | M2 KB, residency filter | Residency-relevant India/EU lists were verified for Oracle@CSP, Aurora DSQL and Cloud SQL; others need a DBA pass. | Open |
+| 20 | Synapse vs Fabric: Microsoft's Synapse page carries no "use Fabric" notice; the Fabric capacity SLA (99.9%) may not be the Warehouse-specific figure. | M2 KB | Both kept as `active`; DBA to confirm which to recommend for new warehouses. | Open |

@@ -1,0 +1,83 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: aws.redshift
+csp: aws
+name: Amazon Redshift
+family: analytics
+secondary_families: []
+engines:
+- proprietary
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: 128000
+horizontal_write_scaling: true
+read_replicas_max: 0
+multi_az: true
+multi_region: none
+sla_by_topology:
+  single_az: 99.9
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: null
+latency_class: seconds
+supports:
+  json_documents: true
+  full_text: none
+  vector: false
+  geospatial: false
+  graph: false
+  stored_procedures: plpgsql
+  cdc: false
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: true
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: medium
+tps_per_vcpu: null
+pricing_ref:
+  provider_api: aws_pricelist
+  service_code: AmazonRedshift
+instance_families:
+- ra3
+- serverless
+storage_options: []
+regions:
+- ap-south-1
+- ap-south-2
+- eu-west-1
+- eu-west-2
+- eu-central-1
+- us-east-1
+- us-east-2
+- us-west-2
+- ap-southeast-1
+- ap-northeast-1
+good_for:
+- data_warehouse
+- bi_dashboards
+avoid_when:
+- oltp
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://aws.amazon.com/redshift/
+verification:
+  verified_fields:
+  - sla_by_topology
+  sources:
+  - https://aws.amazon.com/redshift/sla/
+  - https://docs.aws.amazon.com/redshift/latest/mgmt/amazon-redshift-limits.html
+  notes:
+  - SLA % is the top service-credit threshold on the SLA page (no separate commitment sentence).
+  - single_az = multi-node single-AZ cluster (single-node is 99.5%).
+  - Serverless storage up to 128 TB at 8+ RPUs; provisioned cluster storage not on fetched page.

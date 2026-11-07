@@ -1,0 +1,95 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: aws.aurora_mysql
+csp: aws
+name: Amazon Aurora MySQL-Compatible
+family: relational
+secondary_families: []
+engines:
+- mysql
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: 262144
+horizontal_write_scaling: false
+read_replicas_max: 15
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: 99.9
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: false
+  geospatial: true
+  graph: false
+  stored_procedures: mysql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: medium
+ops_complexity: low
+tps_per_vcpu: 1000
+pricing_ref:
+  provider_api: aws_pricelist
+  service_code: AmazonRDS
+  filters:
+    databaseEngine: Aurora MySQL
+instance_families:
+- db.r7g
+- db.r6g
+- db.t4g
+- db.serverless
+storage_options:
+- aurora_standard
+- aurora_io_optimized
+regions:
+- ap-south-1
+- ap-south-2
+- eu-west-1
+- eu-west-2
+- eu-central-1
+- us-east-1
+- us-east-2
+- us-west-2
+- ap-southeast-1
+- ap-northeast-1
+good_for:
+- oltp
+- htap_light
+- saas_backends
+avoid_when:
+- heavy_plsql_without_refactor
+- petabyte_analytics
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://aws.amazon.com/rds/aurora/
+verification:
+  verified_fields:
+  - sla_by_topology
+  - max_storage_gb
+  - read_replicas_max
+  sources:
+  - https://aws.amazon.com/rds/aurora/sla/
+  - https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_Limits.html
+  - https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Replication.html
+  notes:
+  - SLA % is the top service-credit threshold on the SLA page (no separate commitment sentence).
+  - 256 TiB needs recent engine versions (128 TiB on older ones).
+  - Max table size 64 TiB.
+  - Global Database secondaries give cross-region DR; no Global Database SLA % is published.

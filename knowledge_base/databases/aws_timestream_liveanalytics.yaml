@@ -1,0 +1,74 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: aws.timestream_liveanalytics
+csp: aws
+name: Amazon Timestream for LiveAnalytics
+family: time_series
+secondary_families: []
+engines:
+- proprietary
+deployment: serverless
+lifecycle: not_for_new_projects
+status_note: AWS shows an end-of-support notice and points to Timestream for InfluxDB for similar capabilities.
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: true
+read_replicas_max: 0
+multi_az: true
+multi_region: none
+sla_by_topology:
+  single_az: null
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: null
+latency_class: low_ms
+supports:
+  json_documents: false
+  full_text: none
+  vector: false
+  geospatial: false
+  graph: false
+  stored_procedures: none
+  cdc: false
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: low
+tps_per_vcpu: null
+pricing_ref:
+  provider_api: aws_pricelist
+  service_code: AmazonTimestream
+instance_families: []
+storage_options: []
+regions:
+- ap-south-1
+- eu-west-1
+- eu-central-1
+- us-east-1
+- us-west-2
+- ap-southeast-1
+- ap-northeast-1
+good_for: []
+avoid_when: []
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://aws.amazon.com/timestream/
+verification:
+  verified_fields:
+  - sla_by_topology
+  - lifecycle
+  sources:
+  - https://aws.amazon.com/timestream/sla/
+  - https://aws.amazon.com/timestream/
+  notes:
+  - Max record size 2 KB.

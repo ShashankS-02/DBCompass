@@ -1,0 +1,87 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: azure.sql_database
+csp: azure
+name: Azure SQL Database
+family: relational
+secondary_families:
+- vector
+engines:
+- sql_server
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: 128000
+horizontal_write_scaling: false
+read_replicas_max: 30
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: 99.99
+  multi_az: 99.995
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: tsql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: true
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: low
+tps_per_vcpu: 700
+pricing_ref:
+  provider_api: azure_retail
+  service_code: SQL Database
+instance_families:
+- general_purpose
+- business_critical
+- hyperscale
+- serverless
+storage_options: []
+regions:
+- centralindia
+- southindia
+- westeurope
+- northeurope
+- germanywestcentral
+- eastus
+- westus2
+- southeastasia
+- japaneast
+good_for:
+- oltp
+- dotnet_apps
+- sql_server_modernise
+avoid_when: []
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://learn.microsoft.com/en-us/azure/azure-sql/database/
+verification:
+  verified_fields:
+  - sla_by_topology
+  - max_storage_gb
+  - read_replicas_max
+  sources:
+  - https://www.microsoft.com/licensing/docs/view/Service-Level-Agreements-SLA-for-Online-Services
+  - https://learn.microsoft.com/en-us/azure/azure-sql/database/service-tier-hyperscale
+  notes:
+  - SLA % from Microsoft consolidated Online Services SLA (November 2026 edition).
+  - Zone-redundant 99.995%; not zone-redundant 99.99%.
+  - Hyperscale up to 128 TB and 30 named replicas; General Purpose / Business Critical max 4 TB.

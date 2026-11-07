@@ -1,0 +1,91 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: aws.rds_oracle
+csp: aws
+name: Amazon RDS for Oracle
+family: relational
+secondary_families: []
+engines:
+- oracle
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: 65536
+horizontal_write_scaling: false
+read_replicas_max: 15
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: 99.5
+  multi_az: 99.95
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: false
+  geospatial: false
+  graph: false
+  stored_procedures: plsql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: medium
+tps_per_vcpu: 600
+pricing_ref:
+  provider_api: aws_pricelist
+  service_code: AmazonRDS
+  filters:
+    databaseEngine: Oracle
+instance_families:
+- db.r7i
+- db.m7i
+- db.x2iedn
+storage_options:
+- gp3
+- io2
+regions:
+- ap-south-1
+- ap-south-2
+- eu-west-1
+- eu-west-2
+- eu-central-1
+- us-east-1
+- us-east-2
+- us-west-2
+- ap-southeast-1
+- ap-northeast-1
+good_for:
+- oracle_replatform
+- plsql_heavy
+avoid_when:
+- no_oracle_license_budget
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://aws.amazon.com/rds/
+verification:
+  verified_fields:
+  - sla_by_topology
+  - max_storage_gb
+  - read_replicas_max
+  sources:
+  - https://aws.amazon.com/rds/sla/
+  - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Storage.html
+  - https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_Limits.html
+  notes:
+  - SLA % is the top service-credit threshold on the SLA page (no separate commitment sentence).
+  - Up to 256 TiB with additional storage volumes.
+  - 'Replicas: AWS recommends 5 or fewer; mounted replicas take no reads.'

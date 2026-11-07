@@ -1,0 +1,76 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: azure.cosmos_db_mongodb_vcore
+csp: azure
+name: Azure Cosmos DB for MongoDB (vCore)
+family: document
+secondary_families:
+- vector
+engines:
+- mongodb
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: false
+read_replicas_max: 1
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: 99.9
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: null
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: none
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: medium
+ops_complexity: low
+tps_per_vcpu: 1000
+pricing_ref:
+  provider_api: azure_retail
+  service_code: Azure Cosmos DB for MongoDB (vCore)
+instance_families: []
+storage_options: []
+regions:
+- centralindia
+- southindia
+- westeurope
+- northeurope
+- germanywestcentral
+- eastus
+- westus2
+- southeastasia
+- japaneast
+good_for:
+- mongodb_migration
+- document_store
+avoid_when:
+- complex_joins
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://learn.microsoft.com/en-us/azure/cosmos-db/mongodb/vcore/
+verification:
+  verified_fields: []
+  sources: []
+  notes:
+  - Entire entry is draft; vCore SLA not checked.

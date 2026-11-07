@@ -1,0 +1,23 @@
+# Geography -> CSP region ids. Used by residency rules (region_filter) and user-region matching.
+# Service entries list their regions using these ids. Only the four geographies the form asks
+# about are covered; "apac" means Asia Pacific outside India.
+version: 1
+last_verified: 2026-11-07
+
+geos:
+  india:
+    aws: [ap-south-1, ap-south-2]
+    gcp: [asia-south1, asia-south2]
+    azure: [centralindia, southindia, westindia]
+  eu:
+    aws: [eu-west-1, eu-west-2, eu-west-3, eu-central-1, eu-central-2, eu-north-1, eu-south-1, eu-south-2]
+    gcp: [europe-west1, europe-west2, europe-west3, europe-west4, europe-west6, europe-west8, europe-west9, europe-west12, europe-north1, europe-central2, europe-southwest1]
+    azure: [westeurope, northeurope, germanywestcentral, francecentral, swedencentral, switzerlandnorth, italynorth, spaincentral, uksouth, ukwest]
+  us:
+    aws: [us-east-1, us-east-2, us-west-1, us-west-2]
+    gcp: [us-central1, us-east1, us-east4, us-west1, us-west2]
+    azure: [eastus, eastus2, centralus, westus2, westus3]
+  apac:
+    aws: [ap-southeast-1, ap-southeast-2, ap-northeast-1, ap-northeast-2, ap-northeast-3, ap-east-1]
+    gcp: [asia-southeast1, asia-northeast1, asia-northeast3, asia-east1, australia-southeast1]
+    azure: [southeastasia, eastasia, japaneast, japanwest, australiaeast, australiasoutheast, koreacentral]

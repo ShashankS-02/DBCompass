@@ -1,0 +1,91 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: aws.oracle_database_at_aws
+csp: aws
+name: Oracle Database@AWS
+family: relational
+secondary_families: []
+engines:
+- oracle
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: false
+read_replicas_max: 0
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: null
+  multi_az: null
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: advanced
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: plsql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: medium
+tps_per_vcpu: 600
+pricing_ref:
+  provider_api: aws_pricelist
+  service_code: OracleDatabaseAtAWS
+instance_families:
+- exadata_x11m
+- exadata_x9m
+storage_options: []
+regions:
+- ap-south-1
+- ap-south-2
+- eu-central-1
+- eu-central-2
+- eu-north-1
+- eu-south-1
+- eu-south-2
+- eu-west-1
+- eu-west-2
+- eu-west-3
+- us-east-1
+- us-east-2
+- us-west-1
+- us-west-2
+- ap-northeast-1
+- ap-northeast-2
+- ap-northeast-3
+- ap-southeast-1
+- ap-southeast-2
+good_for:
+- oracle_replatform
+- rac_dependency
+- plsql_heavy
+avoid_when:
+- small_budget
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://docs.aws.amazon.com/odb/latest/UserGuide/getting-started.html
+verification:
+  verified_fields:
+  - regions
+  sources:
+  - https://docs.aws.amazon.com/odb/latest/UserGuide/getting-started.html
+  notes:
+  - 'Offerings: Exadata Database Service (Dedicated), Autonomous Database (Dedicated and Serverless), ExaDB-XS.'
+  - No SLA % on AWS pages read; sla_by_topology left null (OPEN_QUESTIONS).

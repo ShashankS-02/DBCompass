@@ -1,0 +1,76 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: azure.cosmos_db_postgresql
+csp: azure
+name: Azure Cosmos DB for PostgreSQL
+family: distributed_sql
+secondary_families:
+- relational
+engines:
+- postgresql
+deployment: managed
+lifecycle: not_for_new_projects
+status_note: On a retirement path and no longer recommended for new projects; use elastic clusters in Azure Database for PostgreSQL.
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: true
+read_replicas_max: 0
+multi_az: true
+multi_region: none
+sla_by_topology:
+  single_az: null
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: null
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: true
+  geospatial: false
+  graph: false
+  stored_procedures: plpgsql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: medium
+ops_complexity: low
+tps_per_vcpu: 800
+pricing_ref:
+  provider_api: azure_retail
+  service_code: Azure Cosmos DB for PostgreSQL
+instance_families: []
+storage_options: []
+regions:
+- centralindia
+- westeurope
+- northeurope
+- eastus
+- westus2
+- southeastasia
+- japaneast
+good_for: []
+avoid_when: []
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://learn.microsoft.com/en-us/azure/cosmos-db/postgresql/introduction
+verification:
+  verified_fields:
+  - lifecycle
+  - sla_by_topology
+  sources:
+  - https://learn.microsoft.com/en-us/azure/cosmos-db/postgresql/introduction
+  - https://www.microsoft.com/licensing/docs/view/Service-Level-Agreements-SLA-for-Online-Services
+  notes:
+  - SLA % from Microsoft consolidated Online Services SLA (November 2026 edition).
+  - HA node 99.99%.

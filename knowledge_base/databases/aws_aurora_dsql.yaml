@@ -1,0 +1,90 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: aws.aurora_dsql
+csp: aws
+name: Amazon Aurora DSQL
+family: distributed_sql
+secondary_families:
+- relational
+engines:
+- postgresql
+deployment: serverless
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: true
+read_replicas_max: 0
+multi_az: true
+multi_region: active_active
+sla_by_topology:
+  single_az: null
+  multi_az: 99.99
+  multi_region: 99.999
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: none
+  vector: false
+  geospatial: false
+  graph: false
+  stored_procedures: none
+  cdc: false
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: low
+tps_per_vcpu: null
+pricing_ref:
+  provider_api: aws_pricelist
+  service_code: AmazonAuroraDSQL
+instance_families: []
+storage_options: []
+regions:
+- us-east-1
+- us-east-2
+- us-west-2
+- ap-south-1
+- ap-southeast-1
+- ap-northeast-1
+- eu-central-1
+- eu-west-1
+- eu-west-2
+- eu-west-3
+- eu-north-1
+- eu-south-2
+- ap-east-1
+- ap-southeast-2
+- ap-northeast-2
+- ap-northeast-3
+good_for:
+- global_active_active_oltp
+- serverless_oltp
+avoid_when:
+- heavy_stored_procedures
+- postgres_extension_dependency
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://aws.amazon.com/rds/aurora/dsql/
+verification:
+  verified_fields:
+  - sla_by_topology
+  - consistency
+  - multi_region
+  - regions
+  - max_storage_gb
+  sources:
+  - https://docs.aws.amazon.com/aurora-dsql/latest/userguide/what-is-aurora-dsql.html
+  - https://aws.amazon.com/rds/aurora/dsql/sla/
+  notes:
+  - PostgreSQL 16 compatible.
+  - No cross-continent multi-Region clusters.
+  - compliance kept to gdpr/dpdp until PCI/HIPAA eligibility is checked (OPEN_QUESTIONS).

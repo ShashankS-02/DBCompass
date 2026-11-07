@@ -1,0 +1,67 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: gcp.vertex_ai_search
+csp: gcp
+name: Vertex AI Search (Agent Search)
+family: search
+secondary_families:
+- vector
+engines:
+- proprietary
+deployment: serverless
+lifecycle: active
+status_note: Being renamed to Agent Search. A search/RAG product rather than a database; included for the search role only.
+consistency:
+- eventual
+max_storage_gb: null
+horizontal_write_scaling: false
+read_replicas_max: 0
+multi_az: true
+multi_region: none
+sla_by_topology:
+  single_az: null
+  multi_az: null
+  multi_region: null
+rpo_capability_seconds: null
+latency_class: tens_ms
+supports:
+  json_documents: true
+  full_text: advanced
+  vector: true
+  geospatial: false
+  graph: false
+  stored_procedures: none
+  cdc: false
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: false
+  masking_rls: false
+compliance:
+- gdpr
+proprietary_lock_in: high
+ops_complexity: low
+tps_per_vcpu: null
+pricing_ref:
+  provider_api: gcp_catalog
+  service_code: Vertex AI Search
+instance_families: []
+storage_options: []
+regions:
+- us-central1
+- europe-west1
+- asia-south1
+good_for:
+- semantic_search
+- rag
+avoid_when:
+- system_of_record
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://cloud.google.com/enterprise-search
+verification:
+  verified_fields: []
+  sources:
+  - https://docs.cloud.google.com/generative-ai-app-builder/docs/introduction
+  notes:
+  - Rename confirmed; no SLA, storage or region facts on page.

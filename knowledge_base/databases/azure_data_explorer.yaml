@@ -1,0 +1,79 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: azure.data_explorer
+csp: azure
+name: Azure Data Explorer
+family: time_series
+secondary_families:
+- analytics
+engines:
+- proprietary
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- eventual
+max_storage_gb: null
+horizontal_write_scaling: true
+read_replicas_max: 0
+multi_az: true
+multi_region: none
+sla_by_topology:
+  single_az: null
+  multi_az: 99.9
+  multi_region: null
+rpo_capability_seconds: null
+latency_class: tens_ms
+supports:
+  json_documents: true
+  full_text: advanced
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: other
+  cdc: false
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: medium
+tps_per_vcpu: null
+pricing_ref:
+  provider_api: azure_retail
+  service_code: Azure Data Explorer
+instance_families: []
+storage_options: []
+regions:
+- centralindia
+- southindia
+- westeurope
+- northeurope
+- germanywestcentral
+- eastus
+- westus2
+- southeastasia
+- japaneast
+good_for:
+- telemetry
+- log_analytics
+- time_series_at_scale
+avoid_when:
+- oltp
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://learn.microsoft.com/en-us/azure/data-explorer/
+verification:
+  verified_fields:
+  - sla_by_topology
+  sources:
+  - https://www.microsoft.com/licensing/docs/view/Service-Level-Agreements-SLA-for-Online-Services
+  notes:
+  - SLA % from Microsoft consolidated Online Services SLA (November 2026 edition).

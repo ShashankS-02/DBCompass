@@ -1,0 +1,80 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: gcp.oracle_database_at_google_cloud
+csp: gcp
+name: Oracle Database@Google Cloud
+family: relational
+secondary_families: []
+engines:
+- oracle
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: false
+read_replicas_max: 0
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: null
+  multi_az: null
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: advanced
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: plsql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: medium
+tps_per_vcpu: 600
+pricing_ref:
+  provider_api: gcp_catalog
+  service_code: Oracle Database@Google Cloud
+instance_families:
+- exadata
+- exascale
+- autonomous
+storage_options: []
+regions:
+- asia-south1
+- asia-south2
+- europe-west2
+- europe-west3
+- europe-west8
+- europe-west12
+good_for:
+- oracle_replatform
+- rac_dependency
+- plsql_heavy
+avoid_when:
+- small_budget
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://cloud.google.com/oracle/database/docs/overview
+verification:
+  verified_fields:
+  - regions
+  sources:
+  - https://docs.cloud.google.com/oracle/database/docs/regions-and-zones
+  notes:
+  - Only India and EU regions were checked; US/APAC regions not recorded yet.
+  - europe-west12 is Exadata only.
+  - No SLA % on pages read; sla_by_topology left null (OPEN_QUESTIONS).

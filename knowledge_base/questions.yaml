@@ -1,0 +1,691 @@
+# Machine-readable requirements catalog. Human-readable source: docs/02_REQUIREMENTS_CATALOG.md.
+# backend/tests/test_questions_catalog.py checks that the two stay in sync.
+#
+# Field types: single_select, multi_select, number, boolean, text, list, money, engine_version.
+# Option values are stable snake_case ids used by rules; labels are display only.
+# An option with `exclusive: true` cannot be combined with other options (e.g. "None").
+# `tier_defaults` gives the value assumed when the field is left empty, per app.tier.
+
+version: 1
+last_verified: 2026-11-07
+default_tier: tier_2   # used when app.tier itself is unknown
+
+engine_options: &engine_options
+  - {value: none, label: "None (new application)", exclusive: true}
+  - {value: oracle, label: Oracle}
+  - {value: sql_server, label: SQL Server}
+  - {value: postgresql, label: PostgreSQL}
+  - {value: mysql, label: MySQL}
+  - {value: mariadb, label: MariaDB}
+  - {value: db2, label: Db2}
+  - {value: mongodb, label: MongoDB}
+  - {value: cassandra, label: Cassandra}
+  - {value: redis, label: Redis}
+  - {value: other, label: Other}
+
+priority_sliders:
+  - id: performance
+    label: Performance
+    dimension: performance
+    default: 80
+    description: Latency, throughput and scaling headroom.
+  - id: cost
+    label: Cost
+    dimension: cost
+    default: 80
+    description: Lower monthly cost among the options that meet your needs.
+  - id: reliability
+    label: Reliability
+    dimension: reliability
+    default: 80
+    description: SLA headroom, RPO/RTO capability, multi-region support.
+  - id: simplicity
+    label: Simplicity
+    dimension: ops
+    default: 60
+    description: Less to operate, closer to your team's existing skills.
+  - id: portability
+    label: Portability
+    dimension: portability
+    default: 20
+    description: Open engines and less lock-in to one cloud.
+
+# Dimensions not driven by a slider keep a fixed weight. Sliders share the remainder.
+fixed_dimension_weights:
+  ecosystem: 0.10
+  compliance: 0.10
+
+sections:
+  - id: app
+    title: Application context
+    questions:
+      - id: app.tier
+        label: Business criticality
+        type: single_select
+        quick: true
+        why: Drives the default SLA, RPO, RTO and HA layout.
+        options:
+          - {value: tier_0, label: "Tier 0 – mission critical"}
+          - {value: tier_1, label: "Tier 1 – business critical"}
+          - {value: tier_2, label: "Tier 2 – important"}
+          - {value: tier_3, label: "Tier 3 – internal, low impact"}
+      - id: app.type
+        label: Application type
+        type: single_select
+        quick: true
+        why: Seeds workload defaults when traffic and size are unknown.
+        options:
+          - {value: web_api, label: Web / API}
+          - {value: batch, label: Batch}
+          - {value: analytics_bi, label: Analytics / BI}
+          - {value: event_iot, label: Event / IoT}
+          - {value: ml_ai, label: ML / AI}
+          - {value: internal_tool, label: Internal tool}
+      - id: app.env
+        label: Environments needed
+        type: multi_select
+        why: Each environment multiplies cost.
+        options:
+          - {value: prod, label: Prod}
+          - {value: dr, label: DR}
+          - {value: uat, label: UAT}
+          - {value: dev, label: Dev}
+      - id: app.lifecycle
+        label: Expected lifespan
+        type: single_select
+        why: Decides whether commitment discounts and refactoring pay off.
+        options:
+          - {value: lt_1y, label: Less than 1 year}
+          - {value: 1_3y, label: 1–3 years}
+          - {value: gt_3y, label: More than 3 years}
+      - id: app.existing_db
+        label: Current database (if any)
+        type: engine_version
+        why: Determines compatibility and the migration path.
+        options: *engine_options
+
+  - id: data
+    title: Data model
+    questions:
+      - id: data.shape
+        label: Primary data shape
+        type: multi_select
+        quick: true
+        why: First-pass filter on database families.
+        options:
+          - {value: relational, label: Relational}
+          - {value: document, label: Document / JSON}
+          - {value: key_value, label: Key-value}
+          - {value: wide_column, label: Wide-column}
+          - {value: graph, label: Graph}
+          - {value: time_series, label: Time-series}
+          - {value: vector, label: Vector embeddings}
+          - {value: full_text, label: Full-text search}
+      - id: data.joins
+        label: Join complexity
+        type: single_select
+        why: Complex joins favour relational engines over NoSQL.
+        options:
+          - {value: none, label: None}
+          - {value: simple, label: "Simple (1–2 tables)"}
+          - {value: complex, label: "Complex (3+ tables, reporting)"}
+      - id: data.schema_volatility
+        label: How often the schema changes
+        type: single_select
+        why: Constant change favours schemaless options.
+        options:
+          - {value: rarely, label: Rarely}
+          - {value: monthly, label: Monthly}
+          - {value: constantly, label: Constantly}
+      - id: data.proc_code
+        label: Stored procedure dependency (PL/SQL, T-SQL)
+        type: single_select
+        why: Heavy procedural code locks you to an engine and raises refactor cost.
+        options:
+          - {value: none, label: None}
+          - {value: light, label: Light}
+          - {value: heavy, label: Heavy}
+      - id: data.special_features
+        label: Engine-specific features in use
+        type: multi_select
+        why: Used for compatibility scoring against each target.
+        options:
+          - {value: db_links, label: DB links}
+          - {value: sequences, label: Sequences}
+          - {value: hierarchical_queries, label: Hierarchical queries}
+          - {value: materialized_views, label: Materialized views}
+          - {value: partitioning, label: Partitioning}
+          - {value: rac, label: RAC}
+          - {value: spatial, label: Spatial}
+
+  - id: wl
+    title: Workload
+    questions:
+      - id: wl.pattern
+        label: Workload pattern
+        type: single_select
+        quick: true
+        why: Chooses between row and column stores, or separating the two.
+        options:
+          - {value: oltp, label: OLTP}
+          - {value: olap, label: OLAP}
+          - {value: htap, label: HTAP (both)}
+          - {value: mixed_batch, label: Mixed with batch}
+      - id: wl.read_write_ratio
+        label: Read to write ratio
+        type: single_select
+        quick: true
+        why: Decides replicas, caching and whether writes must scale out.
+        options:
+          - {value: "90_10", label: "90:10"}
+          - {value: "70_30", label: "70:30"}
+          - {value: "50_50", label: "50:50"}
+          - {value: write_heavy, label: Write heavy}
+      - id: wl.peak_tps
+        label: Peak transactions or queries per second
+        type: number
+        quick: true
+        unit: TPS
+        min: 0
+        max: 10000000
+        why: Drives instance size and whether horizontal scaling is needed.
+      - id: wl.avg_tps
+        label: Average transactions or queries per second
+        type: number
+        unit: TPS
+        min: 0
+        max: 10000000
+        why: Compares serverless and provisioned economics.
+      - id: wl.burstiness
+        label: Traffic shape
+        type: single_select
+        why: Spiky traffic favours autoscaling or serverless.
+        options:
+          - {value: steady, label: Steady}
+          - {value: daily_peaks, label: Daily peaks}
+          - {value: spiky, label: Spiky / unpredictable}
+      - id: wl.latency_p99_ms
+        label: Target p99 read latency
+        type: single_select
+        quick: true
+        why: Sub-millisecond needs an in-memory cache; also sets the storage tier.
+        options:
+          - {value: lt_1ms, label: "< 1 ms"}
+          - {value: lt_10ms, label: "< 10 ms"}
+          - {value: lt_100ms, label: "< 100 ms"}
+          - {value: seconds_ok, label: Seconds OK}
+      - id: wl.query_types
+        label: Query types
+        type: multi_select
+        why: Adds secondary engines (search, vector, geospatial) to a combination.
+        options:
+          - {value: point_lookup, label: Point lookup}
+          - {value: range_scan, label: Range scan}
+          - {value: aggregation, label: Aggregation}
+          - {value: full_text, label: Full-text}
+          - {value: geospatial, label: Geospatial}
+          - {value: vector_similarity, label: Vector similarity}
+      - id: wl.connections
+        label: Max concurrent connections
+        type: number
+        integer: true
+        min: 0
+        max: 1000000
+        why: High counts need pooling or a proxy (RDS Proxy, PgBouncer).
+      - id: wl.batch_windows
+        label: Batch / ETL windows
+        type: single_select
+        why: Sets IO headroom and whether batch should hit a read replica.
+        options:
+          - {value: none, label: None}
+          - {value: nightly, label: Nightly}
+          - {value: continuous, label: Continuous}
+
+  - id: vol
+    title: Data volume
+    questions:
+      - id: vol.current_gb
+        label: Current data size
+        type: number
+        quick: true
+        unit: GB
+        min: 0
+        max: 100000000
+        why: Drives storage cost and migration time.
+      - id: vol.growth_gb_month
+        label: Growth per month
+        type: number
+        unit: GB / month
+        min: 0
+        max: 10000000
+        why: Used for the 3-year size projection and max storage limits.
+      - id: vol.retention_period
+        label: Retention requirement
+        type: single_select
+        why: Long retention calls for tiering, partitioning and lifecycle rules.
+        options:
+          - {value: lt_1y, label: Less than 1 year}
+          - {value: 1_3y, label: 1–3 years}
+          - {value: 3_7y, label: 3–7 years}
+          - {value: gt_7y, label: More than 7 years}
+      - id: vol.archive_allowed
+        label: Can old data move to an archive tier?
+        type: boolean
+        why: Allows cheaper storage for cold data.
+      - id: vol.item_size
+        label: Typical row / document size
+        type: single_select
+        why: Some NoSQL stores have item size limits; LOBs need special handling.
+        options:
+          - {value: lt_1kb, label: "< 1 KB"}
+          - {value: 1_100kb, label: 1–100 KB}
+          - {value: gt_100kb, label: "> 100 KB"}
+          - {value: lobs, label: LOBs}
+
+  - id: tx
+    title: Consistency and transactions
+    questions:
+      - id: tx.consistency
+        label: Consistency needed
+        type: single_select
+        quick: true
+        why: Strong consistency removes eventually consistent stores.
+        options:
+          - {value: strong, label: Strong}
+          - {value: read_your_writes, label: Read-your-writes}
+          - {value: eventual, label: Eventual OK}
+      - id: tx.acid_scope
+        label: ACID scope
+        type: single_select
+        why: Cross-region transactions need distributed SQL.
+        options:
+          - {value: single_row, label: Single row}
+          - {value: multi_row_single_table, label: "Multi-row, single table"}
+          - {value: multi_table, label: Multi-table}
+          - {value: cross_region, label: Cross-region}
+
+  - id: ha
+    title: Availability and DR
+    questions:
+      - id: ha.sla
+        label: Availability target
+        type: single_select
+        quick: true
+        why: Decides Multi-AZ, multi-region and which services are eligible.
+        options:
+          - {value: sla_99_5, label: "99.5%"}
+          - {value: sla_99_9, label: "99.9%"}
+          - {value: sla_99_95, label: "99.95%"}
+          - {value: sla_99_99, label: "99.99%"}
+          - {value: sla_99_999, label: "99.999%"}
+        tier_defaults: {tier_0: sla_99_99, tier_1: sla_99_95, tier_2: sla_99_9, tier_3: sla_99_5}
+      - id: ha.rpo
+        label: Max data loss (RPO)
+        type: single_select
+        why: Zero RPO needs synchronous replication.
+        options:
+          - {value: zero, label: Zero}
+          - {value: lt_1min, label: "< 1 min"}
+          - {value: lt_15min, label: "< 15 min"}
+          - {value: lt_24h, label: "< 24 h"}
+        tier_defaults: {tier_0: zero, tier_1: lt_1min, tier_2: lt_15min, tier_3: lt_24h}
+      - id: ha.rto
+        label: Max downtime to recover (RTO)
+        type: single_select
+        why: Short RTO needs automatic failover and a hot standby.
+        options:
+          - {value: lt_1min, label: "< 1 min"}
+          - {value: lt_15min, label: "< 15 min"}
+          - {value: lt_4h, label: "< 4 h"}
+          - {value: lt_24h, label: "< 24 h"}
+        tier_defaults: {tier_0: lt_1min, tier_1: lt_15min, tier_2: lt_4h, tier_3: lt_24h}
+      - id: ha.multi_region
+        label: Multi-region needs
+        type: single_select
+        why: Active-active needs a global database.
+        options:
+          - {value: none, label: None}
+          - {value: dr_active_passive, label: DR only (active-passive)}
+          - {value: active_active, label: Active-active}
+        tier_defaults: {tier_0: dr_active_passive, tier_1: dr_active_passive, tier_2: none, tier_3: none}
+      - id: ha.maintenance_tolerance
+        label: Planned downtime tolerance
+        type: single_select
+        why: Zero tolerance needs zero-downtime patching options.
+        options:
+          - {value: none, label: None}
+          - {value: monthly_window, label: Short monthly window}
+          - {value: flexible, label: Flexible}
+      - id: ha.backup_retention_days
+        label: Backup retention
+        type: number
+        integer: true
+        unit: days
+        min: 1
+        max: 3650
+        why: Sets the point-in-time recovery window and backup cost.
+        tier_defaults: {tier_0: 35, tier_1: 30, tier_2: 14, tier_3: 7}
+
+  - id: geo
+    title: Geography and users
+    questions:
+      - id: geo.user_regions
+        label: Where are your users?
+        type: multi_select
+        quick: true
+        why: Drives region choice, latency and read replica placement.
+        options:
+          - {value: india, label: India}
+          - {value: us, label: US}
+          - {value: eu, label: EU}
+          - {value: apac, label: APAC}
+          - {value: global, label: Global}
+      - id: geo.residency
+        label: Data residency constraints
+        type: single_select
+        why: Restricts which regions can be used.
+        options:
+          - {value: none, label: None}
+          - {value: india_dpdp, label: India (DPDP)}
+          - {value: eu_gdpr, label: EU (GDPR)}
+          - {value: us_only, label: US only}
+          - {value: custom, label: Custom}
+      - id: geo.app_location
+        label: Where does the app compute run?
+        type: single_select
+        why: Co-location, egress cost and hybrid connectivity.
+        options:
+          - {value: on_prem, label: On-prem DC}
+          - {value: aws, label: AWS}
+          - {value: gcp, label: GCP}
+          - {value: azure, label: Azure}
+          - {value: undecided, label: Undecided}
+
+  - id: sec
+    title: Security and compliance
+    questions:
+      - id: sec.compliance
+        label: Compliance regimes
+        type: multi_select
+        quick: true
+        why: Needs audit logging and encryption; some services are not eligible.
+        options:
+          - {value: sox, label: SOX}
+          - {value: pci_dss, label: PCI-DSS}
+          - {value: hipaa, label: HIPAA}
+          - {value: gdpr, label: GDPR}
+          - {value: dpdp, label: DPDP}
+          - {value: none, label: None, exclusive: true}
+      - id: sec.cmk
+        label: Customer-managed encryption keys
+        type: boolean
+        why: Needs KMS / Key Vault / Cloud KMS integration.
+      - id: sec.network
+        label: Network exposure
+        type: single_select
+        why: Private access needs PrivateLink / Private Endpoint / PSC support.
+        options:
+          - {value: private_only, label: Private only}
+          - {value: private_vpn, label: Private + VPN}
+          - {value: public_allowlist, label: Public with allowlist}
+      - id: sec.identity
+        label: Auth integration
+        type: multi_select
+        why: Checks native IAM / Entra ID authentication support.
+        options:
+          - {value: db_users, label: DB users}
+          - {value: entra_id, label: Entra ID}
+          - {value: iam, label: IAM}
+          - {value: ldap, label: LDAP}
+      - id: sec.audit
+        label: DB-level auditing needed
+        type: boolean
+        why: Audit feature availability and cost.
+        tier_defaults: {tier_0: true, tier_1: true, tier_2: false, tier_3: false}
+      - id: sec.masking_rls
+        label: Data masking / row-level security
+        type: boolean
+        why: Not every service offers these features.
+
+  - id: eco
+    title: Integration and ecosystem
+    questions:
+      - id: eco.languages
+        label: Languages / frameworks
+        type: multi_select
+        why: Driver and ORM support.
+        options:
+          - {value: python, label: Python}
+          - {value: java, label: Java}
+          - {value: dotnet, label: .NET}
+          - {value: node, label: Node}
+          - {value: go, label: Go}
+      - id: eco.cdc
+        label: Needs change data capture / streaming
+        type: boolean
+        why: Enables combination designs and logical replication.
+      - id: eco.cdc_target
+        label: CDC target
+        type: single_select
+        why: Where change events need to go.
+        options:
+          - {value: kafka, label: Kafka}
+          - {value: analytics_platform, label: Analytics platform}
+          - {value: other, label: Other}
+      - id: eco.analytics
+        label: Downstream analytics / BI
+        type: single_select
+        why: May add a warehouse to the combination.
+        options:
+          - {value: none, label: None}
+          - {value: bi_dashboards, label: BI dashboards}
+          - {value: data_lake_warehouse, label: Data lake / warehouse}
+      - id: eco.vector
+        label: Needs vector search for AI
+        type: boolean
+        why: Favours pgvector or vector-capable services.
+      - id: eco.licenses
+        label: Existing licenses
+        type: multi_select
+        why: Changes the cost model; Oracle BYOL opens the Oracle@CSP path.
+        options:
+          - {value: oracle_byol, label: Oracle BYOL}
+          - {value: sql_server_hybrid_benefit, label: SQL Server (Hybrid Benefit)}
+          - {value: none, label: None, exclusive: true}
+
+  - id: ops
+    title: Operations and team
+    questions:
+      - id: ops.skills
+        label: Team's strongest DB skills
+        type: multi_select
+        quick: true
+        why: Affects operational burden and learning curve.
+        options:
+          - {value: oracle, label: Oracle}
+          - {value: sql_server, label: SQL Server}
+          - {value: postgresql, label: PostgreSQL}
+          - {value: mysql, label: MySQL}
+          - {value: mongodb, label: MongoDB}
+          - {value: none, label: None, exclusive: true}
+      - id: ops.managed_pref
+        label: Management preference
+        type: single_select
+        why: IaaS vs PaaS vs serverless.
+        options:
+          - {value: fully_managed, label: Fully managed / serverless}
+          - {value: managed, label: Managed}
+          - {value: self_managed_ok, label: Self-managed on VMs OK}
+      - id: ops.dba_support
+        label: DBA support available
+        type: single_select
+        why: Complex self-managed options are penalised without DBA cover.
+        options:
+          - {value: 24x7, label: 24x7}
+          - {value: business_hours, label: Business hours}
+          - {value: none, label: None}
+      - id: ops.iac
+        label: IaC tool
+        type: single_select
+        why: Template format for exports.
+        options:
+          - {value: terraform, label: Terraform}
+          - {value: bicep, label: Bicep}
+          - {value: cloudformation, label: CloudFormation}
+          - {value: deployment_manager, label: Deployment Manager}
+          - {value: none, label: None}
+
+  - id: cost
+    title: Budget and commercial
+    questions:
+      - id: cost.monthly_cap
+        label: Monthly budget cap
+        type: money
+        quick: true
+        why: Options well above the cap are filtered out. Leave empty if unknown.
+      - id: cost.commitment
+        label: Willing to commit
+        type: single_select
+        why: Unlocks reserved / Savings Plans / CUD pricing.
+        options:
+          - {value: on_demand, label: On-demand only}
+          - {value: 1_year, label: 1 year}
+          - {value: 3_year, label: 3 years}
+      - id: cost.egress_sensitivity
+        label: Heavy data egress expected
+        type: boolean
+        why: Penalises cross-cloud and hybrid designs.
+
+  - id: hw
+    title: Hardware
+    description: Leave empty to derive from workload and size.
+    questions:
+      - id: hw.vcpu
+        label: Known vCPU need
+        type: number
+        integer: true
+        min: 1
+        max: 1024
+        unit: vCPU
+        why: Picks the instance family.
+      - id: hw.memory_gb
+        label: Known memory need
+        type: number
+        min: 1
+        max: 32768
+        unit: GB
+        why: Memory-optimised families when the working set is large.
+      - id: hw.iops
+        label: Required IOPS
+        type: number
+        integer: true
+        min: 0
+        max: 10000000
+        unit: IOPS
+        why: Picks the storage tier (gp3/io2, Premium SSD v2/Ultra, Hyperdisk/PD-SSD).
+      - id: hw.throughput_mbps
+        label: Required throughput
+        type: number
+        min: 0
+        max: 100000
+        unit: MB/s
+        why: Picks the storage tier.
+
+  - id: pref
+    title: Preferences and constraints
+    questions:
+      - id: pref.csp
+        label: Preferred cloud provider
+        type: single_select
+        quick: true
+        why: A soft boost, or a hard filter if mandated.
+        options:
+          - {value: aws, label: AWS}
+          - {value: gcp, label: GCP}
+          - {value: azure, label: Azure}
+          - {value: no_preference, label: No preference}
+      - id: pref.csp_mandated
+        label: Is the provider mandated by the organisation?
+        type: boolean
+        why: Turns the preference into a hard filter.
+      - id: pref.lock_in
+        label: Vendor lock-in tolerance
+        type: single_select
+        why: Low tolerance penalises proprietary services.
+        options:
+          - {value: low, label: Low}
+          - {value: medium, label: Medium}
+          - {value: high, label: High}
+      - id: pref.open_source
+        label: Prefer open-source engines
+        type: boolean
+        why: Score boost for open engines.
+      - id: pref.excluded
+        label: Services to exclude
+        type: list
+        why: Hard filter.
+
+  - id: mig
+    title: Migration
+    description: Only when moving an existing database.
+    migration_only: true
+    questions:
+      - id: mig.source_platform
+        label: Source platform
+        type: single_select
+        why: Selects the tool matrix.
+        options:
+          - {value: on_prem, label: On-prem}
+          - {value: aws, label: AWS}
+          - {value: gcp, label: GCP}
+          - {value: azure, label: Azure}
+      - id: mig.source_engine
+        label: Source engine and version
+        type: engine_version
+        why: Homogeneous vs heterogeneous migration.
+        options: *engine_options
+      - id: mig.size_gb
+        label: Database size
+        type: number
+        unit: GB
+        min: 0
+        max: 100000000
+        why: Transfer time and method.
+      - id: mig.change_rate_gb_day
+        label: Redo / WAL / change volume per day
+        type: number
+        unit: GB / day
+        min: 0
+        max: 1000000
+        why: CDC sizing.
+      - id: mig.downtime_minutes
+        label: Allowed cutover downtime
+        type: number
+        integer: true
+        unit: minutes
+        min: 0
+        max: 100000
+        why: Offline vs online method.
+      - id: mig.bandwidth_mbps
+        label: Network bandwidth to target
+        type: number
+        unit: Mbps
+        min: 0
+        max: 1000000
+        why: Transfer time; decides whether an offline appliance is needed.
+      - id: mig.dependencies
+        label: Dependencies (DB links, external apps, ETL jobs, schedulers)
+        type: list
+        why: Wave grouping and cutover order.
+      - id: mig.charset
+        label: Character set
+        type: text
+        placeholder: e.g. AL32UTF8
+        why: Non-UTF8 sources carry conversion risk.
+      - id: mig.target_choice
+        label: Target known?
+        type: single_select
+        why: Use the recommendation or plan for a specific target.
+        options:
+          - {value: use_recommendation, label: Use recommendation}
+          - {value: specify, label: Specify target}

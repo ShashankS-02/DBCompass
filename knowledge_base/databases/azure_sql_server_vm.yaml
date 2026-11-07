@@ -1,0 +1,82 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: azure.sql_server_vm
+csp: azure
+name: SQL Server on Azure Virtual Machines
+family: relational
+secondary_families: []
+engines:
+- sql_server
+deployment: iaas
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: false
+read_replicas_max: 8
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: 99.9
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: advanced
+  vector: false
+  geospatial: true
+  graph: false
+  stored_procedures: tsql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: true
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: high
+tps_per_vcpu: 600
+pricing_ref:
+  provider_api: azure_retail
+  service_code: Virtual Machines
+  filters:
+    productName: SQL Server
+instance_families:
+- Ebdsv5
+- Edsv5
+- Mv2
+storage_options:
+- premium_ssd_v2
+- ultra_disk
+regions:
+- centralindia
+- southindia
+- westeurope
+- northeurope
+- germanywestcentral
+- eastus
+- westus2
+- southeastasia
+- japaneast
+good_for:
+- sql_server_rehost
+- full_control
+avoid_when:
+- no_dba_support
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://learn.microsoft.com/en-us/azure/azure-sql/virtual-machines/
+verification:
+  verified_fields: []
+  sources: []
+  notes:
+  - Entire entry is draft (not covered by fetched pages).

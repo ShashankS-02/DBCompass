@@ -1,0 +1,94 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: gcp.compute_engine_self_managed
+csp: gcp
+name: Self-managed database on Compute Engine + Hyperdisk
+family: relational
+secondary_families:
+- document
+- key_value
+- wide_column
+- time_series
+engines:
+- oracle
+- sql_server
+- postgresql
+- mysql
+- mariadb
+- db2
+- mongodb
+- cassandra
+deployment: iaas
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: false
+read_replicas_max: 15
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: 99.9
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: other
+  cdc: true
+  iam_auth: false
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: true
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: low
+ops_complexity: high
+tps_per_vcpu: 700
+pricing_ref:
+  provider_api: gcp_catalog
+  service_code: Compute Engine
+instance_families:
+- n2
+- n4
+- c4
+- m3
+storage_options:
+- hyperdisk_balanced
+- hyperdisk_extreme
+- pd_ssd
+regions:
+- asia-south1
+- asia-south2
+- europe-west1
+- europe-west3
+- europe-west4
+- us-central1
+- us-east1
+- asia-southeast1
+- asia-northeast1
+good_for:
+- unsupported_features
+- full_control
+- rehost
+avoid_when:
+- no_dba_support
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://cloud.google.com/compute
+verification:
+  verified_fields: []
+  sources: []
+  notes:
+  - Entire entry is draft.

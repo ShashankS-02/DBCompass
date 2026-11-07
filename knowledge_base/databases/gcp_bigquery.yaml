@@ -1,0 +1,78 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: gcp.bigquery
+csp: gcp
+name: BigQuery
+family: analytics
+secondary_families:
+- vector
+engines:
+- proprietary
+deployment: serverless
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: true
+read_replicas_max: 0
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: null
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: null
+latency_class: seconds
+supports:
+  json_documents: true
+  full_text: basic
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: other
+  cdc: false
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: true
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: low
+tps_per_vcpu: null
+pricing_ref:
+  provider_api: gcp_catalog
+  service_code: BigQuery
+instance_families: []
+storage_options: []
+regions:
+- asia-south1
+- asia-south2
+- europe-west1
+- europe-west3
+- europe-west4
+- us-central1
+- us-east1
+- asia-southeast1
+- asia-northeast1
+good_for:
+- data_warehouse
+- bi_dashboards
+avoid_when:
+- oltp
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://cloud.google.com/bigquery
+verification:
+  verified_fields:
+  - sla_by_topology
+  sources:
+  - https://cloud.google.com/bigquery/sla
+  notes:
+  - 99.99% except Standard edition (99.9%).

@@ -1,0 +1,73 @@
+# Sizing constants for the doc 02 derivation formulas, plus workload defaults per app type
+# (OPEN_QUESTIONS #7). These are heuristics for the DBA team to tune, not vendor facts.
+version: 1
+last_verified: 2026-11-07
+source: "DBCompass heuristics (docs/02_REQUIREMENTS_CATALOG.md, derivation rules); pending DBA tuning"
+
+projection_months: 36   # vol.projected_3y_gb = current + growth * projection_months
+
+iops:                   # hw.iops ≈ peak_tps × (reads_per_txn × cache_miss_ratio + writes_per_txn × write_amplification)
+  reads_per_txn: 4
+  writes_per_txn: 2
+  cache_miss_ratio: 0.2
+  write_amplification: 3
+
+memory:                 # hw.memory_gb ≈ current_gb × working_set_fraction × memory_multiplier
+  working_set_fraction: 0.2
+  memory_multiplier: 1.3
+
+compute:                # hw.vcpu ≈ ceil(peak_tps / tps_per_vcpu), then headroom when picking instances
+  default_tps_per_vcpu: 500   # used when a service entry has no tps_per_vcpu
+  headroom_fraction: 0.3
+
+# Applied after tier defaults, only to fields still empty; each one is marked as assumed.
+# Values must be valid answers for questions.yaml.
+app_type_defaults:
+  web_api:
+    wl.pattern: oltp
+    wl.read_write_ratio: "70_30"
+    wl.peak_tps: 500
+    wl.latency_p99_ms: lt_10ms
+    vol.current_gb: 100
+    data.shape: [relational]
+    tx.consistency: strong
+  batch:
+    wl.pattern: mixed_batch
+    wl.read_write_ratio: "50_50"
+    wl.peak_tps: 200
+    wl.latency_p99_ms: seconds_ok
+    vol.current_gb: 500
+    data.shape: [relational]
+    tx.consistency: strong
+  analytics_bi:
+    wl.pattern: olap
+    wl.read_write_ratio: "90_10"
+    wl.peak_tps: 50
+    wl.latency_p99_ms: seconds_ok
+    vol.current_gb: 2000
+    data.shape: [relational]
+    tx.consistency: eventual
+  event_iot:
+    wl.pattern: oltp
+    wl.read_write_ratio: write_heavy
+    wl.peak_tps: 10000
+    wl.latency_p99_ms: lt_100ms
+    vol.current_gb: 1000
+    data.shape: [time_series]
+    tx.consistency: eventual
+  ml_ai:
+    wl.pattern: mixed_batch
+    wl.read_write_ratio: "70_30"
+    wl.peak_tps: 300
+    wl.latency_p99_ms: lt_100ms
+    vol.current_gb: 500
+    data.shape: [document, vector]
+    tx.consistency: read_your_writes
+  internal_tool:
+    wl.pattern: oltp
+    wl.read_write_ratio: "70_30"
+    wl.peak_tps: 20
+    wl.latency_p99_ms: lt_100ms
+    vol.current_gb: 20
+    data.shape: [relational]
+    tx.consistency: strong

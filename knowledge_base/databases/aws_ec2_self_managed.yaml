@@ -1,0 +1,96 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: aws.ec2_self_managed
+csp: aws
+name: Self-managed database on Amazon EC2 + EBS
+family: relational
+secondary_families:
+- document
+- key_value
+- wide_column
+- time_series
+engines:
+- oracle
+- sql_server
+- postgresql
+- mysql
+- mariadb
+- db2
+- mongodb
+- cassandra
+deployment: iaas
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: false
+read_replicas_max: 15
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: 99.5
+  multi_az: 99.99
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: true
+  geospatial: true
+  graph: false
+  stored_procedures: other
+  cdc: true
+  iam_auth: false
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: true
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: low
+ops_complexity: high
+tps_per_vcpu: 700
+pricing_ref:
+  provider_api: aws_pricelist
+  service_code: AmazonEC2
+instance_families:
+- r7i
+- r7g
+- m7i
+- x2iedn
+storage_options:
+- gp3
+- io2_block_express
+regions:
+- ap-south-1
+- ap-south-2
+- eu-west-1
+- eu-west-2
+- eu-central-1
+- us-east-1
+- us-east-2
+- us-west-2
+- ap-southeast-1
+- ap-northeast-1
+good_for:
+- unsupported_features
+- full_control
+- rehost
+avoid_when:
+- no_dba_support
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://aws.amazon.com/ec2/
+verification:
+  verified_fields: []
+  sources:
+  - https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
+  notes:
+  - 'EBS: gp3 and io2 Block Express up to 64 TiB per volume; io2 BX up to 256,000 IOPS, gp3 up to 80,000 IOPS.'
+  - EC2 SLA values are draft (instance 99.5%, multi-AZ region 99.99%).

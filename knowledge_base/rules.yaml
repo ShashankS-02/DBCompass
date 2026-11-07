@@ -1,0 +1,474 @@
+# Declarative recommendation rules. Grammar: docs/04_KNOWLEDGE_BASE.md, "rules.yaml".
+#
+# when:    list of conditions on requirement fields (AND). Empty list = always fires.
+#          A field with no value (neither answered nor assumed) never matches.
+#          Ops: eq, ne, in, not_in, contains, not_contains, contains_any, gte, lte, gt, lt, is_set.
+# effects: exclude_where | boost | penalise | require_component | add_guidance | region_filter.
+#          Service predicates use dotted paths into a service entry (e.g. supports.vector) and
+#          compare with a literal `value` or with a requirement field via `value_from`.
+#          Predicates in one list are ANDed. A null service value never matches a comparison.
+# Derived requirement fields (computed by engine/defaults.py, never asked):
+#   vol.projected_3y_gb      = vol.current_gb + vol.growth_gb_month * 36
+#   ha.sla_percent           = numeric form of ha.sla (sla_99_95 -> 99.95)
+#   mig.source_engine_family = engine of mig.source_engine, else app.existing_db
+# Derived service fields: best_sla_percent (highest value in sla_by_topology).
+
+version: 1
+last_verified: 2026-11-07
+
+# data.shape option -> families that can be the primary store for that shape.
+# A service qualifies through its family or any of its secondary_families.
+family_compatibility:
+  relational: [relational, distributed_sql]
+  document: [document]
+  key_value: [key_value, in_memory, wide_column, document]
+  wide_column: [wide_column]
+  graph: [graph]
+  time_series: [time_series, wide_column]
+  vector: [vector, search]
+  full_text: [search]
+
+rules:
+  # ---------- hard filters ----------
+  - id: R-LIFE-001
+    when: []
+    effects:
+      exclude_where:
+        - {field: lifecycle, op: in, value: [not_for_new_projects, retiring]}
+    message: "Service is retiring or no longer recommended for new projects by its provider."
+
+  - id: R-CONS-001
+    when:
+      - {field: tx.consistency, op: eq, value: strong}
+    effects:
+      exclude_where:
+        - {field: consistency, op: not_contains, value: strong}
+    message: "Strong consistency required; eventually consistent-only stores removed."
+
+  - id: R-CONS-002
+    when:
+      - {field: tx.consistency, op: eq, value: read_your_writes}
+    effects:
+      exclude_where:
+        - {field: consistency, op: not_contains, value: strong}
+        - {field: consistency, op: not_contains, value: read_your_writes}
+    message: "Read-your-writes required; stores offering only eventual consistency removed."
+
+  - id: R-ACID-001
+    when:
+      - {field: tx.acid_scope, op: eq, value: cross_region}
+    effects:
+      exclude_where:
+        - {field: family, op: ne, value: distributed_sql}
+    message: "Cross-region ACID transactions need a distributed SQL database."
+
+  - id: R-SLA-001
+    when:
+      - {field: ha.sla_percent, op: gt, value: 0}
+    effects:
+      exclude_where:
+        - {field: best_sla_percent, op: lt, value_from: ha.sla_percent}
+    message: "No published SLA for any topology of this service meets the availability target."
+
+  - id: R-RPO-001
+    when:
+      - {field: ha.rpo, op: eq, value: zero}
+    effects:
+      exclude_where:
+        - {field: rpo_capability_seconds, op: gt, value: 0}
+    message: "Zero data loss needs synchronous replication within the region."
+
+  - id: R-HA-001
+    when:
+      - {field: ha.multi_region, op: eq, value: active_active}
+    effects:
+      exclude_where:
+        - {field: multi_region, op: ne, value: active_active}
+    message: "Active-active across regions needs a service with multi-region writes."
+
+  - id: R-HA-002
+    when:
+      - {field: ha.multi_region, op: eq, value: dr_active_passive}
+    effects:
+      exclude_where:
+        - {field: multi_region, op: eq, value: none}
+    message: "Cross-region DR needs a service that can replicate to another region."
+
+  - id: R-RES-IN-001
+    when:
+      - {field: geo.residency, op: eq, value: india_dpdp}
+    effects:
+      region_filter: {geo: india}
+    message: "India residency: only services available in Indian regions considered."
+
+  - id: R-RES-EU-001
+    when:
+      - {field: geo.residency, op: eq, value: eu_gdpr}
+    effects:
+      region_filter: {geo: eu}
+    message: "EU residency: only services available in EU regions considered."
+
+  - id: R-RES-US-001
+    when:
+      - {field: geo.residency, op: eq, value: us_only}
+    effects:
+      region_filter: {geo: us}
+    message: "US-only residency: only services available in US regions considered."
+
+  - id: R-COMP-001
+    when:
+      - {field: sec.compliance, op: not_contains, value: none}
+    effects:
+      exclude_where:
+        - {field: compliance, op: missing_any_of, value_from: sec.compliance}
+    message: "Service is not listed as eligible for every required compliance regime."
+
+  - id: R-VOL-001
+    when:
+      - {field: vol.projected_3y_gb, op: gt, value: 0}
+    effects:
+      exclude_where:
+        - {field: max_storage_gb, op: lt, value_from: vol.projected_3y_gb}
+    message: "Maximum storage is below the 3-year projected data size."
+
+  - id: R-CSP-001
+    when:
+      - {field: pref.csp_mandated, op: eq, value: true}
+      - {field: pref.csp, op: in, value: [aws, gcp, azure]}
+    effects:
+      exclude_where:
+        - {field: csp, op: ne, value_from: pref.csp}
+    message: "Cloud provider is mandated by the organisation."
+
+  - id: R-EXCL-001
+    when:
+      - {field: pref.excluded, op: is_set}
+    effects:
+      exclude_where:
+        - {field: id, op: in, value_from: pref.excluded}
+    message: "Excluded by the user."
+
+  - id: R-CMK-001
+    when:
+      - {field: sec.cmk, op: eq, value: true}
+    effects:
+      exclude_where:
+        - {field: supports.cmk_encryption, op: eq, value: false}
+    message: "Customer-managed keys required."
+
+  - id: R-NET-001
+    when:
+      - {field: sec.network, op: in, value: [private_only, private_vpn]}
+    effects:
+      exclude_where:
+        - {field: supports.private_endpoint, op: eq, value: false}
+    message: "Private-only access needs PrivateLink / Private Endpoint / Private Service Connect."
+
+  # ---------- boosts and penalties ----------
+  - id: R-CSP-002
+    when:
+      - {field: pref.csp, op: in, value: [aws, gcp, azure]}
+    effects:
+      boost:
+        where:
+          - {field: csp, op: eq, value_from: pref.csp}
+        by: 5
+    message: "Preferred cloud provider."
+
+  - id: R-PLSQL-001
+    when:
+      - {field: data.proc_code, op: eq, value: heavy}
+      - {field: mig.source_engine_family, op: eq, value: oracle}
+    effects:
+      boost:
+        where:
+          - {field: engines, op: contains, value: oracle}
+        by: 15
+      penalise:
+        where:
+          - {field: engines, op: not_contains, value: oracle}
+        by: 20
+    message: "Heavy PL/SQL: Oracle-compatible targets avoid a large refactor."
+
+  - id: R-TSQL-001
+    when:
+      - {field: data.proc_code, op: eq, value: heavy}
+      - {field: mig.source_engine_family, op: eq, value: sql_server}
+    effects:
+      boost:
+        where:
+          - {field: engines, op: contains, value: sql_server}
+        by: 15
+      penalise:
+        where:
+          - {field: engines, op: not_contains, value: sql_server}
+        by: 20
+    message: "Heavy T-SQL: SQL Server targets avoid a large refactor."
+
+  - id: R-LOCK-001
+    when:
+      - {field: pref.lock_in, op: eq, value: low}
+    effects:
+      penalise:
+        where:
+          - {field: proprietary_lock_in, op: eq, value: high}
+        by: 15
+    message: "Low lock-in tolerance: proprietary services penalised."
+
+  - id: R-OSS-001
+    when:
+      - {field: pref.open_source, op: eq, value: true}
+    effects:
+      boost:
+        where:
+          - {field: engines, op: contains_any, value: [postgresql, mysql, mariadb, cassandra, valkey]}
+        by: 8
+    message: "Open-source engine preferred."
+
+  - id: R-MGD-001
+    when:
+      - {field: ops.managed_pref, op: eq, value: fully_managed}
+    effects:
+      penalise:
+        where:
+          - {field: deployment, op: eq, value: iaas}
+        by: 25
+    message: "Fully managed preferred: self-managed options penalised."
+
+  - id: R-DBA-001
+    when:
+      - {field: ops.dba_support, op: eq, value: none}
+    effects:
+      penalise:
+        where:
+          - {field: ops_complexity, op: eq, value: high}
+        by: 20
+    message: "No DBA support: operationally complex options penalised."
+
+  - id: R-SKILL-001
+    when:
+      - {field: ops.skills, op: not_contains, value: none}
+    effects:
+      boost:
+        where:
+          - {field: engines, op: contains_any, value_from: ops.skills}
+        by: 10
+    message: "Matches the team's existing database skills."
+
+  - id: R-SCHEMA-001
+    when:
+      - {field: data.schema_volatility, op: eq, value: constantly}
+    effects:
+      boost:
+        where:
+          - {field: family, op: eq, value: document}
+        by: 10
+    message: "Constantly changing schema favours a document store."
+
+  - id: R-JOIN-001
+    when:
+      - {field: data.joins, op: eq, value: complex}
+    effects:
+      penalise:
+        where:
+          - {field: family, op: in, value: [key_value, wide_column, document, time_series, in_memory]}
+        by: 20
+    message: "Complex joins and reporting favour relational engines."
+
+  - id: R-ITEM-001
+    when:
+      - {field: vol.item_size, op: in, value: [gt_100kb, lobs]}
+    effects:
+      penalise:
+        where:
+          - {field: family, op: in, value: [key_value, wide_column, in_memory]}
+        by: 15
+    message: "Large items or LOBs strain key-value and wide-column item limits."
+
+  - id: R-WRITE-001
+    when:
+      - {field: wl.read_write_ratio, op: eq, value: write_heavy}
+      - {field: wl.peak_tps, op: gte, value: 20000}
+    effects:
+      boost:
+        where:
+          - {field: horizontal_write_scaling, op: eq, value: true}
+        by: 15
+    message: "Write-heavy at high TPS: services that scale writes horizontally preferred."
+
+  - id: R-BURST-001
+    when:
+      - {field: wl.burstiness, op: eq, value: spiky}
+    effects:
+      boost:
+        where:
+          - {field: deployment, op: eq, value: serverless}
+        by: 10
+    message: "Spiky traffic favours serverless capacity."
+
+  - id: R-LIC-001
+    when:
+      - {field: eco.licenses, op: contains, value: oracle_byol}
+    effects:
+      boost:
+        where:
+          - {field: engines, op: contains, value: oracle}
+        by: 10
+    message: "Existing Oracle licenses can be brought to Oracle-on-cloud targets (BYOL)."
+
+  - id: R-LIC-002
+    when:
+      - {field: eco.licenses, op: contains, value: sql_server_hybrid_benefit}
+    effects:
+      boost:
+        where:
+          - {field: csp, op: eq, value: azure}
+          - {field: engines, op: contains, value: sql_server}
+        by: 10
+    message: "SQL Server licenses with Azure Hybrid Benefit lower Azure SQL cost."
+
+  - id: R-EGR-001
+    when:
+      - {field: cost.egress_sensitivity, op: eq, value: true}
+      - {field: geo.app_location, op: in, value: [aws, gcp, azure]}
+    effects:
+      penalise:
+        where:
+          - {field: csp, op: ne, value_from: geo.app_location}
+        by: 15
+    message: "Heavy egress: databases on a different cloud from the app are penalised."
+
+  - id: R-AUD-001
+    when:
+      - {field: sec.audit, op: eq, value: true}
+    effects:
+      penalise:
+        where:
+          - {field: supports.audit, op: eq, value: false}
+        by: 15
+    message: "Database-level auditing needed."
+
+  - id: R-RLS-001
+    when:
+      - {field: sec.masking_rls, op: eq, value: true}
+    effects:
+      penalise:
+        where:
+          - {field: supports.masking_rls, op: eq, value: false}
+        by: 10
+    message: "Data masking / row-level security needed."
+
+  - id: R-GRAPH-001
+    when:
+      - {field: data.shape, op: contains, value: graph}
+    effects:
+      boost:
+        where:
+          - {field: supports.graph, op: eq, value: true}
+        by: 15
+    message: "Graph data shape: native graph support preferred."
+
+  - id: R-GEO-001
+    when:
+      - {field: geo.user_regions, op: contains, value: global}
+    effects:
+      boost:
+        where:
+          - {field: multi_region, op: eq, value: active_active}
+        by: 10
+    message: "Global users: multi-region active-active services preferred."
+
+  - id: R-OLAP-001
+    when:
+      - {field: wl.pattern, op: eq, value: olap}
+    effects:
+      boost:
+        where:
+          - {field: family, op: eq, value: analytics}
+        by: 20
+      penalise:
+        where:
+          - {field: family, op: in, value: [key_value, document, in_memory]}
+        by: 20
+    message: "OLAP workload favours a columnar analytics store."
+
+  # ---------- extra components ----------
+  - id: R-LAT-001
+    when:
+      - {field: wl.latency_p99_ms, op: eq, value: lt_1ms}
+    effects:
+      require_component:
+        role: cache
+        family: in_memory
+        satisfied_by_primary:
+          - {field: latency_class, op: eq, value: sub_ms}
+    message: "Sub-millisecond reads need an in-memory cache in front of the primary store."
+
+  - id: R-FTS-001
+    when:
+      - {field: wl.query_types, op: contains, value: full_text}
+    effects:
+      require_component:
+        role: search
+        family: search
+        satisfied_by_primary:
+          - {field: supports.full_text, op: eq, value: advanced}
+    message: "Full-text queries need a search engine unless the primary has advanced full-text search."
+
+  - id: R-VEC-001
+    when:
+      - {field: eco.vector, op: eq, value: true}
+    effects:
+      require_component:
+        role: vector
+        family: vector
+        satisfied_by_primary:
+          - {field: supports.vector, op: eq, value: true}
+    message: "Vector search needed; add a vector-capable store if the primary lacks it."
+
+  - id: R-ANA-001
+    when:
+      - {field: eco.analytics, op: eq, value: data_lake_warehouse}
+    effects:
+      require_component:
+        role: analytics
+        family: analytics
+    message: "Downstream warehouse: add an analytics store fed by CDC."
+
+  - id: R-HTAP-001
+    when:
+      - {field: wl.pattern, op: eq, value: htap}
+    effects:
+      require_component:
+        role: analytics
+        family: analytics
+        satisfied_by_primary:
+          - {field: secondary_families, op: contains, value: analytics}
+    message: "HTAP: separate analytics unless the primary handles analytical queries."
+
+  - id: R-TS-001
+    when:
+      - {field: data.shape, op: contains, value: time_series}
+      - {field: wl.peak_tps, op: gte, value: 5000}
+    effects:
+      require_component:
+        role: time_series
+        family: time_series
+        satisfied_by_primary:
+          - {field: family, op: in, value: [time_series, wide_column]}
+    message: "High-ingest time-series data needs a time-series store."
+
+  # ---------- guidance ----------
+  - id: R-POOL-001
+    when:
+      - {field: wl.connections, op: gte, value: 1000}
+    effects:
+      add_guidance: "Use connection pooling (RDS Proxy, PgBouncer or the service's built-in pooler) to protect the database from connection storms."
+    message: "High connection count."
+
+  - id: R-BATCH-001
+    when:
+      - {field: wl.batch_windows, op: in, value: [nightly, continuous]}
+    effects:
+      add_guidance: "Run batch / ETL reads against a read replica so they do not compete with OLTP traffic."
+    message: "Batch windows present."

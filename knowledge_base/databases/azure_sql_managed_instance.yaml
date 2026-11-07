@@ -1,0 +1,86 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: azure.sql_managed_instance
+csp: azure
+name: Azure SQL Managed Instance
+family: relational
+secondary_families: []
+engines:
+- sql_server
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: 32000
+horizontal_write_scaling: false
+read_replicas_max: 1
+multi_az: true
+multi_region: active_passive
+sla_by_topology:
+  single_az: 99.99
+  multi_az: 99.995
+  multi_region: null
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: basic
+  vector: false
+  geospatial: true
+  graph: false
+  stored_procedures: tsql
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: true
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: medium
+tps_per_vcpu: 600
+pricing_ref:
+  provider_api: azure_retail
+  service_code: SQL Managed Instance
+instance_families:
+- general_purpose
+- next_gen_general_purpose
+- business_critical
+storage_options: []
+regions:
+- centralindia
+- southindia
+- westeurope
+- northeurope
+- germanywestcentral
+- eastus
+- westus2
+- southeastasia
+- japaneast
+good_for:
+- sql_server_replatform
+- sql_agent_dependency
+- cross_db_queries
+avoid_when: []
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://learn.microsoft.com/en-us/azure/azure-sql/managed-instance/
+verification:
+  verified_fields:
+  - sla_by_topology
+  - max_storage_gb
+  - read_replicas_max
+  sources:
+  - https://www.microsoft.com/licensing/docs/view/Service-Level-Agreements-SLA-for-Online-Services
+  - https://learn.microsoft.com/en-us/azure/azure-sql/managed-instance/resource-limits
+  notes:
+  - SLA % from Microsoft consolidated Online Services SLA (November 2026 edition).
+  - Zone-redundant 99.995%; not zone-redundant 99.99% (GP and BC).
+  - Storage up to 32 TB (Next-gen GP); BC up to 16 TB.
+  - 'BC: 1 read replica (3 with failover groups).'

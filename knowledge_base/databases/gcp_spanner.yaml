@@ -1,0 +1,88 @@
+# Draft KB entry. verification.verified_fields lists what was checked against official pages
+# on last_verified; everything else awaits DBA review (review_status: draft).
+id: gcp.spanner
+csp: gcp
+name: Spanner
+family: distributed_sql
+secondary_families:
+- relational
+- graph
+- vector
+engines:
+- postgresql
+- proprietary
+deployment: managed
+lifecycle: active
+status_note: null
+consistency:
+- strong
+max_storage_gb: null
+horizontal_write_scaling: true
+read_replicas_max: 0
+multi_az: true
+multi_region: active_active
+sla_by_topology:
+  single_az: null
+  multi_az: 99.99
+  multi_region: 99.999
+rpo_capability_seconds: 0
+latency_class: low_ms
+supports:
+  json_documents: true
+  full_text: advanced
+  vector: true
+  geospatial: false
+  graph: true
+  stored_procedures: none
+  cdc: true
+  iam_auth: true
+  cmk_encryption: true
+  private_endpoint: true
+  audit: true
+  masking_rls: false
+compliance:
+- sox
+- pci_dss
+- hipaa
+- gdpr
+- dpdp
+proprietary_lock_in: high
+ops_complexity: low
+tps_per_vcpu: null
+pricing_ref:
+  provider_api: gcp_catalog
+  service_code: Cloud Spanner
+instance_families: []
+storage_options: []
+regions:
+- asia-south1
+- asia-south2
+- europe-west1
+- europe-west3
+- europe-west4
+- us-central1
+- us-east1
+- asia-southeast1
+- asia-northeast1
+good_for:
+- global_active_active_oltp
+- high_write_oltp
+avoid_when:
+- small_budget
+- heavy_stored_procedures
+review_status: draft
+last_verified: '2026-11-07'
+source_url: https://cloud.google.com/spanner
+verification:
+  verified_fields:
+  - sla_by_topology
+  - max_storage_gb
+  - supports.graph
+  sources:
+  - https://cloud.google.com/spanner/sla
+  - https://docs.cloud.google.com/spanner/quotas
+  - https://docs.cloud.google.com/spanner/docs/graph/overview
+  notes:
+  - Regional 99.99%, dual/multi-region 99.999%.
+  - Storage 10 TiB per node; scales with nodes.
+  - Spanner Graph needs Enterprise or Enterprise Plus edition.
