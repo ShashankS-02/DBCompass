@@ -22,10 +22,12 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-dbcompass}:${POSTGRES_PASSWORD:-change-me-locally}@postgres:5432/${POSTGRES_DB:-dbcompass}
       DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS:-true}
       CORS_ORIGINS: http://localhost:5173
+      SAMPLE_REPOS_DIR: /sample_repos
     ports:
       - "8000:8000"
     volumes:
       - ./knowledge_base:/knowledge_base   # writable: POST /api/pricing/refresh/azure saves snapshots
+      - ./sample_repos:/sample_repos:ro     # demo repos for POST /api/repo/analyze (sample:<name>)
     depends_on:
       postgres:
         condition: service_healthy

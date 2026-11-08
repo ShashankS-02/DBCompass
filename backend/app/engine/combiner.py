@@ -32,7 +32,8 @@ class Combination:
     components: list[tuple[ComponentNeed, ServiceEntry]] = field(default_factory=list)
     covered_by_primary: list[ComponentNeed] = field(default_factory=list)
     uncovered: list[ComponentNeed] = field(default_factory=list)
-    score: float = 0.0
+    score: float = 0.0  # clipped 0-100 for display
+    rank_score: float = 0.0  # unclipped, used for ranking
 
 
 def component_needs(rules: list[Rule]) -> list[ComponentNeed]:
@@ -68,7 +69,7 @@ def best_component(
         families = {service.family, *service.secondary_families}
         if service.csp != primary.csp or service.id == primary.id or need.requirement.family not in families:
             continue
-        sort_key = (-candidate_scores[service.id].total_score, service.id)
+        sort_key = (-candidate_scores[service.id].rank_score, service.id)
         if best_key is None or sort_key < best_key:
             best_service, best_key = service, sort_key
     return best_service
@@ -96,10 +97,11 @@ def build_combination(
         else:
             combination.components.append((need, component))
 
-    score = primary_score.total_score
+    score = primary_score.rank_score
     score -= config.component_penalty * len(combination.components)
     score -= config.missing_component_penalty * len(combination.uncovered)
     if needs and not combination.components and not combination.uncovered:
         score += config.simplicity_bonus
+    combination.rank_score = round(score, 2)
     combination.score = round(min(MAX_SCORE, max(0.0, score)), 2)
     return combination

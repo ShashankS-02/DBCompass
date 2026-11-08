@@ -1,4 +1,4 @@
-"""App database tables. More tables (repo_scans, migration_plans, feedback) arrive with their milestones."""
+"""App database tables. More tables (migration_plans, feedback) arrive with their milestones."""
 
 from datetime import datetime, timezone
 
@@ -32,5 +32,19 @@ class AssessmentRow(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     input_json: Mapped[dict] = mapped_column(JSON)
     result_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class RepoScanRow(Base):
+    """A repo analysis, cached by repository URL, commit SHA and analyzer version."""
+
+    __tablename__ = "repo_scans"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    repo_url: Mapped[str] = mapped_column(String(500), index=True)
+    commit_sha: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    analyzer_version: Mapped[str] = mapped_column(String(20))
+    result_json: Mapped[dict] = mapped_column(JSON)
     created_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

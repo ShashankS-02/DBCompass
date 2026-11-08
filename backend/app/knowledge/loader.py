@@ -19,6 +19,7 @@ from app.models.knowledge import (
     SizingConstants,
 )
 from app.models.pricing import PricingConfig
+from app.models.repo import AnalyzerConfig
 from app.pricing.price_cache import PriceIndex, read_snapshots
 from app.models.questions import QuestionCatalog
 
@@ -31,6 +32,7 @@ SIZING_FILE = "sizing.yaml"
 SCORING_FILE = "scoring.yaml"
 HARDWARE_FILE = "hardware_profiles.yaml"
 PRICING_FILE = "pricing.yaml"
+ANALYZER_FILE = "analyzer.yaml"
 SERVICES_DIR = "databases"
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
@@ -131,6 +133,12 @@ def get_hardware_profiles() -> HardwareProfiles:
 def get_pricing_config() -> PricingConfig:
     """Return the cached pricing configuration."""
     return load_model(knowledge_base_dir() / PRICING_FILE, PricingConfig)
+
+
+@lru_cache
+def get_analyzer_config() -> AnalyzerConfig:
+    """Return the cached repo analyzer patterns."""
+    return load_model(knowledge_base_dir() / ANALYZER_FILE, AnalyzerConfig)
 
 
 @lru_cache

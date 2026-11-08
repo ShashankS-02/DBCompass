@@ -4,6 +4,7 @@ import History from "./pages/History";
 import Home from "./pages/Home";
 import NewAssessment from "./pages/NewAssessment";
 import Placeholder from "./pages/Placeholder";
+import RepoInput from "./pages/RepoInput";
 import Results from "./pages/Results";
 
 const NAV_ITEMS = [
@@ -66,7 +67,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/assessments/new" element={<NewAssessment />} />
-          <Route path="/repo" element={<Placeholder title="Analyze repo" milestone="M5" />} />
+          <Route path="/repo" element={<RepoInput />} />
           <Route path="/migrations/new" element={<Placeholder title="Migration plan" milestone="M6" />} />
           <Route path="/assessments/:id" element={<Results />} />
           <Route path="/history" element={<History />} />

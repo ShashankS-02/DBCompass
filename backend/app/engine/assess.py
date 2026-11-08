@@ -124,7 +124,7 @@ def rank_combinations(combinations: list[Combination], sizings: "Sizings") -> li
     """Highest score first; ties broken by lower cost, then service id."""
 
     def sort_key(combination: Combination) -> tuple:
-        return (-combination.score, cost_key(combination.primary.id, sizings), combination.primary.id)
+        return (-combination.rank_score, cost_key(combination.primary.id, sizings), combination.primary.id)
 
     return sorted(combinations, key=sort_key)
 
@@ -202,7 +202,7 @@ def build_all_combinations(
     needs = component_needs(rules)
 
     def primary_order(service: ServiceEntry) -> tuple:
-        return (-candidates.primary_scores[service.id].total_score, cost_key(service.id, sizings), service.id)
+        return (-candidates.primary_scores[service.id].rank_score, cost_key(service.id, sizings), service.id)
 
     combinations = []
     for primary in sorted(candidates.primaries, key=primary_order)[: config.primaries_considered]:
@@ -250,7 +250,7 @@ def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) 
         filtered_out=candidates.filtered_out,
         assumed_fields=resolved.assumed_fields,
         dimension_weights=resolved.dimension_weights,
-        scores=sorted(candidates.primary_scores.values(), key=lambda score: (-score.total_score, score.service_id)),
+        scores=sorted(candidates.primary_scores.values(), key=lambda score: (-score.rank_score, score.service_id)),
         combination_notes=combination_notes(combinations, candidates.primaries),
     )
     return AssessmentOutcome(

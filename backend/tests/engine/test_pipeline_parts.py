@@ -145,7 +145,7 @@ def test_reliability_rewards_active_active_when_needed(knowledge, services) -> N
 
 
 def make_score(service_id: str, total: float) -> ServiceScore:
-    return ServiceScore(service_id=service_id, dimension_scores={}, weighted_score=total, adjustments=[], total_score=total)
+    return ServiceScore(service_id=service_id, dimension_scores={}, weighted_score=total, adjustments=[], total_score=min(total, 100), rank_score=total)
 
 
 def test_combiner_adds_same_csp_component_and_penalises(knowledge, services) -> None:
@@ -176,3 +176,13 @@ def test_combiner_gives_simplicity_bonus_when_primary_covers_need(knowledge, ser
 
     assert combination.components == []
     assert combination.score == 80 + config.simplicity_bonus
+
+
+def test_boosts_above_100_still_decide_the_ranking(knowledge, services) -> None:
+    """Both clip to 100 for display, but the higher raw score must win (not the cheaper option)."""
+    config = knowledge.scoring.combination
+    managed = build_combination(services["aws.rds_oracle"], make_score("aws.rds_oracle", 101.8), [], [], {}, {}, config)
+    self_managed = build_combination(services["aws.ec2_self_managed"], make_score("aws.ec2_self_managed", 100.9), [], [], {}, {}, config)
+
+    assert managed.score == self_managed.score == 100
+    assert managed.rank_score > self_managed.rank_score

@@ -43,7 +43,8 @@ class ServiceScore(BaseModel):
     dimension_scores: dict[str, float]
     weighted_score: float
     adjustments: list[AppliedAdjustment]
-    total_score: float
+    total_score: float  # clipped to 0-100 for display (docs/05)
+    rank_score: float = 0.0  # unclipped weighted score + adjustments; used for ranking so boosts above 100 still count
 
 
 class SizingResult(BaseModel):

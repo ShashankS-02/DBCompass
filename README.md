@@ -57,6 +57,6 @@ or `GCP_BILLING_API_KEY` in `.env`. A `dba_admin` can refresh Azure live with
 backend/          FastAPI app (app/) and pytest suite (tests/)
 frontend/         React + Vite + Tailwind
 knowledge_base/   Service catalog YAML, rules, sizing constants, price snapshots (M2+)
-sample_repos/     Demo repos for the analyzer (M5)
+sample_repos/     Demo repos for the analyzer: try sample:spring-oracle-billing on the Analyze repo page
 docs/             Product and design docs; OPEN_QUESTIONS.md tracks undecided points
 ```

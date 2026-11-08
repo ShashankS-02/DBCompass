@@ -62,3 +62,19 @@ Fields with confidence < 0.5 are shown empty with a hint, not pre-filled.
 ## Demo repos
 Keep 3 small repos in `sample_repos/`: a Spring Boot + Oracle app with PL/SQL,
 a FastAPI + Postgres + Redis app, a Node + MongoDB app.
+
+## Implementation notes (M5)
+- Fetch: GitHub tarball API (no `git clone`, so no hooks or submodules); archive capped at 200 MB,
+  files over 1 MB and skipped folders ignored; only regular files are read (no symlinks, absolute
+  paths or `..`); nothing is written to disk. `/tree/<branch>/<folder>` URLs analyse one folder.
+  Tokens travel in a header, are used once, and are never logged or stored.
+- All patterns live in `knowledge_base/analyzer.yaml` (checked by `python -m app.knowledge.check`).
+- Signals carry a source: `static` (code and config), `readme` (plainly stated facts in README /
+  docs, e.g. "99.95%", "2,000 TPS", "1.5 TB") or `llm`. Merge order on ties: static, readme, llm.
+- Oracle report person-days come from `oracle_features.person_days_per_item` plus
+  `plsql_person_days_per_100_lines`; heuristics for the DBA team to tune.
+- The LLM step runs only when all four `AZURE_OPENAI_*` settings are present. It may fill only
+  `llm_fields` that static scanning left empty, must cite a file that exists, values are validated
+  against the catalog, and confidence is capped at 0.7.
+- Demo repos: `sample_repos/spring-oracle-billing`, `fastapi-postgres-redis`, `node-mongo-catalog`
+  pre-fill 80%, 80% and 73% of Quick fields without an LLM (doc 01 target: 60%).

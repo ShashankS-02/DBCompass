@@ -66,13 +66,16 @@ dbcompass/
         sizer.py
         explain.py
       analyzer/
-        repo_fetch.py        # shallow clone or GitHub API, size limits
+        repo_fetch.py        # GitHub tarball API (no git clone), 200 MB cap, safe unpacking, sample: repos
+        scan_common.py       # line-numbered matching, redacted evidence
+        readme_scanner.py    # plainly stated scale / SLA / compliance in README and docs
+        analyze.py           # orchestrator; repo_scans cache by (url, commit, analyzer version)
         secret_redactor.py
         dependency_scanner.py
         schema_extractor.py
         sql_profiler.py
         infra_scanner.py     # docker-compose, Terraform, k8s manifests
-        llm_extractor.py
+        llm_extractor.py     # optional (Azure OpenAI); redacted excerpts only, validated, capped at 0.7
         mapper.py            # signals -> InferredRequirements
       pricing/
         azure_retail.py      # Retail Prices API (no auth), with retry/backoff
@@ -90,6 +93,7 @@ dbcompass/
         runbook.py
       knowledge/loader.py, knowledge/catalog.py   # YAML loading; answer validation
       knowledge/check.py   # `python -m app.knowledge.check` cross-checks the KB
+      db/repo_scans.py     # repo analysis cache / history
       db/session.py, db/tables.py, db/assessments.py
     tests/                 # pytest suite, run from backend/; tests/engine/golden/*.yaml = golden cases
   knowledge_base/
@@ -103,6 +107,7 @@ dbcompass/
     design_patterns.yaml
     migration_tools.yaml
     pricing.yaml             # how to find each service's prices; tiers; not_priced reasons
+    analyzer.yaml            # repo analyzer patterns: dependencies, SQL / Oracle features, README rules
     price_snapshots/         # aws.json, azure.json (gcp.json once a key is set)
   frontend/
     src/pages/ (NewAssessment, RepoInput, Results, MigrationPlan, History)
@@ -117,7 +122,8 @@ dbcompass/
 | GET | /api/assessments | ?limit=1..100 | list[AssessmentSummary] — caller's own, newest first |
 | GET | /api/assessments/{id} | | AssessmentResult; 404 if missing or not the caller's (dba_admin can read all) |
 | POST | /api/assessments/{id}/whatif | partial RequirementsInput | AssessmentResult (not stored) |
-| POST | /api/repo/analyze | {repo_url, branch?, token?} | InferredRequirements |
+| POST | /api/repo/analyze | {repo_url, branch?, token?} — GitHub URL (optionally /tree/<branch>/<folder>) or `sample:<name>` | InferredRequirements {fields: {id: {value, confidence, evidence, source, hint}}, prefill, oracle_report, summary, llm_used, warnings}; 400 bad URL / repo, 502 GitHub unreachable |
+| GET | /api/repo/samples | | names of bundled demo repos |
 | POST | /api/migrations/plan | MigrationInput | MigrationPlan |
 | GET | /api/assessments/{id}/export?format=md\|pdf | | file |
 | GET | /api/pricing/status | | snapshot date, regions, price count and unmatched components per CSP; priced / not-priced service counts; INR rate |
@@ -186,7 +192,7 @@ breakdown and adjustments for every scored primary) and `combination_notes`.
 
 ## Persistence (app DB)
 Tables: users, assessments (input JSON, result JSON, created_by, created_at),
-repo_scans (repo_url, commit_sha, signals JSON), migration_plans, feedback
+repo_scans (repo_url, commit_sha, analyzer_version, result JSON, created_by; the GitHub token is never stored), migration_plans, feedback
 (assessment_id, accepted_option, comment). Feedback is used later to tune weights.
 
 ## Security

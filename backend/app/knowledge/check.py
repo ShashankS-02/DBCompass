@@ -6,6 +6,7 @@ Each check returns a list of problems; an empty list means OK.
 """
 
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
@@ -16,6 +17,7 @@ from pydantic import BaseModel
 from app.config import get_settings
 from app.knowledge.catalog import AnswerError, validate_answer
 from app.knowledge.loader import (
+    ANALYZER_FILE,
     HARDWARE_FILE,
     PRICING_FILE,
     QUESTIONS_FILE,
@@ -41,6 +43,7 @@ from app.models.knowledge import (
     SizingConstants,
 )
 from app.models.pricing import PricingConfig
+from app.models.repo import AnalyzerConfig
 from app.models.questions import QuestionCatalog
 
 logger = logging.getLogger(__name__)
@@ -384,6 +387,54 @@ def check_pricing_specs(pricing: PricingConfig, services: dict[Path, ServiceEntr
     return problems
 
 
+# ---------- repo analyzer ----------
+
+
+def regex_problems(label: str, pattern: str) -> list[str]:
+    try:
+        re.compile(pattern)
+    except re.error as error:
+        return [f"analyzer.yaml {label}: invalid regex ({error})"]
+    return []
+
+
+def check_analyzer(analyzer: AnalyzerConfig, catalog: QuestionCatalog) -> list[str]:
+    """Every regex compiles; every field, engine, shape and option named exists in the catalog."""
+    questions = catalog.questions_by_id()
+    engines = {option.value for option in catalog.engine_options}
+    shapes = set(questions["data.shape"].option_values())
+    problems: list[str] = []
+    for rule in analyzer.dependencies:
+        problems += regex_problems(f"dependency '{rule.label}'", rule.match)
+        if rule.engine and rule.engine not in engines:
+            problems.append(f"analyzer.yaml dependency '{rule.label}': unknown engine '{rule.engine}'")
+        if rule.shape and rule.shape not in shapes:
+            problems.append(f"analyzer.yaml dependency '{rule.label}': unknown data shape '{rule.shape}'")
+    problems += expect_keys("analyzer query_types", set(analyzer.query_types), set(questions["wl.query_types"].option_values()))
+    special_options = set(questions["data.special_features"].option_values())
+    for option in list(analyzer.special_features) + [rule.special_feature for rule in analyzer.oracle_features.values() if rule.special_feature]:
+        if option not in special_options:
+            problems.append(f"analyzer.yaml: '{option}' is not a data.special_features option")
+    for pattern_list in list(analyzer.query_types.values()) + list(analyzer.special_features.values()):
+        for pattern in pattern_list:
+            problems += regex_problems("pattern", pattern)
+    for key, rule in analyzer.oracle_features.items():
+        problems += regex_problems(f"oracle feature '{key}'", rule.pattern)
+    for rule in analyzer.readme_rules:
+        problems += regex_problems(f"readme rule {rule.field_id}", rule.pattern)
+        question = questions.get(rule.field_id)
+        if question is None:
+            problems.append(f"analyzer.yaml readme rule: unknown field '{rule.field_id}'")
+            continue
+        for value in rule.value_map.values():
+            if question.options and value not in question.option_values():
+                problems.append(f"analyzer.yaml readme rule {rule.field_id}: '{value}' is not an option")
+    for field_id in analyzer.llm_fields:
+        if field_id not in questions:
+            problems.append(f"analyzer.yaml llm_fields: unknown field '{field_id}'")
+    return problems
+
+
 # ---------- entry point ----------
 
 
@@ -398,6 +449,7 @@ def run_all_checks(kb_dir: Path) -> list[str]:
         scoring = load_model(kb_dir / SCORING_FILE, ScoringConfig)
         hardware = load_model(kb_dir / HARDWARE_FILE, HardwareProfiles)
         pricing = load_model(kb_dir / PRICING_FILE, PricingConfig)
+        analyzer = load_model(kb_dir / ANALYZER_FILE, AnalyzerConfig)
     except KnowledgeBaseError as error:
         return str(error).split("\n")
 
@@ -412,6 +464,7 @@ def run_all_checks(kb_dir: Path) -> list[str]:
     problems.extend(check_scoring(scoring, sizing, catalog))
     problems.extend(check_pricing_coverage(pricing, services))
     problems.extend(check_pricing_specs(pricing, services, regions, catalog))
+    problems.extend(check_analyzer(analyzer, catalog))
     return problems
 
 

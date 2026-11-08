@@ -1,0 +1,13 @@
+{
+  "name": "catalog-service",
+  "version": "2.3.0",
+  "dependencies": {
+    "express": "4.21.1",
+    "mongoose": "8.8.1",
+    "ioredis": "5.4.1",
+    "kafkajs": "2.2.4"
+  },
+  "devDependencies": {
+    "jest": "29.7.0"
+  }
+}

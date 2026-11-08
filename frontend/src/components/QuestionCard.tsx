@@ -7,6 +7,7 @@ interface QuestionCardProps {
   onChange: (value: unknown) => void;
   error?: string;
   defaultHint?: string;
+  repoEvidence?: { confidence: number; evidence: string[] };
 }
 
 const inputClass =
@@ -264,7 +265,7 @@ const INPUTS = {
 };
 
 export default function QuestionCard(props: QuestionCardProps) {
-  const { question, error, defaultHint } = props;
+  const { question, error, defaultHint, repoEvidence } = props;
   const [showWhy, setShowWhy] = useState(false);
   const Input = INPUTS[question.type];
 
@@ -286,6 +287,11 @@ export default function QuestionCard(props: QuestionCardProps) {
       {showWhy && <p className="mb-2 text-xs text-slate-500">Why it matters: {question.why}</p>}
       <Input {...props} />
       {defaultHint && <p className="mt-2 text-xs text-slate-500">{defaultHint}</p>}
+      {repoEvidence && (
+        <p className="mt-2 text-xs text-indigo-700" title={repoEvidence.evidence.join("\n")}>
+          From repo ({Math.round(repoEvidence.confidence * 100)}% confidence): <span className="font-mono">{repoEvidence.evidence[0] ?? ""}</span>
+        </p>
+      )}
       {error && <p className="mt-2 text-xs font-medium text-rose-600">{error}</p>}
     </div>
   );

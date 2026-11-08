@@ -184,13 +184,14 @@ def score_service(
         weighted_score += weights.get(dimension, 0.0) * dimension_scores[dimension]
     adjustments = rule_adjustments(service, rules, resolved_values)
     adjustment_total = sum(adjustment.points for adjustment in adjustments)
-    total = min(GOOD, max(0.0, weighted_score + adjustment_total))
+    raw_total = weighted_score + adjustment_total
     return ServiceScore(
         service_id=service.id,
         dimension_scores=dimension_scores,
         weighted_score=round(weighted_score, SCORE_DECIMALS),
         adjustments=adjustments,
-        total_score=round(total, SCORE_DECIMALS),
+        total_score=round(min(GOOD, max(0.0, raw_total)), SCORE_DECIMALS),
+        rank_score=round(raw_total, SCORE_DECIMALS),
     )
 
 

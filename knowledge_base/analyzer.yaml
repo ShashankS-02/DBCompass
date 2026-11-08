@@ -1,0 +1,172 @@
+# Repo analyzer patterns (docs/06). Everything the static scanners recognise lives here so the DBA
+# team can extend it without code changes. Person-day figures are heuristics, not vendor facts.
+version: 1
+last_verified: 2026-11-08
+
+max_repo_bytes: 209715200      # 200 MB archive cap (doc 03)
+max_file_bytes: 1048576        # files above 1 MB are skipped
+prefill_threshold: 0.5         # doc 06: fields below this confidence are shown empty with a hint
+
+skip_dirs: [node_modules, vendor, .git, dist, build, target, out, bin, obj, .venv, venv, __pycache__, .gradle, .idea, .next, coverage]
+text_extensions: [.py, .java, .kt, .scala, .js, .mjs, .cjs, .ts, .tsx, .go, .cs, .rb, .php, .sql, .pks, .pkb, .pls, .plb, .prc, .fnc, .trg, .yml, .yaml, .json, .toml, .xml, .gradle, .kts, .tf, .bicep, .md, .txt, .cfg, .ini, .properties, .prisma, .csproj, .mod, .env.example, .dockerfile]
+
+# File name (regex on the base name) -> ecosystem for dependency scanning.
+manifest_files:
+  '^requirements.*\.txt$': python
+  '^pyproject\.toml$': python
+  '^Pipfile$': python
+  '^package\.json$': node
+  '^pom\.xml$': java
+  '^build\.gradle(\.kts)?$': java
+  '\.csproj$': dotnet
+  '^go\.mod$': go
+
+# Package / artifact names (regex, case-insensitive, matched against the dependency name).
+dependencies:
+  - {ecosystems: [python], match: '^(psycopg2(-binary)?|psycopg|asyncpg|pg8000)$', label: PostgreSQL driver, engine: postgresql, shape: relational}
+  - {ecosystems: [python], match: '^(oracledb|cx[-_]oracle)$', label: Oracle driver, engine: oracle, shape: relational}
+  - {ecosystems: [python], match: '^(pymysql|mysqlclient|mysql-connector-python|aiomysql)$', label: MySQL driver, engine: mysql, shape: relational}
+  - {ecosystems: [python], match: '^(pyodbc|pymssql)$', label: SQL Server driver, engine: sql_server, shape: relational}
+  - {ecosystems: [python], match: '^(pymongo|motor|mongoengine|beanie)$', label: MongoDB driver, engine: mongodb, shape: document}
+  - {ecosystems: [python], match: '^(cassandra-driver|scylla-driver)$', label: Cassandra driver, engine: cassandra, shape: wide_column}
+  - {ecosystems: [python], match: '^neo4j$', label: Neo4j driver, shape: graph}
+  - {ecosystems: [python], match: '^(redis|aioredis|valkey)$', label: Redis cache client}
+  - {ecosystems: [python], match: '^(elasticsearch|opensearch-py)$', label: Search engine client, shape: full_text}
+  - {ecosystems: [python], match: '^(pgvector|faiss-cpu|faiss-gpu|chromadb|pinecone-client|qdrant-client|weaviate-client)$', label: Vector search library, shape: vector, vector: true}
+  - {ecosystems: [python], match: '^(kafka-python|confluent-kafka|aiokafka)$', label: Kafka client, cdc: true}
+  - {ecosystems: [python], match: '^(celery|apscheduler|rq)$', label: Background job scheduler, batch: true}
+  - {ecosystems: [python], match: '^(fastapi|flask|django|starlette|aiohttp)$', label: Web framework, web_framework: true}
+  - {ecosystems: [node], match: '^(pg|postgres|pg-promise)$', label: PostgreSQL driver, engine: postgresql, shape: relational}
+  - {ecosystems: [node], match: '^(mysql2?|mariadb)$', label: MySQL driver, engine: mysql, shape: relational}
+  - {ecosystems: [node], match: '^oracledb$', label: Oracle driver, engine: oracle, shape: relational}
+  - {ecosystems: [node], match: '^(mssql|tedious)$', label: SQL Server driver, engine: sql_server, shape: relational}
+  - {ecosystems: [node], match: '^(mongodb|mongoose)$', label: MongoDB driver, engine: mongodb, shape: document}
+  - {ecosystems: [node], match: '^(ioredis|redis)$', label: Redis cache client}
+  - {ecosystems: [node], match: '^(@elastic/elasticsearch|@opensearch-project/opensearch)$', label: Search engine client, shape: full_text}
+  - {ecosystems: [node], match: '^(kafkajs|node-rdkafka)$', label: Kafka client, cdc: true}
+  - {ecosystems: [node], match: '^(bull|bullmq|agenda|node-cron)$', label: Background job scheduler, batch: true}
+  - {ecosystems: [node], match: '^(express|fastify|koa|@nestjs/core|next)$', label: Web framework, web_framework: true}
+  - {ecosystems: [java], match: '^(ojdbc\d*|ojdbc\d+-production)$', label: Oracle JDBC driver, engine: oracle, shape: relational}
+  - {ecosystems: [java], match: '^postgresql$', label: PostgreSQL JDBC driver, engine: postgresql, shape: relational}
+  - {ecosystems: [java], match: '^(mysql-connector-j|mysql-connector-java|mariadb-java-client)$', label: MySQL JDBC driver, engine: mysql, shape: relational}
+  - {ecosystems: [java], match: '^mssql-jdbc$', label: SQL Server JDBC driver, engine: sql_server, shape: relational}
+  - {ecosystems: [java], match: '^spring-boot-starter-data-mongodb$', label: Spring Data MongoDB, engine: mongodb, shape: document}
+  - {ecosystems: [java], match: '^spring-boot-starter-data-redis$', label: Spring Data Redis}
+  - {ecosystems: [java], match: '^(spring-kafka|debezium-.*)$', label: Kafka / Debezium, cdc: true}
+  - {ecosystems: [java], match: '^(spring-boot-starter-quartz|quartz)$', label: Quartz scheduler, batch: true}
+  - {ecosystems: [java], match: '^spring-boot-starter-web(flux)?$', label: Spring web, web_framework: true}
+  - {ecosystems: [dotnet], match: '^Microsoft\.EntityFrameworkCore\.SqlServer$', label: EF Core SQL Server, engine: sql_server, shape: relational}
+  - {ecosystems: [dotnet], match: '^Npgsql(\.EntityFrameworkCore\.PostgreSQL)?$', label: EF Core PostgreSQL, engine: postgresql, shape: relational}
+  - {ecosystems: [dotnet], match: '^Oracle\.(ManagedDataAccess|EntityFrameworkCore).*$', label: Oracle .NET driver, engine: oracle, shape: relational}
+  - {ecosystems: [go], match: '^github\.com/(jackc/pgx|lib/pq).*$', label: PostgreSQL driver, engine: postgresql, shape: relational}
+  - {ecosystems: [go], match: '^github\.com/sijms/go-ora.*$', label: Oracle driver, engine: oracle, shape: relational}
+  - {ecosystems: [go], match: '^go\.mongodb\.org/mongo-driver.*$', label: MongoDB driver, engine: mongodb, shape: document}
+
+# Engine version from container images / config (regex with a `version` group).
+engine_version_patterns:
+  postgresql: 'image:\s*["'']?(?:postgres|postgis/postgis|bitnami/postgresql):(?P<version>\d+(?:\.\d+)?)'
+  mysql: 'image:\s*["'']?(?:mysql|bitnami/mysql):(?P<version>\d+(?:\.\d+)?)'
+  mongodb: 'image:\s*["'']?(?:mongo|bitnami/mongodb):(?P<version>\d+(?:\.\d+)?)'
+  oracle: '(?:image:\s*["'']?[\w./-]*oracle[\w./-]*:(?P<version>\d+[a-z]?)|Oracle\s+(?:Database\s+)?(?P<version2>\d{2}[cgi]))'
+  sql_server: 'image:\s*["'']?mcr\.microsoft\.com/mssql/server:(?P<version>\d{4})'
+
+# wl.query_types option -> patterns found in SQL or ORM code.
+query_types:
+  point_lookup: ['(?i)\bWHERE\s+\w+\s*=\s*[:?$@]', '\bfindBy\w+\(', '\.(findById|findOne|find_by_pk|get_by_id|findUnique)\(', '\b(session|db|em|entityManager)\.(get|find)\(']
+  range_scan: ['(?i)\bBETWEEN\b', '(?i)\bWHERE\s+\w+\s*[<>]=?\s*[:?$@]']
+  aggregation: ['(?i)\bGROUP\s+BY\b', '(?i)\b(SUM|AVG|COUNT)\s*\(']
+  full_text: ['(?i)\bLIKE\s+''%', '(?i)\bto_tsvector\b', '(?i)\bMATCH\s*\(.*\)\s*AGAINST\b', '(?i)\$text\s*:']
+  geospatial: ['(?i)\bST_\w+\(', '(?i)\bSDO_\w+', '(?i)\$near\b']
+  vector_similarity: ['<->|<=>', '(?i)\bvector\(\d+\)', '(?i)cosine_similarity']
+
+# data.special_features option -> patterns (Oracle-specific ones come from oracle_features).
+special_features:
+  materialized_views: ['(?i)\bCREATE\s+MATERIALIZED\s+VIEW\b']
+  partitioning: ['(?i)\bPARTITION\s+BY\s+(RANGE|LIST|HASH)\b']
+  spatial: ['(?i)\bSDO_GEOMETRY\b', '(?i)\bgeography\s*\(', '(?i)\bCREATE\s+EXTENSION\s+(IF\s+NOT\s+EXISTS\s+)?postgis\b']
+
+# Oracle → PostgreSQL effort (doc 06 table). person_days_per_item = [low, high] per occurrence.
+oracle_features:
+  plsql_package: {pattern: '(?i)\bCREATE\s+(OR\s+REPLACE\s+)?PACKAGE\s+BODY\b', label: PL/SQL package body, effort: high, person_days_per_item: [3, 8]}
+  autonomous_transaction: {pattern: '(?i)\bPRAGMA\s+AUTONOMOUS_TRANSACTION\b', label: Autonomous transaction, effort: high, person_days_per_item: [1, 3]}
+  dbms_package: {pattern: '(?i)\b(DBMS_(JOB|SCHEDULER|LOB|OUTPUT|SQL|LOCK|AQ)|UTL_(FILE|HTTP|SMTP|MAIL))\b', label: DBMS_* / UTL_* package call, effort: high, person_days_per_item: [0.5, 2]}
+  db_link: {pattern: '(?i)\b[A-Za-z_][\w$#.]*@[A-Za-z_][\w$#.]*\b(?!\.[a-z]{2,})', label: Database link (@dblink), effort: medium_high, person_days_per_item: [1, 3], special_feature: db_links}
+  connect_by: {pattern: '(?i)\bCONNECT\s+BY\b', label: CONNECT BY hierarchical query, effort: medium, person_days_per_item: [0.5, 1], special_feature: hierarchical_queries}
+  rownum: {pattern: '(?i)\bROWNUM\b', label: ROWNUM, effort: medium, person_days_per_item: [0.25, 0.5]}
+  outer_join_plus: {pattern: '\(\+\)', label: (+) outer join, effort: medium, person_days_per_item: [0.25, 0.5]}
+  sequence: {pattern: '(?i)\bCREATE\s+SEQUENCE\b|\.NEXTVAL\b', label: Sequence, effort: low_medium, person_days_per_item: [0.05, 0.2], special_feature: sequences}
+  trigger: {pattern: '(?i)\bCREATE\s+(OR\s+REPLACE\s+)?TRIGGER\b', label: Trigger, effort: low_medium, person_days_per_item: [0.25, 1]}
+  merge: {pattern: '(?i)\bMERGE\s+INTO\b', label: MERGE statement, effort: low_medium, person_days_per_item: [0.1, 0.5]}
+plsql_thresholds: {light: 1, heavy: 500}       # PL/SQL lines: >= light -> light, >= heavy -> heavy
+plsql_person_days_per_100_lines: [0.5, 1.5]
+
+# Terraform / Bicep resource types -> existing database and cloud.
+terraform_resources:
+  '^aws_(db_instance|rds_cluster)$': {csp: aws, engine: ''}
+  '^aws_(dynamodb_table)$': {csp: aws, engine: ''}
+  '^aws_elasticache_\w+$': {csp: aws, engine: redis}
+  '^azurerm_(postgresql_flexible_server|postgresql_server)$': {csp: azure, engine: postgresql}
+  '^azurerm_(mysql_flexible_server)$': {csp: azure, engine: mysql}
+  '^azurerm_(mssql_server|mssql_database|sql_server)$': {csp: azure, engine: sql_server}
+  '^azurerm_cosmosdb_account$': {csp: azure, engine: ''}
+  '^google_sql_database_instance$': {csp: gcp, engine: ''}
+  '^google_(spanner_instance|bigtable_instance|alloydb_cluster)$': {csp: gcp, engine: ''}
+
+# CSP region name prefix -> geo.user_regions option.
+region_to_geo:
+  ap-south: india
+  asia-south: india
+  centralindia: india
+  southindia: india
+  westindia: india
+  eu-: eu
+  europe-: eu
+  westeurope: eu
+  northeurope: eu
+  us-: us
+  eastus: us
+  westus: us
+  centralus: us
+  ap-southeast: apac
+  ap-northeast: apac
+  asia-southeast: apac
+  asia-northeast: apac
+  southeastasia: apac
+  japaneast: apac
+
+# Deterministic README / docs phrases (doc 06 sends these to the LLM; plain statements are caught here).
+readme_rules:
+  - field_id: ha.sla
+    pattern: '(?P<value>99\.9{1,3}5?)\s*%'
+    value_map: {'99.5': sla_99_5, '99.9': sla_99_9, '99.95': sla_99_95, '99.99': sla_99_99, '99.999': sla_99_999}
+    confidence: 0.75
+  - field_id: wl.peak_tps
+    pattern: '(?i)(?:peak|up to|around|about|handles?)?\s*(?P<value>\d[\d,]*(?:\.\d+)?\s*[km]?)\s*(?:TPS|QPS|transactions?\s*(?:per|/)\s*s(?:ec(?:ond)?)?|requests?\s*(?:per|/)\s*s(?:ec(?:ond)?)?|req/s|rps)\b'
+    number: true
+    confidence: 0.7
+  - field_id: vol.current_gb
+    pattern: '(?i)(?:database|data|dataset|db)\s+(?:size\s+)?(?:is\s+|of\s+|~|about\s+|around\s+)*(?P<value>\d[\d,]*(?:\.\d+)?)\s*(?P<unit>GB|TB)\b'
+    number: true
+    multiply_by_unit: {gb: 1, tb: 1024}
+    confidence: 0.7
+  - field_id: wl.latency_p99_ms
+    pattern: '(?i)p99[^.\n]{0,40}?(?:under|below|<|within)\s*(?P<value>\d+(?:\.\d+)?)\s*ms'
+    value_map: {}
+    number: true
+    confidence: 0.7
+  - field_id: sec.compliance
+    pattern: '(?i)\b(?P<value>PCI[- ]?DSS|PCI|HIPAA|SOX|GDPR|DPDP)\b'
+    value_map: {pci-dss: pci_dss, pci dss: pci_dss, pcidss: pci_dss, pci: pci_dss, hipaa: hipaa, sox: sox, gdpr: gdpr, dpdp: dpdp}
+    confidence: 0.7
+  - field_id: app.tier
+    pattern: '(?i)\b(?P<value>tier[- ]?[0-3]|mission[- ]critical|business[- ]critical)\b'
+    value_map: {tier-0: tier_0, tier 0: tier_0, tier0: tier_0, tier-1: tier_1, tier 1: tier_1, tier1: tier_1, tier-2: tier_2, tier 2: tier_2, tier2: tier_2, tier-3: tier_3, tier 3: tier_3, tier3: tier_3, mission-critical: tier_0, mission critical: tier_0, business-critical: tier_1, business critical: tier_1}
+    confidence: 0.7
+  - field_id: geo.user_regions
+    line_must_match: '(?i)\busers?\b'
+    pattern: '(?i)\b(?P<value>India|Europe|EU|United States|US|APAC|Asia[- ]Pacific|global(?:ly)?|worldwide)\b'
+    value_map: {india: india, europe: eu, eu: eu, united states: us, us: us, apac: apac, asia-pacific: apac, asia pacific: apac, global: global, globally: global, worldwide: global}
+    confidence: 0.6
+
+# Fields the optional LLM step may fill when static scanners and README rules did not.
+llm_fields: [app.tier, app.type, wl.pattern, wl.read_write_ratio, wl.peak_tps, wl.latency_p99_ms, vol.current_gb, vol.growth_gb_month, tx.consistency, ha.sla, geo.user_regions, sec.compliance]

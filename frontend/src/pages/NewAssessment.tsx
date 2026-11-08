@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import type { RepoPrefill } from "../api/repo";
 import { createAssessment } from "../api/assessments";
 import {
   describeValue,
@@ -66,9 +67,10 @@ interface SectionCardProps {
   onAnswer: (fieldId: string, value: unknown) => void;
   errors: Map<string, string>;
   defaultHintFor: (question: Question) => string | undefined;
+  repoEvidence: RepoPrefill["evidence"];
 }
 
-function SectionCard({ section, open, onToggle, answers, onAnswer, errors, defaultHintFor }: SectionCardProps) {
+function SectionCard({ section, open, onToggle, answers, onAnswer, errors, defaultHintFor, repoEvidence }: SectionCardProps) {
   const answeredCount = section.questions.filter((question) => answers[question.id] !== undefined).length;
   const hasError = section.questions.some((question) => errors.has(question.id));
 
@@ -99,6 +101,7 @@ function SectionCard({ section, open, onToggle, answers, onAnswer, errors, defau
               onChange={(value) => onAnswer(question.id, value)}
               error={errors.get(question.id)}
               defaultHint={defaultHintFor(question)}
+              repoEvidence={answers[question.id] !== undefined ? repoEvidence[question.id] : undefined}
             />
           ))}
         </div>
@@ -188,13 +191,15 @@ function ReportPanel({
 export default function NewAssessment() {
   const { getAccessToken } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<FormMode>("quick");
+  const location = useLocation();
+  const repoPrefill = (location.state as { repoPrefill?: RepoPrefill } | null)?.repoPrefill;
+  const [mode, setMode] = useState<FormMode>(repoPrefill ? "expert" : "quick");
   const [schema, setSchema] = useState<QuestionSchema | null>(null);
   const [expertSchema, setExpertSchema] = useState<QuestionSchema | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Answers>({});
+  const [answers, setAnswers] = useState<Answers>(() => (repoPrefill ? { ...repoPrefill.answers } : {}));
   const [priorities, setPriorities] = useState<Record<string, number>>({});
-  const [migrating, setMigrating] = useState(false);
+  const [migrating, setMigrating] = useState(() => Boolean(repoPrefill && Object.keys(repoPrefill.answers).some((id) => id.startsWith("mig."))));
   const [closedSections, setClosedSections] = useState<Set<string>>(new Set());
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [reportStale, setReportStale] = useState(false);
@@ -312,6 +317,11 @@ export default function NewAssessment() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">New assessment</h1>
           <p className="mt-1 text-sm text-slate-600">
+            {repoPrefill && (
+              <span className="mb-1 block font-medium text-indigo-700">
+                {Object.keys(repoPrefill.answers).length} answers pre-filled from {repoPrefill.repoUrl}; review them before continuing.
+              </span>
+            )}
             Answer what you know. Anything left empty is filled from defaults for your criticality tier and
             marked as assumed.
           </p>
@@ -345,6 +355,7 @@ export default function NewAssessment() {
               onAnswer={onAnswer}
               errors={errors}
               defaultHintFor={defaultHintFor}
+              repoEvidence={repoPrefill?.evidence ?? {}}
             />
           ))}
         </div>
