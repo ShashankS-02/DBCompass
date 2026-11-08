@@ -52,12 +52,14 @@ dbcompass/
         requirements.py      # RequirementsInput, ValidationReport
         results.py           # AssessmentResult, Recommendation, Trace, SizingResult
         migration.py         # MigrationInput, MigrationPlan
+        pricing.py           # PricingConfig (pricing.yaml), PricePoint, PriceSnapshot
       engine/
         defaults.py
         weights.py           # priority sliders -> dimension weights
         validation.py        # builds ValidationReport
         rules.py             # condition / predicate evaluation
         assess.py            # runs the pipeline, ranks, builds AssessmentOutcome
+        costing.py           # tier sizing, budget filter, recommendation cost tiers
         filters.py
         scorer.py
         combiner.py
@@ -73,11 +75,13 @@ dbcompass/
         llm_extractor.py
         mapper.py            # signals -> InferredRequirements
       pricing/
-        azure_retail.py
-        aws_pricelist.py
-        gcp_catalog.py
-        price_cache.py
-        estimator.py
+        azure_retail.py      # Retail Prices API (no auth), with retry/backoff
+        aws_pricelist.py     # public bulk CSV per offer/region; reserved -> effective hourly
+        gcp_catalog.py       # Cloud Billing Catalog API (needs GCP_BILLING_API_KEY)
+        matching.py          # pricing.yaml matchers -> PricePoints
+        snapshot.py          # `python -m app.pricing.snapshot <csp>`
+        price_cache.py       # snapshot files + PriceIndex lookup
+        estimator.py         # monthly cost lines per service and tier
       migration/
         strategy.py          # 7 Rs selection
         method.py            # offline / physical / CDC selection
@@ -98,7 +102,8 @@ dbcompass/
     hardware_profiles.yaml
     design_patterns.yaml
     migration_tools.yaml
-    price_snapshots/
+    pricing.yaml             # how to find each service's prices; tiers; not_priced reasons
+    price_snapshots/         # aws.json, azure.json (gcp.json once a key is set)
   frontend/
     src/pages/ (NewAssessment, RepoInput, Results, MigrationPlan, History)
     src/components/ (QuestionCard, PrioritySliders, ScoreRadar, CostTiers, WhyPanel, RunbookView)
@@ -115,6 +120,8 @@ dbcompass/
 | POST | /api/repo/analyze | {repo_url, branch?, token?} | InferredRequirements |
 | POST | /api/migrations/plan | MigrationInput | MigrationPlan |
 | GET | /api/assessments/{id}/export?format=md\|pdf | | file |
+| GET | /api/pricing/status | | snapshot date, regions, price count and unmatched components per CSP; priced / not-priced service counts; INR rate |
+| POST | /api/pricing/refresh/{csp} | | dba_admin only; `azure` only (AWS and GCP via the CLI). Rebuilds and saves the snapshot |
 | GET | /api/questions?mode=quick\|expert | | QuestionSchema {mode, sections[questions], priority_sliders, fixed_dimension_weights, default_tier} |
 | POST | /api/requirements/validate | RequirementsInput | ValidationReport {valid, errors, normalised, unanswered_quick_fields, assumed_fields, ignored_fields, dimension_weights} |
 | GET | /api/health | | HealthResponse {status, version, database} (no auth) |
@@ -165,10 +172,13 @@ class Trace(BaseModel):
    components (only `scope: all_components` rules). Every removal is a `FilterReason`.
 5. `sizer.size_service` for every service, once as primary and once as component (an in-memory
    primary holds the whole dataset; a cache holds the working set).
-6. `scorer.score_all`: 7 dimensions, weighted, plus rule boosts/penalties, clipped to 0–100.
-   Cost uses relative cost units until M4 pricing.
+6. `costing.apply_budget_filter` drops primaries whose Budget tier exceeds cap × 1.5 (unpriced pass, noted).
+   `scorer.score_all`: 7 dimensions, weighted, plus rule boosts/penalties, clipped to 0–100.
+   Cost = Balanced-tier monthly USD (unpriced services score neutral 50; relative units only if nothing is priced).
 7. `combiner.build_combination` for the best `primaries_considered` primaries.
-8. Rank by score, then lower relative cost, then service id. Top 3 become `Recommendation`s.
+8. Rank by score, then lower monthly cost, then service id. Top 3 become `Recommendation`s, each with
+   `cost_tiers` (budget / balanced / performance `CostEstimate`s whose `lines` carry SKU, region,
+   term, quantity and unit price) and the result carries `pricing` (snapshot dates, INR rate).
 
 `Trace` holds `rules_fired`, `filtered_out` (service, rule id, message — every service not
 scored has at least one), `assumed_fields`, `dimension_weights`, `scores` (per-dimension

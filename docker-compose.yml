@@ -25,7 +25,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./knowledge_base:/knowledge_base:ro
+      - ./knowledge_base:/knowledge_base   # writable: POST /api/pricing/refresh/azure saves snapshots
     depends_on:
       postgres:
         condition: service_healthy

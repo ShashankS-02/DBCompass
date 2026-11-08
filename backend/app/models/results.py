@@ -53,10 +53,15 @@ class SizingResult(BaseModel):
     memory_gb: float
     iops: int
     instance_class: str
+    instance_family: str | None = None
+    instance_vcpu: int | None = None
+    instance_memory_gb: float | None = None
     storage_tier: str
     topology: Literal["single_az", "multi_az", "multi_region"]
     ha_topology: str
     replicas: int
+    standby: int = 0
+    needs_dr: bool = False
     node_count: int
     engine: str
     relative_cost_units: float
@@ -78,11 +83,31 @@ class ServiceChoice(BaseModel):
     reason: str
 
 
-class CostEstimate(BaseModel):
-    """Monthly cost for one tier (Budget / Balanced / Performance). Filled in by M4 pricing."""
+class CostLine(BaseModel):
+    """One priced line: quantity × unit price from a dated price list."""
 
+    component: str
+    description: str
+    quantity: float
+    unit: str
+    unit_usd: float
     monthly_usd: float
-    breakdown: dict[str, float] = {}
+    sku: str
+    region: str
+    term: str
+
+
+class CostEstimate(BaseModel):
+    """Monthly list-price estimate for one tier (Budget / Balanced / Performance)."""
+
+    tier: str
+    label: str
+    monthly_usd: float
+    lines: list[CostLine] = []
+    environment_multiplier: float = 1.0
+    complete: bool = True
+    missing: list[str] = []
+    notes: list[str] = []
 
 
 class Recommendation(BaseModel):
@@ -99,6 +124,15 @@ class Recommendation(BaseModel):
     design_guidance: list[str]
     why: list[str]
     explanation: str = ""
+
+
+class PricingSummary(BaseModel):
+    """Where the prices came from: snapshot dates per CSP and currency conversion."""
+
+    prices_as_of: dict[str, str]
+    inr_per_usd: float | None = None
+    inr_rate_date: str = ""
+    notes: list[str] = []
 
 
 class Trace(BaseModel):
@@ -118,6 +152,7 @@ class AssessmentOutcome(BaseModel):
     engine_version: str
     recommendations: list[Recommendation]
     trace: Trace
+    pricing: PricingSummary | None = None
 
 
 class AssessmentResult(AssessmentOutcome):

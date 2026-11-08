@@ -17,6 +17,7 @@ from app.config import get_settings
 from app.knowledge.catalog import AnswerError, validate_answer
 from app.knowledge.loader import (
     HARDWARE_FILE,
+    PRICING_FILE,
     QUESTIONS_FILE,
     REGIONS_FILE,
     RULES_FILE,
@@ -39,6 +40,7 @@ from app.models.knowledge import (
     ServicePredicate,
     SizingConstants,
 )
+from app.models.pricing import PricingConfig
 from app.models.questions import QuestionCatalog
 
 logger = logging.getLogger(__name__)
@@ -335,6 +337,53 @@ def check_scoring(scoring: ScoringConfig, sizing: SizingConstants, catalog: Ques
     return problems
 
 
+# ---------- pricing ----------
+
+
+def check_pricing_coverage(pricing: PricingConfig, services: dict[Path, ServiceEntry]) -> list[str]:
+    """Every service is either priced or listed under not_priced with a reason — never both."""
+    service_ids = {service.id for service in services.values()}
+    priced = set(pricing.services)
+    unpriced = set(pricing.not_priced)
+    problems = []
+    for unknown in sorted((priced | unpriced) - service_ids):
+        problems.append(f"pricing.yaml: '{unknown}' is not a service in databases/")
+    for missing in sorted(service_ids - priced - unpriced):
+        problems.append(f"pricing.yaml: '{missing}' needs a price model or a not_priced reason")
+    for both in sorted(priced & unpriced):
+        problems.append(f"pricing.yaml: '{both}' is both priced and not_priced")
+    return problems
+
+
+def check_pricing_specs(pricing: PricingConfig, services: dict[Path, ServiceEntry], regions: RegionCatalog, catalog: QuestionCatalog) -> list[str]:
+    """Family / storage filters name real options; regions and keyed tables line up with the catalog."""
+    by_id = {service.id: service for service in services.values()}
+    problems: list[str] = []
+    for service_id, service_pricing in pricing.services.items():
+        service = by_id.get(service_id)
+        if service is None:
+            continue
+        for spec in service_pricing.components:
+            for family in spec.applies_to_family:
+                if family not in service.instance_families:
+                    problems.append(f"pricing.yaml {service_id}: family '{family}' not in the service's instance_families")
+            for tier in spec.applies_to_storage:
+                if tier not in service.storage_options:
+                    problems.append(f"pricing.yaml {service_id}: storage '{tier}' not in the service's storage_options")
+    for csp, csp_regions in pricing.snapshot_regions.items():
+        known = set()
+        for geo in regions.geos:
+            known.update(regions.regions_for(geo, csp))
+        for region in csp_regions:
+            if region not in known:
+                problems.append(f"pricing.yaml: snapshot region '{region}' not in regions.yaml for {csp}")
+    questions = catalog.questions_by_id()
+    problems += expect_keys("pricing terms_allowed", set(pricing.terms_allowed), set(questions["cost.commitment"].option_values()) | {"on_demand"})
+    problems += expect_keys("pricing environment_multipliers", set(pricing.environment_multipliers), set(questions["app.env"].option_values()))
+    problems += expect_keys("pricing tiers", set(pricing.tiers), {"budget", "balanced", "performance"})
+    return problems
+
+
 # ---------- entry point ----------
 
 
@@ -348,6 +397,7 @@ def run_all_checks(kb_dir: Path) -> list[str]:
         sizing = load_model(kb_dir / SIZING_FILE, SizingConstants)
         scoring = load_model(kb_dir / SCORING_FILE, ScoringConfig)
         hardware = load_model(kb_dir / HARDWARE_FILE, HardwareProfiles)
+        pricing = load_model(kb_dir / PRICING_FILE, PricingConfig)
     except KnowledgeBaseError as error:
         return str(error).split("\n")
 
@@ -360,6 +410,8 @@ def run_all_checks(kb_dir: Path) -> list[str]:
     problems.extend(check_sizing(sizing, catalog))
     problems.extend(check_hardware(hardware))
     problems.extend(check_scoring(scoring, sizing, catalog))
+    problems.extend(check_pricing_coverage(pricing, services))
+    problems.extend(check_pricing_specs(pricing, services, regions, catalog))
     return problems
 
 

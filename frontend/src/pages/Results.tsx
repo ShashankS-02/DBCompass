@@ -3,10 +3,17 @@ import { Link, useParams } from "react-router-dom";
 import { CSP_LABELS, ROLE_LABELS, fetchAssessment, type AssessmentResult, type Recommendation } from "../api/assessments";
 import { describeValue, fetchQuestions, type Question } from "../api/questions";
 import { useAuth } from "../auth/AuthProvider";
+import CostTiers, { type Currency } from "../components/CostTiers";
 import ScoreRadar from "../components/ScoreRadar";
 import WhyNotPanel from "../components/WhyNotPanel";
 
-function RecommendationCard({ recommendation }: { recommendation: Recommendation }) {
+interface CardProps {
+  recommendation: Recommendation;
+  currency: Currency;
+  inrPerUsd: number | null;
+}
+
+function RecommendationCard({ recommendation, currency, inrPerUsd }: CardProps) {
   return (
     <article className="flex flex-col rounded-lg border border-slate-200 bg-white p-4">
       <header className="flex items-start justify-between gap-2">
@@ -43,10 +50,9 @@ function RecommendationCard({ recommendation }: { recommendation: Recommendation
           <dd className="text-slate-800">{recommendation.ha_topology}</dd>
         </div>
         <div>
-          <dt className="text-xs font-medium text-slate-500">Relative cost</dt>
-          <dd className="text-slate-800">
-            {recommendation.relative_cost_units} units{" "}
-            <span className="text-xs text-slate-500">(comparison only; monthly prices arrive with pricing)</span>
+          <dt className="mb-1 text-xs font-medium text-slate-500">Monthly cost (list price)</dt>
+          <dd>
+            <CostTiers tiers={recommendation.cost_tiers} currency={currency} inrPerUsd={inrPerUsd} />
           </dd>
         </div>
       </dl>
@@ -78,6 +84,7 @@ export default function Results() {
   const [result, setResult] = useState<AssessmentResult | null>(null);
   const [questions, setQuestions] = useState<Map<string, Question>>(new Map());
   const [error, setError] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<Currency>("usd");
 
   useEffect(() => {
     fetchAssessment(id, getAccessToken)
@@ -115,10 +122,39 @@ export default function Results() {
             fired · {new Set(result.trace.filtered_out.map((reason) => reason.service_id)).size} services filtered out
           </p>
         </div>
-        <Link to="/assessments/new" className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:border-slate-500">
-          New assessment
-        </Link>
+        <div className="flex items-center gap-2">
+          {result.pricing?.inr_per_usd && (
+            <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5" role="group" aria-label="Currency">
+              {(["usd", "inr"] as Currency[]).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={currency === option}
+                  onClick={() => setCurrency(option)}
+                  className={`rounded px-2 py-1 text-xs ${currency === option ? "bg-slate-900 text-white" : "text-slate-600"}`}
+                >
+                  {option.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
+          <Link to="/assessments/new" className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:border-slate-500">
+            New assessment
+          </Link>
+        </div>
       </div>
+
+      {result.pricing && (
+        <p className="text-xs text-slate-500">
+          Prices as of{" "}
+          {Object.entries(result.pricing.prices_as_of)
+            .map(([csp, date]) => `${CSP_LABELS[csp]} ${new Date(date).toLocaleDateString()}`)
+            .join(" · ") || "—"}
+          {result.pricing.inr_per_usd ? ` · ₹${result.pricing.inr_per_usd}/USD (${result.pricing.inr_rate_date || "date not set"})` : ""}
+          {" · "}
+          {result.pricing.notes.join(" ")}
+        </p>
+      )}
 
       {result.recommendations.length === 0 ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -129,7 +165,12 @@ export default function Results() {
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
           {result.recommendations.map((recommendation) => (
-            <RecommendationCard key={recommendation.rank} recommendation={recommendation} />
+            <RecommendationCard
+              key={recommendation.rank}
+              recommendation={recommendation}
+              currency={currency}
+              inrPerUsd={result.pricing?.inr_per_usd ?? null}
+            />
           ))}
         </div>
       )}

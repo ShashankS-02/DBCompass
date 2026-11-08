@@ -135,11 +135,13 @@ def score_portability(service: ServiceEntry, values: dict[str, Any], scoring: Sc
     return blend(scoring.dimension_parts["portability"], parts)
 
 
-def score_cost(units: float, cheapest_units: float) -> float:
-    """Inverse of relative cost, normalised so the cheapest candidate scores 100."""
-    if units <= 0:
+def score_cost(cost: float | None, cheapest: float | None, unknown_points: float = 50.0) -> float:
+    """Inverse of cost, normalised so the cheapest candidate scores 100; unknown cost is neutral."""
+    if cost is None or cheapest is None:
+        return unknown_points
+    if cost <= 0:
         return GOOD
-    return GOOD * cheapest_units / units
+    return GOOD * cheapest / cost
 
 
 def rule_adjustments(service: ServiceEntry, rules: list[Rule], values: dict[str, Any]) -> list[AppliedAdjustment]:
@@ -158,7 +160,8 @@ def rule_adjustments(service: ServiceEntry, rules: list[Rule], values: dict[str,
 def score_service(
     service: ServiceEntry,
     sizing: SizingResult,
-    cheapest_units: float,
+    cost: float | None,
+    cheapest: float | None,
     resolved_values: dict[str, Any],
     weights: dict[str, float],
     rules: list[Rule],
@@ -168,7 +171,7 @@ def score_service(
     engine = sizing.engine
     dimension_scores = {
         "performance": score_performance(service, resolved_values, scoring),
-        "cost": score_cost(sizing.relative_cost_units, cheapest_units),
+        "cost": score_cost(cost, cheapest, scoring.unknown_points),
         "reliability": score_reliability(service, resolved_values, scoring),
         "ops": score_ops(service, resolved_values, scoring, engine),
         "ecosystem": score_ecosystem(service, resolved_values),
@@ -191,21 +194,31 @@ def score_service(
     )
 
 
+def cost_basis(services: list[ServiceEntry], sizings: dict[str, SizingResult], usd: dict[str, float | None]) -> dict[str, float | None]:
+    """Monthly USD when any candidate is priced (unpriced ones score neutral); else relative units for all."""
+    if any(usd.get(service.id) is not None for service in services):
+        return {service.id: usd.get(service.id) for service in services}
+    return {service.id: sizings[service.id].relative_cost_units for service in services}
+
+
 def score_all(
     services: list[ServiceEntry],
     sizings: dict[str, SizingResult],
+    usd: dict[str, float | None],
     resolved_values: dict[str, Any],
     weights: dict[str, float],
     rules: list[Rule],
     scoring: ScoringConfig,
 ) -> dict[str, ServiceScore]:
-    """Score every service; cost is normalised against the cheapest in this group."""
+    """Score every service; cost is normalised against the cheapest known cost in this group."""
     if not services:
         return {}
-    cheapest_units = min(sizings[service.id].relative_cost_units for service in services)
+    costs = cost_basis(services, sizings, usd)
+    known_costs = [cost for cost in costs.values() if cost is not None]
+    cheapest = min(known_costs) if known_costs else None
     scores: dict[str, ServiceScore] = {}
     for service in services:
         scores[service.id] = score_service(
-            service, sizings[service.id], cheapest_units, resolved_values, weights, rules, scoring
+            service, sizings[service.id], costs[service.id], cheapest, resolved_values, weights, rules, scoring
         )
     return scores

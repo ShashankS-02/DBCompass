@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.engine.combiner import Combination, build_combination, component_needs
+from app.engine.costing import apply_budget_filter, balanced_costs, pricing_summary, recommendation_tiers
 from app.engine.defaults import resolve_requirements
 from app.engine.filters import filter_services, rules_for_scope
 from app.engine.rules import fired_rules
@@ -27,7 +28,7 @@ from app.models.results import (
     Trace,
 )
 
-ENGINE_VERSION = "m3.1"
+ENGINE_VERSION = "m4.1"
 TOP_N = 3
 WHY_TOP_DIMENSIONS = 2
 
@@ -86,13 +87,16 @@ def to_recommendation(
     sizings: "Sizings",
     resolved: ResolvedRequirements,
     guidance: list[str],
+    knowledge: KnowledgeBundle,
 ) -> Recommendation:
     """Turn a scored combination into the API model."""
     primary = combination.primary
     primary_sizing = sizings.primary[primary.id]
     components = [choice_for(primary, "primary_oltp", primary_sizing, "Primary database", resolved.values)]
+    priced_parts = [(primary, "primary_oltp")]
     total_units = primary_sizing.relative_cost_units
     for need, component in combination.components:
+        priced_parts.append((component, need.requirement.role))
         component_sizing = sizings.component[component.id]
         components.append(choice_for(component, need.requirement.role, component_sizing, need.message, resolved.values))
         total_units += component_sizing.relative_cost_units
@@ -103,27 +107,36 @@ def to_recommendation(
         total_score=combination.score,
         dimension_scores=combination.primary_score.dimension_scores,
         relative_cost_units=round(total_units, 2),
+        cost_tiers=recommendation_tiers(priced_parts, resolved.values, knowledge),
         ha_topology=primary_sizing.ha_topology,
         design_guidance=list(guidance) + primary_sizing.notes,
         why=why_lines(combination, resolved.dimension_weights),
     )
 
 
-def rank_combinations(combinations: list[Combination], sizings: "Sizings") -> list[Combination]:
-    """Highest score first; ties broken by lower relative cost, then service id."""
+def cost_key(service_id: str, sizings: "Sizings") -> tuple[bool, float, float]:
+    """Tie-break order: priced before unpriced, then lower monthly USD, then lower relative units."""
+    usd = sizings.primary_usd.get(service_id)
+    return (usd is None, usd or 0.0, sizings.primary[service_id].relative_cost_units)
 
-    def sort_key(combination: Combination) -> tuple[float, float, str]:
-        return (-combination.score, sizings.primary[combination.primary.id].relative_cost_units, combination.primary.id)
+
+def rank_combinations(combinations: list[Combination], sizings: "Sizings") -> list[Combination]:
+    """Highest score first; ties broken by lower cost, then service id."""
+
+    def sort_key(combination: Combination) -> tuple:
+        return (-combination.score, cost_key(combination.primary.id, sizings), combination.primary.id)
 
     return sorted(combinations, key=sort_key)
 
 
 @dataclass(frozen=True)
 class Sizings:
-    """Sizing per service: as a primary (in-memory holds all data) and as an add-on component."""
+    """Sizing and Balanced-tier monthly USD per service, as a primary and as an add-on component."""
 
     primary: dict[str, SizingResult]
     component: dict[str, SizingResult]
+    primary_usd: dict[str, float | None]
+    component_usd: dict[str, float | None]
 
 
 @dataclass(frozen=True)
@@ -135,6 +148,7 @@ class Candidates:
     components: list[ServiceEntry]
     component_scores: dict[str, ServiceScore]
     filtered_out: list[FilterReason]
+    pricing_notes: list[str]
 
 
 def size_everything(services: list[ServiceEntry], values: dict[str, Any], knowledge: KnowledgeBundle) -> Sizings:
@@ -142,11 +156,19 @@ def size_everything(services: list[ServiceEntry], values: dict[str, Any], knowle
     primary: dict[str, SizingResult] = {}
     component: dict[str, SizingResult] = {}
     for service in services:
-        primary[service.id] = size_service(service, values, knowledge.sizing, knowledge.hardware, knowledge.scoring)
-        component[service.id] = size_service(
-            service, values, knowledge.sizing, knowledge.hardware, knowledge.scoring, role="component"
+        offered = knowledge.prices.offered_instances(service.id)
+        primary[service.id] = size_service(
+            service, values, knowledge.sizing, knowledge.hardware, knowledge.scoring, offered=offered
         )
-    return Sizings(primary=primary, component=component)
+        component[service.id] = size_service(
+            service, values, knowledge.sizing, knowledge.hardware, knowledge.scoring, role="component", offered=offered
+        )
+    return Sizings(
+        primary=primary,
+        component=component,
+        primary_usd=balanced_costs(services, values, "primary_oltp", knowledge),
+        component_usd=balanced_costs(services, values, "component", knowledge),
+    )
 
 
 def find_candidates(
@@ -158,15 +180,17 @@ def find_candidates(
     primaries, filtered_out = filter_services(
         knowledge.services, rules, values, knowledge.regions, knowledge.rules, check_shape=True
     )
+    primaries, over_budget, pricing_notes = apply_budget_filter(primaries, values, knowledge)
     components, _ = filter_services(
         knowledge.services, rules_for_scope(rules, False), values, knowledge.regions, knowledge.rules, check_shape=False
     )
     return Candidates(
         primaries=primaries,
-        primary_scores=score_all(primaries, sizings.primary, values, weights, rules, knowledge.scoring),
+        primary_scores=score_all(primaries, sizings.primary, sizings.primary_usd, values, weights, rules, knowledge.scoring),
         components=components,
-        component_scores=score_all(components, sizings.component, values, weights, rules, knowledge.scoring),
-        filtered_out=filtered_out,
+        component_scores=score_all(components, sizings.component, sizings.component_usd, values, weights, rules, knowledge.scoring),
+        filtered_out=filtered_out + over_budget,
+        pricing_notes=pricing_notes,
     )
 
 
@@ -177,8 +201,8 @@ def build_all_combinations(
     config = knowledge.scoring.combination
     needs = component_needs(rules)
 
-    def primary_order(service: ServiceEntry) -> tuple[float, float, str]:
-        return (-candidates.primary_scores[service.id].total_score, sizings.primary[service.id].relative_cost_units, service.id)
+    def primary_order(service: ServiceEntry) -> tuple:
+        return (-candidates.primary_scores[service.id].total_score, cost_key(service.id, sizings), service.id)
 
     combinations = []
     for primary in sorted(candidates.primaries, key=primary_order)[: config.primaries_considered]:
@@ -219,7 +243,7 @@ def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) 
             guidance.append(rule.effects.add_guidance)
     recommendations = []
     for rank, combination in enumerate(rank_combinations(combinations, sizings)[:TOP_N], start=1):
-        recommendations.append(to_recommendation(rank, combination, sizings, resolved, guidance))
+        recommendations.append(to_recommendation(rank, combination, sizings, resolved, guidance, knowledge))
 
     trace = Trace(
         rules_fired=[rule.id for rule in rules],
@@ -229,4 +253,9 @@ def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) 
         scores=sorted(candidates.primary_scores.values(), key=lambda score: (-score.total_score, score.service_id)),
         combination_notes=combination_notes(combinations, candidates.primaries),
     )
-    return AssessmentOutcome(engine_version=ENGINE_VERSION, recommendations=recommendations, trace=trace)
+    return AssessmentOutcome(
+        engine_version=ENGINE_VERSION,
+        recommendations=recommendations,
+        trace=trace,
+        pricing=pricing_summary(knowledge, candidates.pricing_notes),
+    )

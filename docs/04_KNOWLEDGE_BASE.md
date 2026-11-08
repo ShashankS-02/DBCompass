@@ -148,5 +148,15 @@ vCPU, memory and network; storage tiers with IOPS/throughput ceilings
 ### design_patterns.yaml
 Guidance snippets keyed by condition: read replicas, CQRS, cache-aside, partitioning by date,
 connection pooling, outbox pattern for CDC, multi-region write conflict handling.
+### pricing.yaml
+How to find each service's prices in the CSP price lists: per component (compute, storage,
+reads/writes, throughput, zone redundancy) a matcher on price-list fields (`equals`, `regex` with
+named groups for dimensions like `vcpu`, `exclude`, `dims`, Azure-only `odata` narrowing), the
+billing `basis`, and how HA standbys are billed (`multi_az_rate`). Also the three cost tiers,
+commitment → allowed terms, environment multipliers and request-unit constants. Every service
+is either in `services` or in `not_priced` with a reason (checked).
+### price_snapshots/
+Built by `python -m app.pricing.snapshot <csp>`; never edited by hand. Each price keeps its SKU,
+unit, region, term and `fetched_at`.
 ### migration_tools.yaml
 See doc 07.

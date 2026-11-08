@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { apiGet, type CurrentUser, type HealthResponse } from "../api/client";
+
+interface PricingStatus {
+  snapshots: { csp: string; fetched_at: string | null; price_count: number }[];
+  priced_services: number;
+  not_priced_services: number;
+}
 import { useAuth } from "../auth/AuthProvider";
 
 type LoadState<T> = { status: "loading" } | { status: "ok"; data: T } | { status: "error"; message: string };
@@ -44,6 +50,7 @@ function StatusRow<T>({ label, state, render }: { label: string; state: LoadStat
 export default function Home() {
   const health = useApiResource<HealthResponse>("/health");
   const me = useApiResource<CurrentUser>("/me");
+  const pricing = useApiResource<PricingStatus>("/pricing/status");
 
   return (
     <div className="space-y-6">
@@ -65,6 +72,19 @@ export default function Home() {
           label="Signed in"
           state={me}
           render={(data) => `${data.name} (${data.auth_mode})`}
+        />
+        <StatusRow
+          label="Prices"
+          state={pricing}
+          render={(data) =>
+            data.snapshots
+              .map((snapshot) =>
+                snapshot.fetched_at
+                  ? `${snapshot.csp.toUpperCase()} ${new Date(snapshot.fetched_at).toLocaleDateString()}`
+                  : `${snapshot.csp.toUpperCase()} not priced`,
+              )
+              .join(" · ") + ` (${data.priced_services} services priced)`
+          }
         />
       </section>
     </div>

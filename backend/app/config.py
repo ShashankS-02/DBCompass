@@ -12,7 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     """All runtime configuration. Values come from env vars or a local .env file."""
 
-    model_config = SettingsConfigDict(env_file=(REPO_ROOT / ".env", ".env"), extra="ignore")
+    model_config = SettingsConfigDict(env_file=(REPO_ROOT / ".env", ".env"), extra="ignore", env_ignore_empty=True)
 
     dev_auth_bypass: bool = False
     database_url: str = "sqlite:///./dbcompass.db"
@@ -22,6 +22,11 @@ class Settings(BaseSettings):
 
     entra_tenant_id: str = ""
     entra_api_client_id: str = ""
+
+    gcp_billing_api_key: str = ""
+    gcp_service_account_file: str = ""
+    inr_per_usd: float | None = None
+    inr_rate_date: str = ""
 
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""

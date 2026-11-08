@@ -1,0 +1,661 @@
+# How to find each service's prices in the CSP price lists, and how to turn them into monthly cost.
+# Prices themselves are never written here: `python -m app.pricing.snapshot <csp>` reads the official
+# price lists and writes knowledge_base/price_snapshots/<csp>.json (see docs/05 "Pricing").
+version: 1
+last_verified: 2026-11-07
+
+default_geo: india          # pricing geography when neither residency nor user regions say otherwise
+snapshot_regions:           # one region per geography; the snapshot builder fetches these
+  aws: [ap-south-1, eu-west-1, us-east-1, ap-southeast-1]
+  azure: [centralindia, westeurope, eastus, southeastasia]
+  gcp: [asia-south1, europe-west1, us-central1, asia-southeast1]
+
+hours_per_month: 730
+seconds_per_month: 2628000
+storage_months_ahead: 12    # provision storage for current size + 12 months of growth
+minimum_storage_gb: 20
+average_to_peak_tps: 0.4    # used when wl.avg_tps is not given (request-priced services)
+cosmos_ru_per_read: 1       # 1 KB point read
+cosmos_ru_per_write: 5      # 1 KB write with default indexing
+budget_margin: 1.5          # doc 05: drop options whose Budget tier exceeds cap × margin
+
+# app.env option -> share of production cost. DR counts only when the HA layout has no DR replica.
+environment_multipliers: {prod: 1.0, dr: 1.0, uat: 0.5, dev: 0.25}
+
+# cost.commitment answer -> terms that may be used. Unanswered = on_demand only.
+terms_allowed:
+  on_demand: [on_demand]
+  1_year: [on_demand, 1yr]
+  3_year: [on_demand, 1yr, 3yr]
+
+# doc 05 §5. A tier uses its preferred term when allowed, else the longest allowed shorter one.
+tiers:
+  budget: {label: Budget, headroom_fraction: 0.0, size_steps_up: 0, extra_replicas: 0, preferred_term: 3yr, storage: cheapest}
+  balanced: {label: Balanced, headroom_fraction: null, size_steps_up: 0, extra_replicas: 0, preferred_term: 1yr, storage: cheapest}
+  performance: {label: Performance, headroom_fraction: null, size_steps_up: 1, extra_replicas: 1, preferred_term: on_demand, storage: fastest}
+
+# multi_az_rate: how standby / HA is billed
+#   deployment_option     – AWS RDS: the Multi-AZ rate already includes the standby
+#   extra_node            – standby billed as another node at the same rate
+#   zone_redundancy_addon – Azure SQL: add the "Zone Redundancy" meter
+#   included              – serverless / request-priced: HA is in the unit price
+services:
+  # ---------------- AWS ----------------
+  aws.rds_postgresql: &rds
+    multi_az_rate: deployment_option
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Instance, Database Engine: PostgreSQL, License Model: No license required}
+          regex: {Deployment Option: "^(Single-AZ|Multi-AZ)$", usageType: "(InstanceUsage|Multi-AZUsage|MirrorUsage):db"}
+          dims: {instance: Instance Type, deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [gp3]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: General Purpose-GP3}
+          regex: {Database Engine: "^(PostgreSQL|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [io2]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: Provisioned IOPS-IO2}
+          regex: {Database Engine: "^(PostgreSQL|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+    note: "Provisioned IOPS above the gp3 baseline and backup beyond the free allowance are not included."
+  aws.rds_mysql:
+    multi_az_rate: deployment_option
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Instance, Database Engine: MySQL, License Model: No license required}
+          regex: {Deployment Option: "^(Single-AZ|Multi-AZ)$", usageType: "(InstanceUsage|Multi-AZUsage|MirrorUsage):db"}
+          dims: {instance: Instance Type, deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [gp3]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: General Purpose-GP3}
+          regex: {Database Engine: "^(MySQL|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [io2]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: Provisioned IOPS-IO2}
+          regex: {Database Engine: "^(MySQL|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+    note: "Provisioned IOPS above the gp3 baseline and backup beyond the free allowance are not included."
+  aws.rds_mariadb:
+    multi_az_rate: deployment_option
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Instance, Database Engine: MariaDB, License Model: No license required}
+          regex: {Deployment Option: "^(Single-AZ|Multi-AZ)$", usageType: "(InstanceUsage|Multi-AZUsage|MirrorUsage):db"}
+          dims: {instance: Instance Type, deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [gp3]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: General Purpose-GP3}
+          regex: {Database Engine: "^(MariaDB|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [io2]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: Provisioned IOPS-IO2}
+          regex: {Database Engine: "^(MariaDB|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+  aws.rds_oracle:
+    multi_az_rate: deployment_option
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Instance, Database Engine: Oracle, Database Edition: Enterprise, License Model: Bring your own license}
+          regex: {Deployment Option: "^(Single-AZ|Multi-AZ)$", usageType: "(InstanceUsage|Multi-AZUsage|MirrorUsage):db"}
+          dims: {instance: Instance Type, deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [gp3]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: General Purpose-GP3}
+          regex: {Database Engine: "^(Oracle|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [io2]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: Provisioned IOPS-IO2}
+          regex: {Database Engine: "^(Oracle|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+    note: "Oracle Enterprise Edition on BYOL: Oracle licence and support costs are NOT included."
+  aws.rds_sqlserver:
+    multi_az_rate: deployment_option
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Instance, Database Engine: SQL Server, Database Edition: Standard, License Model: License included}
+          regex: {Deployment Option: "^(Single-AZ|Multi-AZ)$", usageType: "(InstanceUsage|Multi-AZUsage|MirrorUsage):db"}
+          dims: {instance: Instance Type, deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [gp3]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: General Purpose-GP3}
+          regex: {Database Engine: "^(SQL Server|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [io2]
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage, Volume Type: Provisioned IOPS-IO2}
+          regex: {Database Engine: "^(SQL Server|Any)$", Deployment Option: "^(Single-AZ|Multi-AZ)$"}
+          dims: {deployment: Deployment Option}
+    note: "SQL Server Standard Edition, licence included."
+  aws.aurora_postgresql:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Instance, Database Engine: Aurora PostgreSQL}
+          regex: {usageType: "(^|-)InstanceUsage:db"}
+          dims: {instance: Instance Type}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage}
+          regex: {Database Engine: "^(Aurora PostgreSQL|Any)$", usageType: "(^|-)Aurora:StorageUsage$"}
+    note: "Aurora Standard; I/O requests are billed separately and not included."
+  aws.aurora_mysql:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Instance, Database Engine: Aurora MySQL}
+          regex: {usageType: "(^|-)InstanceUsage:db"}
+          dims: {instance: Instance Type}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: AmazonRDS
+          equals: {Product Family: Database Storage}
+          regex: {Database Engine: "^(Aurora MySQL|Any)$", usageType: "(^|-)Aurora:StorageUsage$"}
+    note: "Aurora Standard; I/O requests are billed separately and not included."
+  aws.elasticache:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonElastiCache
+          equals: {Product Family: Cache Instance, Cache Engine: Valkey}
+          regex: {usageType: "(^|-)NodeUsage:cache\\."}
+          dims: {instance: Instance Type}
+  aws.memorydb:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonMemoryDB
+          equals: {Product Family: Amazon MemoryDB}
+          regex: {usageType: "(^|-)NodeUsage:db\\.[^:]+:Valkey$"}
+          dims: {instance: Instance Type}
+  aws.documentdb:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonDocDB
+          equals: {Product Family: Database Instance}
+          regex: {usageType: "(^|-)InstanceUsage:db\\."}
+          dims: {instance: Instance Type}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: AmazonDocDB
+          equals: {Product Family: Database Storage}
+          regex: {usageType: "(^|-)StorageUsage$"}
+          exclude: {usageType: [Elastic, IOOptimized]}
+    note: "Standard storage; I/O requests are billed separately and not included."
+  aws.opensearch:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonES
+          equals: {Product Family: Amazon OpenSearch Service Instance}
+          regex: {usageType: "(^|-)ESInstance:"}
+          dims: {instance: Instance Type}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: AmazonES
+          equals: {Product Family: Amazon OpenSearch Service Volume}
+          regex: {usageType: "(^|-)ES:GP3-Storage$"}
+  aws.redshift:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonRedshift
+          equals: {Product Family: Compute Instance}
+          regex: {usageType: "(^|-)Node:ra3\\."}
+          dims: {instance: Instance Type}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: AmazonRedshift
+          equals: {Product Family: Redshift Managed Storage}
+          regex: {usageType: "(^|-)RMS:ra3\\.xlplus$"}
+  aws.dynamodb:
+    multi_az_rate: included
+    components:
+      - kind: reads
+        basis: read_request_unit
+        matcher:
+          source: AmazonDynamoDB
+          equals: {Product Family: Amazon DynamoDB PayPerRequest Throughput, Group: DDB-ReadUnits}
+      - kind: writes
+        basis: write_request_unit
+        matcher:
+          source: AmazonDynamoDB
+          equals: {Product Family: Amazon DynamoDB PayPerRequest Throughput, Group: DDB-WriteUnits}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: AmazonDynamoDB
+          equals: {Product Family: Database Storage, Volume Type: Amazon DynamoDB - Indexed DataStore}
+          regex: {usageType: "(^|-)TimedStorage-ByteHrs$"}
+    note: "On-demand capacity, Standard table class; global-table replicas are not included."
+  aws.keyspaces:
+    multi_az_rate: included
+    components:
+      - kind: reads
+        basis: read_request_unit
+        matcher:
+          source: AmazonMCS
+          regex: {usageType: "(^|-)ReadRequestUnits$"}
+      - kind: writes
+        basis: write_request_unit
+        matcher:
+          source: AmazonMCS
+          regex: {usageType: "(^|-)WriteRequestUnits$"}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: AmazonMCS
+          regex: {usageType: "(^|-)TimedStorage-ByteHrs$"}
+    note: "On-demand capacity; multi-region replication is not included."
+  aws.ec2_self_managed:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: AmazonEC2
+          equals: {Product Family: Compute Instance, Operating System: Linux, Tenancy: Shared, Pre Installed S/W: NA, CapacityStatus: Used, License Model: No License required}
+          dims: {instance: Instance Type}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [gp3]
+        matcher:
+          source: AmazonEC2
+          equals: {Product Family: Storage, Volume API Name: gp3}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [io2_block_express]
+        matcher:
+          source: AmazonEC2
+          equals: {Product Family: Storage, Volume API Name: io2}
+    note: "Linux compute and EBS only; database licences (e.g. Oracle) and DBA effort are not included."
+
+  # ---------------- Azure ----------------
+  azure.postgresql_flexible:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: vcpu_hour
+        applies_to_family: [Dds_v5]
+        matcher:
+          source: Azure Database for PostgreSQL
+          equals: {productName: Azure Database for PostgreSQL Flexible Server General Purpose Ddsv5 Series Compute, skuName: vCore}
+      - kind: compute
+        basis: vcpu_hour
+        applies_to_family: [Eds_v5]
+        matcher:
+          source: Azure Database for PostgreSQL
+          equals: {productName: Azure Database for PostgreSQL Flexible Server Memory Optimized Edsv5 Series Compute, skuName: vCore}
+      - kind: compute
+        basis: instance_hour
+        applies_to_family: [B]
+        matcher:
+          source: Azure Database for PostgreSQL
+          equals: {productName: Azure Database for PostgreSQL Flexible Server Burstable BS Series Compute}
+          regex: {skuName: "^(?P<instance>B\\d+m?s)$"}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [premium_ssd]
+        matcher:
+          source: Azure Database for PostgreSQL
+          equals: {productName: Azure Database for PostgreSQL Flex Server Storage, skuName: Storage}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [premium_ssd_v2]
+        matcher:
+          source: Azure Database for PostgreSQL
+          equals: {productName: Azure Database for PostgreSQL Flex Server Storage, skuName: Premium SSD v2 Storage}
+  azure.mysql_flexible:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: vcpu_hour
+        applies_to_family: [Ddsv5]
+        matcher:
+          source: Azure Database for MySQL
+          equals: {productName: Azure Database for MySQL Flexible Server General Purpose Ddsv5 Series Compute, skuName: 1 vCore}
+      - kind: compute
+        basis: instance_hour
+        applies_to_family: [Edsv5]
+        matcher:
+          source: Azure Database for MySQL
+          equals: {productName: Azure Database for MySQL Flexible Server Memory Optimized Edsv5 Series Compute}
+          regex: {skuName: "^Standard_E(?P<vcpu>\\d+)d_v5$"}
+      - kind: compute
+        basis: instance_hour
+        applies_to_family: [B]
+        matcher:
+          source: Azure Database for MySQL
+          equals: {productName: Azure Database for MySQL Flexible Server Burstable BS Series Compute}
+          regex: {skuName: "^Standard_(?P<instance>B\\d+m?s)$"}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: Azure Database for MySQL
+          equals: {productName: Azure Database for MySQL Flexible Server Storage}
+          regex: {meterName: "^Storage Data Stored$"}
+  azure.sql_database:
+    multi_az_rate: zone_redundancy_addon
+    components:
+      - kind: compute
+        basis: instance_hour
+        applies_to_family: [general_purpose]
+        matcher:
+          source: SQL Database
+          equals: {productName: SQL Database Single/Elastic Pool General Purpose - Compute Gen5, meterName: vCore}
+          regex: {skuName: "^(?P<vcpu>\\d+) vCore$"}
+      - kind: zone_redundancy
+        basis: instance_hour
+        applies_to_family: [general_purpose]
+        matcher:
+          source: SQL Database
+          equals: {productName: SQL Database Single/Elastic Pool General Purpose - Compute Gen5}
+          regex: {skuName: "^(?P<vcpu>\\d+) vCore Zone Redundancy$"}
+      - kind: compute
+        basis: instance_hour
+        applies_to_family: [business_critical]
+        matcher:
+          source: SQL Database
+          equals: {productName: SQL Database Single/Elastic Pool Business Critical - Compute Gen5, meterName: vCore}
+          regex: {skuName: "^(?P<vcpu>\\d+) vCore$"}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: SQL Database
+          equals: {productName: SQL Database Single/Elastic Pool General Purpose - Storage}
+          regex: {meterName: "Data Stored$"}
+          exclude: {meterName: [Zone]}
+    note: "vCore model, SQL licence included."
+  azure.sql_managed_instance:
+    multi_az_rate: zone_redundancy_addon
+    components:
+      - kind: compute
+        basis: instance_hour
+        applies_to_family: [general_purpose, next_gen_general_purpose]
+        matcher:
+          source: SQL Managed Instance
+          equals: {productName: SQL Managed Instance General Purpose - Compute Gen5, meterName: vCore}
+          regex: {skuName: "^(?P<vcpu>\\d+) vCore$"}
+      - kind: zone_redundancy
+        basis: instance_hour
+        applies_to_family: [general_purpose, next_gen_general_purpose]
+        matcher:
+          source: SQL Managed Instance
+          equals: {productName: SQL Managed Instance General Purpose - Compute Gen5}
+          regex: {skuName: "^(?P<vcpu>\\d+) vCore Zone Redundancy$"}
+      - kind: compute
+        basis: instance_hour
+        applies_to_family: [business_critical]
+        matcher:
+          source: SQL Managed Instance
+          equals: {productName: SQL Managed Instance Business Critical - Compute Gen5, meterName: vCore}
+          regex: {skuName: "^(?P<vcpu>\\d+) vCore$"}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: SQL Managed Instance
+          equals: {productName: SQL Managed Instance General Purpose - Storage}
+          regex: {meterName: "Data Stored$"}
+          exclude: {meterName: [Zone]}
+    note: "vCore model, SQL licence included; first 32 GB of storage is included in the vCore price."
+  azure.cosmos_db_nosql: &cosmos
+    multi_az_rate: included
+    components:
+      - kind: throughput
+        basis: ru100_hour
+        matcher:
+          source: Azure Cosmos DB
+          equals: {productName: Azure Cosmos DB, meterName: 100 RU/s}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: Azure Cosmos DB
+          equals: {productName: Azure Cosmos DB, meterName: Data Stored}
+          exclude: {skuName: [Free Tier, mRUs]}
+    note: "Provisioned throughput (manual), single write region; each extra region adds the same RU/s and storage."
+  azure.cosmos_db_mongodb_ru: *cosmos
+  azure.cosmos_db_table: *cosmos
+  azure.cosmos_db_cassandra: *cosmos
+  azure.cosmos_db_gremlin: *cosmos
+  azure.vm_self_managed:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: instance_hour
+        matcher:
+          source: Virtual Machines
+          odata: "contains(armSkuName, 'ds_v5') or contains(armSkuName, 'ms_v2')"
+          regex: {productName: "^Virtual Machines \\S+ Series$"}
+          exclude: {skuName: [Spot, Low Priority]}
+          dims: {instance: armSkuName}
+      - kind: storage
+        basis: gb_hour
+        applies_to_storage: [premium_ssd_v2]
+        matcher:
+          source: Storage
+          odata: "productName eq 'Azure Premium SSD v2'"
+          equals: {productName: Azure Premium SSD v2, meterName: Premium LRS Provisioned Capacity}
+    note: "Linux VM and Premium SSD v2 capacity only; database licences, extra disk IOPS/throughput and DBA effort are not included."
+
+  # ---------------- GCP (Cloud Billing Catalog; built with a service account or API key) ----------------
+  gcp.cloudsql_postgresql:
+    multi_az_rate: deployment_option
+    components:
+      - kind: compute
+        basis: vcpu_hour
+        matcher:
+          source: Cloud SQL
+          regex: {description: "^Cloud SQL for PostgreSQL: (?P<deployment>Zonal|Regional) - vCPU in "}
+          aliases: {deployment: {zonal: single-az, regional: multi-az}}
+      - kind: memory
+        basis: memory_gb_hour
+        matcher:
+          source: Cloud SQL
+          regex: {description: "^Cloud SQL for PostgreSQL: (?P<deployment>Zonal|Regional) - RAM in "}
+          aliases: {deployment: {zonal: single-az, regional: multi-az}}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [pd_ssd]
+        matcher:
+          source: Cloud SQL
+          regex: {description: "^Cloud SQL for PostgreSQL: (?P<deployment>Zonal|Regional) - Standard storage in "}
+          aliases: {deployment: {zonal: single-az, regional: multi-az}}
+    note: "Enterprise edition rates; Enterprise Plus (needed above 99.95% availability) is priced higher and not modelled. Regional (HA) rates include the standby."
+  gcp.cloudsql_mysql:
+    multi_az_rate: deployment_option
+    components:
+      - kind: compute
+        basis: vcpu_hour
+        matcher:
+          source: Cloud SQL
+          regex: {description: "^Cloud SQL for MySQL: (?P<deployment>Zonal|Regional) - vCPU in "}
+          aliases: {deployment: {zonal: single-az, regional: multi-az}}
+      - kind: memory
+        basis: memory_gb_hour
+        matcher:
+          source: Cloud SQL
+          regex: {description: "^Cloud SQL for MySQL: (?P<deployment>Zonal|Regional) - RAM in "}
+          aliases: {deployment: {zonal: single-az, regional: multi-az}}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [pd_ssd]
+        matcher:
+          source: Cloud SQL
+          regex: {description: "^Cloud SQL for MySQL: (?P<deployment>Zonal|Regional) - Standard storage in "}
+          aliases: {deployment: {zonal: single-az, regional: multi-az}}
+      - kind: storage
+        basis: gb_month
+        applies_to_storage: [hyperdisk_balanced]
+        matcher:
+          source: Cloud SQL
+          regex: {description: "^Cloud SQL for MySQL: (?P<deployment>Zonal|Regional) - Enterprise Storage Hyperdisk Balanced Capacity in "}
+          aliases: {deployment: {zonal: single-az, regional: multi-az}}
+    note: "Enterprise edition rates; Enterprise Plus (needed above 99.95% availability) is priced higher and not modelled. Regional (HA) rates include the standby."
+  gcp.alloydb:
+    multi_az_rate: extra_node
+    components:
+      - kind: compute
+        basis: vcpu_hour
+        matcher:
+          source: AlloyDB
+          regex: {description: "^AlloyDB Instance vCPU Cores in "}
+      - kind: memory
+        basis: memory_gb_hour
+        matcher:
+          source: AlloyDB
+          regex: {description: "^AlloyDB Instance RAM Usage in "}
+      - kind: storage
+        basis: gb_hour
+        matcher:
+          source: AlloyDB
+          regex: {description: "^AlloyDB Cluster Database Storage in "}
+    note: "HA primary billed as two nodes; read pool nodes billed each; cluster storage shared."
+  gcp.bigtable:
+    multi_az_rate: included
+    node_capacity: {ops_per_node: 10000, storage_gb_per_node: 5120, min_nodes: 1}
+    components:
+      - kind: compute
+        basis: node_hour
+        matcher:
+          source: Cloud Bigtable
+          regex: {description: "^Server Node in "}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: Cloud Bigtable
+          regex: {description: "^SSD storage in "}
+    note: "Nodes = max(1, peak ops ÷ 10,000, data ÷ 5 TB) per cluster (heuristic, see OPEN_QUESTIONS); replicated clusters multiply nodes and storage."
+  gcp.firestore:
+    multi_az_rate: included
+    components:
+      - kind: reads
+        basis: read_request_unit
+        matcher:
+          source: Cloud Firestore
+          regex: {description: "^Cloud Firestore Enterprise Read Units "}
+          exclude: {description: [free tier]}
+      - kind: writes
+        basis: write_request_unit
+        matcher:
+          source: Cloud Firestore
+          regex: {description: "^Cloud Firestore Enterprise Write Units "}
+          exclude: {description: [free tier]}
+      - kind: storage
+        basis: gb_month
+        matcher:
+          source: Cloud Firestore
+          regex: {description: "^Cloud Firestore Enterprise Storage "}
+          exclude: {description: [free tier]}
+    note: "Enterprise edition at regional-location rates; multi-region locations (nam5, eur3) cost more and are not mapped yet. Free-tier allowances not deducted."
+  gcp.compute_engine_self_managed:
+    multi_az_rate: extra_node
+    components:
+      - {kind: compute, basis: vcpu_hour, applies_to_family: [n2], matcher: {source: Compute Engine, regex: {description: "^N2 Instance Core running in "}}}
+      - {kind: compute, basis: vcpu_hour, applies_to_family: [n4], matcher: {source: Compute Engine, regex: {description: "^N4 Instance Core running in "}}}
+      - {kind: compute, basis: vcpu_hour, applies_to_family: [c4], matcher: {source: Compute Engine, regex: {description: "^C4 Instance Core running in "}}}
+      - {kind: compute, basis: vcpu_hour, applies_to_family: [m3], matcher: {source: Compute Engine, regex: {description: "^M3 Memory-optimized Instance Core running in "}}}
+      - {kind: memory, basis: memory_gb_hour, applies_to_family: [n2], matcher: {source: Compute Engine, regex: {description: "^N2 Instance Ram running in "}}}
+      - {kind: memory, basis: memory_gb_hour, applies_to_family: [n4], matcher: {source: Compute Engine, regex: {description: "^N4 Instance Ram running in "}}}
+      - {kind: memory, basis: memory_gb_hour, applies_to_family: [c4], matcher: {source: Compute Engine, regex: {description: "^C4 Instance Ram running in "}}}
+      - {kind: memory, basis: memory_gb_hour, applies_to_family: [m3], matcher: {source: Compute Engine, regex: {description: "^M3 Memory-optimized Instance Ram running in "}}}
+      - {kind: storage, basis: gb_month, applies_to_storage: [hyperdisk_balanced], matcher: {source: Compute Engine, regex: {description: "^Hyperdisk Balanced Capacity in "}}}
+      - {kind: storage, basis: gb_month, applies_to_storage: [hyperdisk_extreme], matcher: {source: Compute Engine, regex: {description: "^Hyperdisk Extreme Capacity in "}}}
+      - {kind: storage, basis: gb_month, applies_to_storage: [pd_ssd], matcher: {source: Compute Engine, regex: {description: "^SSD backed PD Capacity( in |$)"}}}
+    note: "VM cores, RAM and disk capacity only; database licences, extra disk IOPS/throughput and DBA effort are not included."
+
+# Services without a price model yet, and why. Every KB service is either above or here.
+not_priced:
+  aws.aurora_dsql: "Priced in DPUs; DPU usage cannot be derived from TPS reliably yet."
+  aws.oracle_database_at_aws: "Contract / Oracle-quoted pricing (Exadata infrastructure plus licences)."
+  aws.neptune: "Not in the M4 pricing scope."
+  aws.timestream_liveanalytics: "Not recommended for new projects."
+  aws.timestream_influxdb: "Not in the M4 pricing scope."
+  aws.rds_db2: "IBM licence pricing needs confirmation."
+  gcp.cloudsql_sqlserver: "SQL Server licence SKUs are not in the Cloud SQL catalog; an infrastructure-only price would understate it."
+  gcp.spanner: "Multi-region configurations (how Spanner is usually recommended) and node sizing are not mapped yet."
+  gcp.memorystore: "Priced by node type / capacity tier; the catalog does not state each type's memory, so no mapping yet."
+  gcp.bigquery: "Query (per TiB scanned) and slot pricing; not in the M4 scope."
+  gcp.oracle_database_at_google_cloud: "Contract / Oracle-quoted pricing."
+  gcp.bare_metal_solution_oracle: "Contract pricing."
+  gcp.vertex_ai_search: "Query-based pricing; not in the M4 scope."
+  azure.oracle_database_at_azure: "Contract / Oracle-quoted pricing."
+  azure.sql_server_vm: "SQL Server licence meters per edition not mapped yet."
+  azure.cosmos_db_postgresql: "Not recommended for new projects."
+  azure.cosmos_db_mongodb_vcore: "Not in the M4 pricing scope."
+  azure.managed_instance_cassandra: "Not in the M4 pricing scope."
+  azure.managed_redis: "SKU (M/B/X sizes) mapping from sized memory not defined yet."
+  azure.data_explorer: "Not in the M4 pricing scope."
+  azure.ai_search: "Search units / tiers mapping not defined yet."
+  azure.fabric_warehouse: "Capacity-unit pricing; not in the M4 scope."
+  azure.synapse_analytics: "DWU pricing; not in the M4 scope."

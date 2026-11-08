@@ -18,6 +18,8 @@ from app.models.knowledge import (
     ServiceEntry,
     SizingConstants,
 )
+from app.models.pricing import PricingConfig
+from app.pricing.price_cache import PriceIndex, read_snapshots
 from app.models.questions import QuestionCatalog
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,7 @@ REGIONS_FILE = "regions.yaml"
 SIZING_FILE = "sizing.yaml"
 SCORING_FILE = "scoring.yaml"
 HARDWARE_FILE = "hardware_profiles.yaml"
+PRICING_FILE = "pricing.yaml"
 SERVICES_DIR = "databases"
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
@@ -124,6 +127,18 @@ def get_hardware_profiles() -> HardwareProfiles:
     return load_model(knowledge_base_dir() / HARDWARE_FILE, HardwareProfiles)
 
 
+@lru_cache
+def get_pricing_config() -> PricingConfig:
+    """Return the cached pricing configuration."""
+    return load_model(knowledge_base_dir() / PRICING_FILE, PricingConfig)
+
+
+@lru_cache
+def get_price_index() -> PriceIndex:
+    """Return the cached index over knowledge_base/price_snapshots/*.json."""
+    return PriceIndex(read_snapshots(knowledge_base_dir()))
+
+
 @dataclass(frozen=True)
 class KnowledgeBundle:
     """Everything the engine reads from the knowledge base, loaded once."""
@@ -135,6 +150,10 @@ class KnowledgeBundle:
     sizing: SizingConstants
     scoring: ScoringConfig
     hardware: HardwareProfiles
+    pricing: PricingConfig
+    prices: PriceIndex
+    inr_per_usd: float | None = None
+    inr_rate_date: str = ""
 
 
 def get_knowledge() -> KnowledgeBundle:
@@ -147,4 +166,8 @@ def get_knowledge() -> KnowledgeBundle:
         sizing=get_sizing(),
         scoring=get_scoring(),
         hardware=get_hardware_profiles(),
+        pricing=get_pricing_config(),
+        prices=get_price_index(),
+        inr_per_usd=get_settings().inr_per_usd,
+        inr_rate_date=get_settings().inr_rate_date,
     )

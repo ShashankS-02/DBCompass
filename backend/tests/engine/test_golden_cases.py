@@ -75,3 +75,18 @@ def test_golden_case(case_file: Path) -> None:
 
 def test_there_are_ten_golden_cases() -> None:
     assert len(CASE_FILES) == 10
+
+
+@pytest.mark.parametrize("case_file", CASE_FILES, ids=[path.stem for path in CASE_FILES])
+def test_golden_top_pick_is_priced_when_its_services_are(case_file: Path) -> None:
+    knowledge = get_knowledge()
+    outcome = run_case(load_case(case_file))
+    top = outcome.recommendations[0]
+    all_priced = all(choice.service_id in knowledge.pricing.services for choice in top.components)
+
+    if all_priced:
+        for tier in top.cost_tiers.values():
+            assert tier.complete, f"{tier.tier}: {tier.missing}"
+            assert tier.monthly_usd > 0
+    else:
+        assert any(not tier.complete for tier in top.cost_tiers.values())

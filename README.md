@@ -33,6 +33,18 @@ Service entries, rules and sizing constants live in `knowledge_base/` (see docs/
 any YAML, run `python -m app.knowledge.check` from `backend/` (with the venv active).
 Golden recommendation cases live in `backend/tests/engine/golden/` — add one YAML file per case.
 
+## Prices
+Monthly costs come from price snapshots in `knowledge_base/price_snapshots/`, built from the
+official price lists (no prices are hand-entered). Rebuild from the repo root:
+```
+cd backend && .venv/bin/python -m app.pricing.snapshot azure   # Retail Prices API; a few minutes (rate-limited)
+cd backend && .venv/bin/python -m app.pricing.snapshot aws     # public bulk CSVs; ~10 minutes (EC2 files are large)
+cd backend && .venv/bin/python -m app.pricing.snapshot gcp     # Cloud Billing Catalog API; needs GCP credentials
+```
+GCP needs `GCP_SERVICE_ACCOUNT_FILE` (path to a service-account JSON key, kept outside the repo)
+or `GCP_BILLING_API_KEY` in `.env`. A `dba_admin` can refresh Azure live with
+`POST /api/pricing/refresh/azure`.
+
 ## Auth
 - Local dev: `DEV_AUTH_BYPASS=true` (backend) and `VITE_DEV_AUTH_BYPASS=true` (frontend). Every
   request runs as a fixed dev user. Never enable in a shared environment.

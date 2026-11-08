@@ -77,6 +77,25 @@ total        = sum of the above, per environment, times env multipliers (prod 1.
 All prices cached with `fetched_at`. UI shows "prices as of <date>, list price, excludes
 enterprise discounts". The LLM never produces numbers.
 
+### Pricing as implemented (M4)
+- Snapshots: AWS bulk CSVs and Azure Retail Prices API built on 2026-11-07 for one region per
+  geography (ap-south-1 / centralindia, eu-west-1 / westeurope, us-east-1 / eastus,
+  ap-southeast-1 / southeastasia). GCP snapshot built 2026-11-08 from the Cloud Billing Catalog API
+  (service account) for asia-south1, europe-west1, us-central1, asia-southeast1.
+- 31 services priced, 23 marked `not_priced` with reasons (contract-priced Oracle@CSP, Spanner,
+  Memorystore / Managed Redis node-type mapping, Cloud SQL for SQL Server licences, query-priced
+  analytics and search).
+- GCP prices vCPU and RAM separately (`vcpu_hour` + `memory_gb_hour`); Cloud SQL Zonal / Regional
+  rates map to single-AZ / multi-AZ. Bigtable is node-priced: nodes = max(1, peak ops ÷ 10,000,
+  data ÷ 5 TB) per cluster.
+- Reserved prices become effective hourly rates (AWS: hourly + upfront ÷ term hours, preferring
+  No Upfront; Azure: reservation total ÷ term hours).
+- Pricing region: residency geography, else the first named user region, else `default_geo` (india).
+- Not included (shown as notes): provisioned IOPS above baselines, Aurora / DocumentDB I/O requests,
+  backup beyond free allowances, data egress, licences on BYOL / self-managed, discounts and taxes.
+- When a tier's instance size is not sold (e.g. Aurora has no db.t4g.xlarge) the recommended size
+  is priced and noted. A recommendation with an unpriced component shows a partial total (*).
+
 ## 6. Rank and explain
 Rank by total score. Ties broken by Balanced cost. The explainer prompt receives:
 user priorities, top 3 with dimension scores, rules fired, filtered-out list, assumptions.

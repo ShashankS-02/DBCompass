@@ -29,6 +29,36 @@ export interface ServiceChoice {
   reason: string;
 }
 
+export interface CostLine {
+  component: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  unit_usd: number;
+  monthly_usd: number;
+  sku: string;
+  region: string;
+  term: string;
+}
+
+export interface CostEstimate {
+  tier: string;
+  label: string;
+  monthly_usd: number;
+  lines: CostLine[];
+  environment_multiplier: number;
+  complete: boolean;
+  missing: string[];
+  notes: string[];
+}
+
+export interface PricingSummary {
+  prices_as_of: Record<string, string>;
+  inr_per_usd: number | null;
+  inr_rate_date: string;
+  notes: string[];
+}
+
 export interface Recommendation {
   rank: number;
   components: ServiceChoice[];
@@ -36,6 +66,7 @@ export interface Recommendation {
   total_score: number;
   dimension_scores: Record<string, number>;
   relative_cost_units: number;
+  cost_tiers: Record<string, CostEstimate>;
   ha_topology: string;
   design_guidance: string[];
   why: string[];
@@ -73,6 +104,7 @@ export interface AssessmentResult {
   engine_version: string;
   recommendations: Recommendation[];
   trace: Trace;
+  pricing: PricingSummary | null;
 }
 
 export interface AssessmentSummary {

@@ -1,0 +1,1797 @@
+{
+ "csp": "gcp",
+ "fetched_at": "2026-11-08T09:27:51Z",
+ "prices": [
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "AlloyDB Instance vCPU Cores in Mumbai",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.alloydb",
+   "sku": "9155-5E0F-9E0C",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.06872
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "AlloyDB Instance vCPU Cores in Singapore",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.alloydb",
+   "sku": "8840-2760-29BB",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.08128
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "AlloyDB Instance vCPU Cores in Belgium",
+   "dims": {},
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.alloydb",
+   "sku": "FD6C-9739-1642",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.07269
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "AlloyDB Instance vCPU Cores in Iowa",
+   "dims": {},
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.alloydb",
+   "sku": "6F5E-021F-DC56",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.06608
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "AlloyDB Instance RAM Usage in Mumbai",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.alloydb",
+   "sku": "6E09-F3D0-0DD2",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.01165
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "AlloyDB Instance RAM Usage in Singapore",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.alloydb",
+   "sku": "ABDE-FCCE-8FB8",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.01378
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "AlloyDB Instance RAM Usage in Belgium",
+   "dims": {},
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.alloydb",
+   "sku": "D80A-F203-F8F4",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.01232
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "AlloyDB Instance RAM Usage in Iowa",
+   "dims": {},
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.alloydb",
+   "sku": "F8AA-184E-4DBC",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0112
+  },
+  {
+   "basis": "gb_hour",
+   "component_id": "storage.2",
+   "description": "AlloyDB Cluster Database Storage in Mumbai",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.alloydb",
+   "sku": "70B8-5660-B071",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0004273
+  },
+  {
+   "basis": "gb_hour",
+   "component_id": "storage.2",
+   "description": "AlloyDB Cluster Database Storage in Singapore",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.alloydb",
+   "sku": "599C-B210-CE8A",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0005054
+  },
+  {
+   "basis": "gb_hour",
+   "component_id": "storage.2",
+   "description": "AlloyDB Cluster Database Storage in Belgium",
+   "dims": {},
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.alloydb",
+   "sku": "428F-65B3-D03E",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.000452
+  },
+  {
+   "basis": "gb_hour",
+   "component_id": "storage.2",
+   "description": "AlloyDB Cluster Database Storage in Iowa",
+   "dims": {},
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.alloydb",
+   "sku": "57F9-97C9-B17B",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0004109
+  },
+  {
+   "basis": "node_hour",
+   "component_id": "compute.0",
+   "description": "Server Node in asia-south1 region",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.bigtable",
+   "sku": "6C8B-A993-CE07",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.748
+  },
+  {
+   "basis": "node_hour",
+   "component_id": "compute.0",
+   "description": "Server Node in asia-southeast1 region",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.bigtable",
+   "sku": "150E-B413-9E7C",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.72
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.1",
+   "description": "SSD storage in asia-south1 region",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.bigtable",
+   "sku": "5C4C-703D-8CD1",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.196
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.1",
+   "description": "SSD storage in asia-southeast1 region",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.bigtable",
+   "sku": "6C2D-34FB-03F8",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.19
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for MySQL: Regional - vCPU in Mumbai",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "C6EC-0069-3076",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0991
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for MySQL: Zonal - vCPU in Mumbai",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "FD1C-BF76-E3AA",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0496
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for MySQL: Regional - vCPU in Singapore",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "F61D-C80B-8895",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.1156
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for MySQL: Zonal - vCPU in Singapore",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "3A8F-F454-6BF0",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0578
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for MySQL: Regional - vCPU in EMEA",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "F4E3-97B6-9ECB",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0826
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for MySQL: Zonal - vCPU in EMEA",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "4A83-AFCC-FA43",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0413
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for MySQL: Regional - vCPU in Americas",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "2C7C-7705-6CE7",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0826
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for MySQL: Zonal - vCPU in Americas",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "741F-D668-2417",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0413
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for MySQL: Regional - RAM in Mumbai",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "CF65-6199-3E00",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0168
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for MySQL: Zonal - RAM in Mumbai",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "EAF1-CE88-2F23",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0084
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for MySQL: Regional - RAM in Singapore",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "B5A3-F8E0-E992",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0196
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for MySQL: Zonal - RAM in Singapore",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "646E-05DE-6331",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0098
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for MySQL: Regional - RAM in EMEA",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "5E9D-7BE2-E334",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.014
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for MySQL: Zonal - RAM in EMEA",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "A8F3-9054-7B81",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.007
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for MySQL: Regional - RAM in Americas",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "E33C-229F-2DA2",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.014
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for MySQL: Zonal - RAM in Americas",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "49E9-5D00-B807",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.007
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for MySQL: Regional - Standard storage in Mumbai",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "4029-EDEA-4294",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.408
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for MySQL: Zonal - Standard storage in Mumbai",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "8E8D-BF79-E47F",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.204
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for MySQL: Regional - Standard storage in Singapore",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "3879-3E06-B919",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.476
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for MySQL: Zonal - Standard storage in Singapore",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "1266-187E-230D",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.238
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for MySQL: Regional - Standard storage in EMEA",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "6BDA-4210-0EF4",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.34
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for MySQL: Zonal - Standard storage in EMEA",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "873D-A7DC-E74F",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.17
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for MySQL: Regional - Standard storage in Americas",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "D65A-D0C3-34F4",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.34
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for MySQL: Zonal - Standard storage in Americas",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "F0A1-2B08-FA36",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.17
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.3",
+   "description": "Cloud SQL for MySQL: Regional - Enterprise Storage Hyperdisk Balanced Capacity in Mumbai",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "9CAF-84D3-B8C9",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.276
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.3",
+   "description": "Cloud SQL for MySQL: Zonal - Enterprise Storage Hyperdisk Balanced Capacity in Mumbai",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "F56D-0A93-5805",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.138
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.3",
+   "description": "Cloud SQL for MySQL: Regional - Enterprise Storage Hyperdisk Balanced Capacity in Singapore",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "D351-E526-3358",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.322
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.3",
+   "description": "Cloud SQL for MySQL: Zonal - Enterprise Storage Hyperdisk Balanced Capacity in Singapore",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "B422-E093-7A64",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.161
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.3",
+   "description": "Cloud SQL for MySQL: Regional - Enterprise Storage Hyperdisk Balanced Capacity in Belgium",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "C2D1-E357-4D8F",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.23
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.3",
+   "description": "Cloud SQL for MySQL: Zonal - Enterprise Storage Hyperdisk Balanced Capacity in Belgium",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "0B94-AED9-EC65",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.115
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.3",
+   "description": "Cloud SQL for MySQL: Regional - Enterprise Storage Hyperdisk Balanced Capacity in Iowa",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "16D0-F365-34C2",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.23
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.3",
+   "description": "Cloud SQL for MySQL: Zonal - Enterprise Storage Hyperdisk Balanced Capacity in Iowa",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_mysql",
+   "sku": "D63C-2E22-6233",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.115
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for PostgreSQL: Regional - vCPU in Mumbai",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "65ED-2048-3203",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0991
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for PostgreSQL: Zonal - vCPU in Mumbai",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "DF80-E0D1-CCE3",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0496
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for PostgreSQL: Regional - vCPU in Singapore",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "0152-2835-C929",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.1156
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for PostgreSQL: Zonal - vCPU in Singapore",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "DE86-B401-E60F",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0578
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for PostgreSQL: Regional - vCPU in EMEA",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "84B5-2F8B-3A6D",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0826
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for PostgreSQL: Zonal - vCPU in EMEA",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "2154-E036-4CB2",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0413
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for PostgreSQL: Regional - vCPU in Americas",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "1912-86A6-9950",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0826
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "Cloud SQL for PostgreSQL: Zonal - vCPU in Americas",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "965E-7C36-08E6",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0413
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for PostgreSQL: Regional - RAM in Mumbai",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "34E0-9B1D-C80D",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0168
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for PostgreSQL: Zonal - RAM in Mumbai",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "72C1-62A1-2C8B",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0084
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for PostgreSQL: Regional - RAM in Singapore",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "37B4-B2B7-C640",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0196
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for PostgreSQL: Zonal - RAM in Singapore",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "EF83-F6A8-8EA7",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0098
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for PostgreSQL: Regional - RAM in EMEA",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "C690-8FB3-59EE",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.014
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for PostgreSQL: Zonal - RAM in EMEA",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "8A88-5E4B-2265",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.007
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for PostgreSQL: Regional - RAM in Americas",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "9BE2-CB5B-66F8",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.014
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.1",
+   "description": "Cloud SQL for PostgreSQL: Zonal - RAM in Americas",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "93DA-3F55-CB04",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.007
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for PostgreSQL: Regional - Standard storage in Mumbai",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "E77A-52C7-BB42",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.408
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for PostgreSQL: Zonal - Standard storage in Mumbai",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "42A1-880A-9B0F",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.204
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for PostgreSQL: Regional - Standard storage in Singapore",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "83A6-DA61-7797",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.476
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for PostgreSQL: Zonal - Standard storage in Singapore",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "45B3-606F-EE91",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.238
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for PostgreSQL: Regional - Standard storage in EMEA",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "D901-4910-1FD2",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.34
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for PostgreSQL: Zonal - Standard storage in EMEA",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "B14E-2B60-F10B",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.17
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for PostgreSQL: Regional - Standard storage in Americas",
+   "dims": {
+    "deployment": "multi-az"
+   },
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "F5EC-5814-93C3",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.34
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud SQL for PostgreSQL: Zonal - Standard storage in Americas",
+   "dims": {
+    "deployment": "single-az"
+   },
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.cloudsql_postgresql",
+   "sku": "C18F-7FE0-0717",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.17
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "N2 Instance Core running in Mumbai",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "3A1A-7CFC-5747",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.03797
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "N2 Instance Core running in Singapore",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "2514-CA24-299A",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.038999
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "N2 Instance Core running in EMEA",
+   "dims": {},
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "9F61-45D7-D4FB",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.034773
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.0",
+   "description": "N2 Instance Core running in Americas",
+   "dims": {},
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "BB77-5FDA-69D9",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.031611
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.1",
+   "description": "N4 Instance Core running in Mumbai",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "CA44-0E73-787F",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0324376
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.1",
+   "description": "N4 Instance Core running in Singapore",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "DFAF-9D8F-2A48",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0384791
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.1",
+   "description": "N4 Instance Core running in Belgium",
+   "dims": {},
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "79CA-B6A3-8BA7",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.03434331
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.1",
+   "description": "N4 Instance Core running in Americas",
+   "dims": {},
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "1C3C-9EBD-240F",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.03119
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.2",
+   "description": "C4 Instance Core running in Mumbai",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "70F1-D1A1-608C",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.036036
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.2",
+   "description": "C4 Instance Core running in Singapore",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "A8C4-2189-7951",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.04274771
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.2",
+   "description": "C4 Instance Core running in Belgium",
+   "dims": {},
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "89B2-FF91-3836",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.03815312
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.2",
+   "description": "C4 Instance Core running in Americas",
+   "dims": {},
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "4AA0-9497-B351",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.03465
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.3",
+   "description": "M3 Memory-optimized Instance Core running in Mumbai",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "DAC5-4645-999C",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.036225176
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.3",
+   "description": "M3 Memory-optimized Instance Core running in Singapore",
+   "dims": {},
+   "kind": "compute",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "12CB-75EB-8C97",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.04293276
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.3",
+   "description": "M3 Memory-optimized Instance Core running in Belgium",
+   "dims": {},
+   "kind": "compute",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "C248-9879-00EA",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.03831828
+  },
+  {
+   "basis": "vcpu_hour",
+   "component_id": "compute.3",
+   "description": "M3 Memory-optimized Instance Core running in Americas",
+   "dims": {},
+   "kind": "compute",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "2B4F-981A-703B",
+   "term": "on_demand",
+   "unit": "h",
+   "usd": 0.0348
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.4",
+   "description": "N2 Instance Ram running in Mumbai",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "23FA-BF9A-7C7A",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.005088
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.4",
+   "description": "N2 Instance Ram running in Singapore",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "C84B-1AD4-8EAE",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.005226
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.4",
+   "description": "N2 Instance Ram running in EMEA",
+   "dims": {},
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "A109-54C1-7CB0",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.004661
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.4",
+   "description": "N2 Instance Ram running in Americas",
+   "dims": {},
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "5B01-D157-A097",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.004237
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.5",
+   "description": "N4 Instance Ram running in Mumbai",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "510B-D0B4-2215",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0036816
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.5",
+   "description": "N4 Instance Ram running in Singapore",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "1F92-9CD1-0C58",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.004367298
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.5",
+   "description": "N4 Instance Ram running in Belgium",
+   "dims": {},
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "6828-A0F1-21CC",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.003897894
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.5",
+   "description": "N4 Instance Ram running in Americas",
+   "dims": {},
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "36D5-78B0-A4D9",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.00354
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.6",
+   "description": "C4 Instance Ram running in Mumbai",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "BC60-A7D5-6A2C",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.00409552
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.6",
+   "description": "C4 Instance Ram running in Singapore",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "BDCC-00A7-D91A",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.004858311
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.6",
+   "description": "C4 Instance Ram running in Belgium",
+   "dims": {},
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "30AA-05BC-7BC4",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.004336132
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.6",
+   "description": "C4 Instance Ram running in Americas",
+   "dims": {},
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "E259-34D3-C50F",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.003938
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.7",
+   "description": "M3 Memory-optimized Instance Ram running in Mumbai",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "FCC3-050A-255F",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.005308862
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.7",
+   "description": "M3 Memory-optimized Instance Ram running in Singapore",
+   "dims": {},
+   "kind": "memory",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "1B31-5195-94B0",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.00629187
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.7",
+   "description": "M3 Memory-optimized Instance Ram running in Belgium",
+   "dims": {},
+   "kind": "memory",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "44B6-634A-135A",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.00561561
+  },
+  {
+   "basis": "memory_gb_hour",
+   "component_id": "memory.7",
+   "description": "M3 Memory-optimized Instance Ram running in Americas",
+   "dims": {},
+   "kind": "memory",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "D493-0B62-1972",
+   "term": "on_demand",
+   "unit": "GiBy.h",
+   "usd": 0.0051
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.10",
+   "description": "SSD backed PD Capacity in Mumbai",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "FF66-41CB-DE90",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.204
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.10",
+   "description": "SSD backed PD Capacity in Singapore",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "C97A-896E-D6F0",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.187
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.10",
+   "description": "SSD backed PD Capacity",
+   "dims": {},
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "B188-61DD-52E4",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.17
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.10",
+   "description": "SSD backed PD Capacity",
+   "dims": {},
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "B188-61DD-52E4",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.17
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.8",
+   "description": "Hyperdisk Balanced Capacity in Mumbai",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "9953-32B6-978B",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.083
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.8",
+   "description": "Hyperdisk Balanced Capacity in Singapore",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "7500-5594-7B83",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.098
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.8",
+   "description": "Hyperdisk Balanced Capacity in Belgium",
+   "dims": {},
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "6A38-4AD7-FDB6",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.088
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.8",
+   "description": "Hyperdisk Balanced Capacity in Iowa",
+   "dims": {},
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "83FF-9C17-D184",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.08
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.9",
+   "description": "Hyperdisk Extreme Capacity in Mumbai",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "A50C-1A03-6788",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.13
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.9",
+   "description": "Hyperdisk Extreme Capacity in Singapore",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "3140-CBE4-EC7A",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.154
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.9",
+   "description": "Hyperdisk Extreme Capacity in Belgium",
+   "dims": {},
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "B0E5-9165-67F0",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.138
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.9",
+   "description": "Hyperdisk Extreme Capacity in Iowa",
+   "dims": {},
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.compute_engine_self_managed",
+   "sku": "97E3-3552-1C19",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.125
+  },
+  {
+   "basis": "read_request_unit",
+   "component_id": "reads.0",
+   "description": "Cloud Firestore Enterprise Read Units Mumbai",
+   "dims": {},
+   "kind": "reads",
+   "region": "asia-south1",
+   "service_id": "gcp.firestore",
+   "sku": "0592-C46D-2979",
+   "term": "on_demand",
+   "unit": "count",
+   "usd": 5.2e-08
+  },
+  {
+   "basis": "read_request_unit",
+   "component_id": "reads.0",
+   "description": "Cloud Firestore Enterprise Read Units Singapore",
+   "dims": {},
+   "kind": "reads",
+   "region": "asia-southeast1",
+   "service_id": "gcp.firestore",
+   "sku": "CD19-2CBB-8F52",
+   "term": "on_demand",
+   "unit": "count",
+   "usd": 6.1e-08
+  },
+  {
+   "basis": "read_request_unit",
+   "component_id": "reads.0",
+   "description": "Cloud Firestore Enterprise Read Units Belgium",
+   "dims": {},
+   "kind": "reads",
+   "region": "europe-west1",
+   "service_id": "gcp.firestore",
+   "sku": "7729-D786-8823",
+   "term": "on_demand",
+   "unit": "count",
+   "usd": 5.5e-08
+  },
+  {
+   "basis": "read_request_unit",
+   "component_id": "reads.0",
+   "description": "Cloud Firestore Enterprise Read Units Iowa",
+   "dims": {},
+   "kind": "reads",
+   "region": "us-central1",
+   "service_id": "gcp.firestore",
+   "sku": "9926-3AA3-F346",
+   "term": "on_demand",
+   "unit": "count",
+   "usd": 5e-08
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud Firestore Enterprise Storage Mumbai",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-south1",
+   "service_id": "gcp.firestore",
+   "sku": "CF2E-37A7-CC22",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.2769
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud Firestore Enterprise Storage Singapore",
+   "dims": {},
+   "kind": "storage",
+   "region": "asia-southeast1",
+   "service_id": "gcp.firestore",
+   "sku": "107B-64AC-E849",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.2954
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud Firestore Enterprise Storage Belgium",
+   "dims": {},
+   "kind": "storage",
+   "region": "europe-west1",
+   "service_id": "gcp.firestore",
+   "sku": "4723-F3F9-6284",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.264
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "storage.2",
+   "description": "Cloud Firestore Enterprise Storage Iowa",
+   "dims": {},
+   "kind": "storage",
+   "region": "us-central1",
+   "service_id": "gcp.firestore",
+   "sku": "B383-DFB9-B85F",
+   "term": "on_demand",
+   "unit": "GiBy.mo",
+   "usd": 0.24
+  },
+  {
+   "basis": "write_request_unit",
+   "component_id": "writes.1",
+   "description": "Cloud Firestore Enterprise Write Units Mumbai",
+   "dims": {},
+   "kind": "writes",
+   "region": "asia-south1",
+   "service_id": "gcp.firestore",
+   "sku": "B0FF-BEDF-88D4",
+   "term": "on_demand",
+   "unit": "count",
+   "usd": 2.7e-07
+  },
+  {
+   "basis": "write_request_unit",
+   "component_id": "writes.1",
+   "description": "Cloud Firestore Enterprise Write Units Singapore",
+   "dims": {},
+   "kind": "writes",
+   "region": "asia-southeast1",
+   "service_id": "gcp.firestore",
+   "sku": "83FA-D70F-08D8",
+   "term": "on_demand",
+   "unit": "count",
+   "usd": 3.2e-07
+  },
+  {
+   "basis": "write_request_unit",
+   "component_id": "writes.1",
+   "description": "Cloud Firestore Enterprise Write Units Belgium",
+   "dims": {},
+   "kind": "writes",
+   "region": "europe-west1",
+   "service_id": "gcp.firestore",
+   "sku": "D9CE-88BD-68B2",
+   "term": "on_demand",
+   "unit": "count",
+   "usd": 2.86e-07
+  },
+  {
+   "basis": "write_request_unit",
+   "component_id": "writes.1",
+   "description": "Cloud Firestore Enterprise Write Units Iowa",
+   "dims": {},
+   "kind": "writes",
+   "region": "us-central1",
+   "service_id": "gcp.firestore",
+   "sku": "B159-EDCF-3EF2",
+   "term": "on_demand",
+   "unit": "count",
+   "usd": 2.6e-07
+  }
+ ],
+ "regions": [
+  "asia-south1",
+  "europe-west1",
+  "us-central1",
+  "asia-southeast1"
+ ],
+ "sources": [
+  "https://cloudbilling.googleapis.com/v1"
+ ],
+ "unmatched": [
+  "gcp.bigtable/compute.0/europe-west1",
+  "gcp.bigtable/compute.0/us-central1",
+  "gcp.bigtable/storage.1/europe-west1",
+  "gcp.bigtable/storage.1/us-central1"
+ ]
+}
