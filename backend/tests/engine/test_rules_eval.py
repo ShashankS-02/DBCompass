@@ -68,3 +68,11 @@ def test_derived_best_sla(dynamodb) -> None:
     predicate = ServicePredicate(field="best_sla_percent", op="lt", value_from="ha.sla_percent")
     assert not predicate_matches(predicate, dynamodb, {"ha.sla_percent": 99.99})
     assert predicate_matches(predicate, dynamodb, {"ha.sla_percent": 99.9999})
+
+
+def test_excludes_is_true_for_empty_or_missing_value() -> None:
+    condition = Condition(field="data.special_features", op="excludes", value="in_db_full_text")
+    assert condition_matches(condition, {})
+    assert condition_matches(condition, {"data.special_features": []})
+    assert condition_matches(condition, {"data.special_features": ["sequences"]})
+    assert not condition_matches(condition, {"data.special_features": ["in_db_full_text"]})

@@ -8,7 +8,7 @@ from app.analyzer.repo_fetch import SourceFile
 from app.analyzer.scan_common import add_evidence, evidence, is_code_file, is_sql_file, sql_lines
 from app.models.repo import AnalyzerConfig, OracleCompatibilityReport, OracleFeatureCount, Signal
 
-PROCEDURAL_OBJECT = re.compile(r"(?i)\bCREATE\s+(OR\s+REPLACE\s+)?(PACKAGE|PROCEDURE|FUNCTION|TRIGGER|TYPE\s+BODY)\b|\$\$\s*LANGUAGE\s+plpgsql|\bLANGUAGE\s+plpgsql\b")
+PROCEDURAL_OBJECT = re.compile(r"(?i)\bCREATE\s+(OR\s+(REPLACE|ALTER)\s+)?(PACKAGE|PROCEDURE|PROC|FUNCTION|TRIGGER|TYPE\s+BODY)\b|\$\$\s*LANGUAGE\s+plpgsql|\bLANGUAGE\s+plpgsql\b")
 PLSQL_FILE_EXTENSIONS = (".pks", ".pkb", ".pls", ".plb", ".prc", ".fnc", ".trg")
 TRANSACTIONAL = re.compile(r"(@Transactional\b|\bsession\.commit\(\)|\.begin\(\)|\bBEGIN\s+TRANSACTION\b|\bwith\s+transaction\.atomic\b|\bstartSession\(|\.transaction\()")
 DB_LINK_NAME = re.compile(r"@([A-Za-z_][\w$#.]*)")
@@ -77,11 +77,12 @@ def profile_sql(files: list[SourceFile], config: AnalyzerConfig) -> SqlProfile:
             tally_patterns(number, line, source.path, config.special_features, profile.special_features)
             if is_sql_file(source):
                 tally_patterns(number, line, source.path, config.query_types, profile.query_types)
+            if len(profile.top_snippets) < 20 and line.strip():
+                profile.top_snippets.append(evidence(source.path, number, line))
         if is_code_file(source):  # ORM calls (findById, session.get) carry no SQL keywords
             for number, line in enumerate(source.lines, start=1):
                 tally_patterns(number, line, source.path, config.query_types, profile.query_types)
-            if len(profile.top_snippets) < 20 and line.strip():
-                profile.top_snippets.append(evidence(source.path, number, line))
+                tally_patterns(number, line, source.path, config.special_features, profile.special_features)
         if is_code_file(source) or is_sql_file(source):
             for number, line in enumerate(source.lines, start=1):
                 if TRANSACTIONAL.search(line):

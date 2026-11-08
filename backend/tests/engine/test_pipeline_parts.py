@@ -186,3 +186,11 @@ def test_boosts_above_100_still_decide_the_ranking(knowledge, services) -> None:
 
     assert managed.score == self_managed.score == 100
     assert managed.rank_score > self_managed.rank_score
+
+
+def test_unpriced_candidate_cannot_win_on_cost() -> None:
+    from app.engine.scorer import fill_unknown_costs
+
+    filled = fill_unknown_costs({"cheap": 100.0, "dear": 900.0, "unpriced": None})
+    assert filled["unpriced"] == 900.0
+    assert fill_unknown_costs({"a": None}) == {"a": None}  # nothing priced: unknown stays neutral

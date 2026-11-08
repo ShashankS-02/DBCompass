@@ -22,7 +22,8 @@ a confidence (0–1) and evidence (file path + line). The user confirms before s
 | go.mod | pgx, go-ora, mongo-driver | same |
 | ORM models (SQLAlchemy, Django, JPA @Entity, Prisma schema) | entity count, relationship count, JSON columns | data.joins, data.shape, data.schema_volatility |
 | Migrations (Alembic, Flyway, Liquibase, Django migrations) | migration frequency over git history | data.schema_volatility |
-| *.sql, *.pks, *.pkb | PL/SQL packages, triggers, CONNECT BY, ROWNUM, MERGE, sequences, DB links (`@dblink`), hints, partitioning DDL | data.proc_code, data.special_features |
+| *.sql, *.pks, *.pkb | PL/SQL packages and T-SQL procedures (`CREATE [OR REPLACE / OR ALTER] PROCEDURE`), triggers, CONNECT BY, ROWNUM, MERGE, sequences, DB links (`@dblink`), partitioning DDL (incl. SQL Server partition functions), SQL Server Agent jobs (`sp_add_job`) | data.proc_code, data.special_features |
+| SQL and code | in-database full-text search (`to_tsvector`, GIN on tsvector, `MATCH ... AGAINST`, `CREATE FULLTEXT INDEX`, MongoDB `$text`) | data.special_features (`in_db_full_text`) |
 | SQL in code | count of JOINs, GROUP BY, LIKE '%x%', window functions, SELECT FOR UPDATE | wl.query_types, wl.pattern |
 | docker-compose.yml, k8s manifests | DB images and versions, replica counts, cache/queue containers | app.existing_db, eco.cdc |
 | Terraform / Bicep / CloudFormation | provider, regions, existing DB resources | geo.app_location, pref.csp, geo.user_regions |
@@ -76,5 +77,8 @@ a FastAPI + Postgres + Redis app, a Node + MongoDB app.
 - The LLM step runs only when all four `AZURE_OPENAI_*` settings are present. It may fill only
   `llm_fields` that static scanning left empty, must cite a file that exists, values are validated
   against the catalog, and confidence is capped at 0.7.
-- Demo repos: `sample_repos/spring-oracle-billing`, `fastapi-postgres-redis`, `node-mongo-catalog`
+- Demo repos: `sample_repos/spring-oracle-billing`, `fastapi-postgres-redis`, `node-mongo-catalog`,
+  `claims-hub` (.NET + SQL Server on-prem, heavy T-SQL and Agent jobs → Azure SQL Managed Instance) and
+  `docs-assistant` (FastAPI + PostgreSQL/pgvector RAG on GCP India → Cloud SQL for PostgreSQL).
+  `tests/analyzer/test_repo_to_recommendation.py` pins the top recommendation for each.
   pre-fill 80%, 80% and 73% of Quick fields without an LLM (doc 01 target: 60%).

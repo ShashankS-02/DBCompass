@@ -46,6 +46,7 @@ supports:
   private_endpoint: true
   audit: true
   masking_rls: true
+  sql_agent: true
 compliance:
 - sox
 - pci_dss

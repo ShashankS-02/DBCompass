@@ -2,7 +2,8 @@
 #
 # when:    list of conditions on requirement fields (AND). Empty list = always fires.
 #          A field with no value (neither answered nor assumed) never matches.
-#          Ops: eq, ne, in, not_in, contains, not_contains, contains_any, gte, lte, gt, lt, is_set.
+#          Ops: eq, ne, in, not_in, contains, not_contains, contains_any, gte, lte, gt, lt, is_set,
+#          excludes (true when the field is empty or does not contain the value).
 # effects: exclude_where | boost | penalise | require_component | add_guidance | region_filter.
 #          Service predicates use dotted paths into a service entry (e.g. supports.vector) and
 #          compare with a literal `value` or with a requirement field via `value_from`.
@@ -225,6 +226,17 @@ rules:
         by: 20
     message: "Heavy T-SQL: SQL Server targets avoid a large refactor."
 
+  - id: R-AGENT-001
+    when:
+      - {field: data.special_features, op: contains, value: sql_agent_jobs}
+    effects:
+      penalise:
+        where:
+          - {field: engines, op: contains, value: sql_server}
+          - {field: supports.sql_agent, op: eq, value: false}
+        by: 15
+    message: "SQL Server Agent jobs in use: targets without Agent need the jobs rebuilt (for example as Elastic Jobs)."
+
   - id: R-LOCK-001
     when:
       - {field: pref.lock_in, op: eq, value: low}
@@ -437,6 +449,7 @@ rules:
   - id: R-FTS-001
     when:
       - {field: wl.query_types, op: contains, value: full_text}
+      - {field: data.special_features, op: excludes, value: in_db_full_text}
     effects:
       require_component:
         role: search
@@ -444,6 +457,18 @@ rules:
         satisfied_by_primary:
           - {field: supports.full_text, op: eq, value: advanced}
     message: "Full-text queries need a search engine unless the primary has advanced full-text search."
+
+  - id: R-FTS-002
+    when:
+      - {field: wl.query_types, op: contains, value: full_text}
+      - {field: data.special_features, op: contains, value: in_db_full_text}
+    effects:
+      require_component:
+        role: search
+        family: search
+        satisfied_by_primary:
+          - {field: supports.full_text, op: in, value: [basic, advanced]}
+    message: "Full-text search already runs inside the database; a primary with built-in full-text keeps it there."
 
   - id: R-VEC-001
     when:

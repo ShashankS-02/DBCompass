@@ -157,6 +157,8 @@ sections:
           - {value: partitioning, label: Partitioning}
           - {value: rac, label: RAC}
           - {value: spatial, label: Spatial}
+          - {value: sql_agent_jobs, label: SQL Server Agent jobs}
+          - {value: in_db_full_text, label: Full-text search inside the database}
 
   - id: wl
     title: Workload

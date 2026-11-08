@@ -14,7 +14,7 @@ from app.analyzer.sql_profiler import SqlProfile, scan_sql
 from app.models.questions import QuestionCatalog
 from app.models.repo import AnalyzerConfig, InferredRequirements, OracleCompatibilityReport, ScanSummary, Signal
 
-ANALYZER_VERSION = "m5.1"
+ANALYZER_VERSION = "m5.2"
 
 logger = logging.getLogger(__name__)
 

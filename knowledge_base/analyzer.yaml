@@ -82,7 +82,9 @@ query_types:
 # data.special_features option -> patterns (Oracle-specific ones come from oracle_features).
 special_features:
   materialized_views: ['(?i)\bCREATE\s+MATERIALIZED\s+VIEW\b']
-  partitioning: ['(?i)\bPARTITION\s+BY\s+(RANGE|LIST|HASH)\b']
+  partitioning: ['(?i)\bPARTITION\s+BY\s+(RANGE|LIST|HASH)\b', '(?i)\bCREATE\s+PARTITION\s+(FUNCTION|SCHEME)\b']
+  in_db_full_text: ['(?i)\bto_tsvector\s*\(', '\$text\s*:', '(?i)\busing\s+gin\s*\(\s*\w*tsv', '(?i)\bMATCH\s*\(.*\)\s*AGAINST\b', '(?i)\bCREATE\s+FULLTEXT\s+INDEX\b', '(?i)\b(CONTAINSTABLE|FREETEXTTABLE)\s*\(']
+  sql_agent_jobs: ['(?i)\bsp_add_job(step|schedule|server)?\b', '(?i)\bmsdb\.dbo\.sysjobs\b']
   spatial: ['(?i)\bSDO_GEOMETRY\b', '(?i)\bgeography\s*\(', '(?i)\bCREATE\s+EXTENSION\s+(IF\s+NOT\s+EXISTS\s+)?postgis\b']
 
 # Oracle → PostgreSQL effort (doc 06 table). person_days_per_item = [low, high] per occurrence.
@@ -145,7 +147,7 @@ readme_rules:
     number: true
     confidence: 0.7
   - field_id: vol.current_gb
-    pattern: '(?i)(?:database|data|dataset|db)\s+(?:size\s+)?(?:is\s+|of\s+|~|about\s+|around\s+)*(?P<value>\d[\d,]*(?:\.\d+)?)\s*(?P<unit>GB|TB)\b'
+    pattern: '(?i)(?:database|data|dataset|db)\s*:?\s+(?:size\s+)?(?:is\s+|of\s+|~|about\s+|around\s+)*(?P<value>\d[\d,]*(?:\.\d+)?)\s*(?P<unit>GB|TB)\b'
     number: true
     multiply_by_unit: {gb: 1, tb: 1024}
     confidence: 0.7

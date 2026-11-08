@@ -95,6 +95,9 @@ enterprise discounts". The LLM never produces numbers.
   backup beyond free allowances, data egress, licences on BYOL / self-managed, discounts and taxes.
 - When a tier's instance size is not sold (e.g. Aurora has no db.t4g.xlarge) the recommended size
   is priced and noted. A recommendation with an unpriced component shows a partial total (*).
+- Cost score for an unpriced candidate: it is scored as if it cost the highest known price in its
+  group, so a missing price can never win on cost (an infrastructure-only or absent price usually
+  understates the real bill). When nothing in the group is priced, cost falls back to relative units.
 
 ## 6. Rank and explain
 Rank by total score. Ties broken by Balanced cost. The explainer prompt receives:

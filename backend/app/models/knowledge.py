@@ -85,6 +85,7 @@ class Supports(StrictModel):
     private_endpoint: bool
     audit: bool
     masking_rls: bool
+    sql_agent: bool = False  # SQL Server Agent jobs available (SQL Server engines only)
 
 
 class PricingRef(StrictModel):
@@ -162,7 +163,7 @@ class ServiceEntry(StrictModel):
 
 # ---------- rules ----------
 
-AnswerOp = Literal["eq", "ne", "in", "not_in", "contains", "not_contains", "contains_any", "gte", "lte", "gt", "lt", "is_set"]
+AnswerOp = Literal["eq", "ne", "in", "not_in", "contains", "not_contains", "contains_any", "gte", "lte", "gt", "lt", "is_set", "excludes"]
 ServiceOp = Literal[
     "eq",
     "ne",
@@ -183,7 +184,7 @@ VALUELESS_OPS = {"is_set", "is_null", "not_null"}
 
 
 class Condition(StrictModel):
-    """A test on one requirement field. A field with no value (answered or assumed) never matches."""
+    """A test on one requirement field. A field with no value never matches, except is_set and excludes."""
 
     field: str
     op: AnswerOp

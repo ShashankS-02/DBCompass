@@ -57,10 +57,12 @@ def as_list(value: Any) -> list:
 
 
 def condition_matches(condition: Condition, values: dict[str, Any]) -> bool:
-    """A condition on a field with no value never matches (except is_set, which tests exactly that)."""
+    """A condition on a field with no value never matches, except is_set and excludes (empty excludes everything)."""
     value = values.get(condition.field)
     if condition.op == "is_set":
         return not is_empty(value)
+    if condition.op == "excludes":
+        return is_empty(value) or condition.value not in as_list(value)
     if is_empty(value):
         return False
     return compare(condition.op, value, condition.value)

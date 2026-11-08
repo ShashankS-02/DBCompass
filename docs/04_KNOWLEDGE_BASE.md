@@ -55,7 +55,7 @@ sketch. Differences:
 - `sla_percent` → `sla_by_topology: {single_az, multi_az, multi_region}` (null = not offered or
   not published). Rules compare against `best_sla_percent`, the highest of the three.
 - `supports.json` → `supports.json_documents` (name clash with Pydantic). New flags: `graph`,
-  `audit`, `masking_rls`.
+  `audit`, `masking_rls`, `sql_agent` (SQL Server Agent available; default false).
 - New: `secondary_families` (e.g. Aurora PostgreSQL also serves `vector` via pgvector),
   `regions` (ids from `regions.yaml`, only the India / EU / US / APAC geographies),
   `lifecycle` (`active | not_for_new_projects | retiring`) with `status_note`.
@@ -114,7 +114,7 @@ ANDed; empty = always), `effects`, `message`. Implemented grammar:
 - id: R-COMP-001
   when:
     - {field: sec.compliance, op: not_contains, value: none}   # eq ne in not_in contains not_contains
-  effects:                                                     # contains_any gte lte gt lt is_set
+  effects:                                                     # contains_any gte lte gt lt is_set excludes
     exclude_where:                                             # service predicates, ANDed
       - {field: compliance, op: missing_any_of, value_from: sec.compliance}
   message: "Service is not listed as eligible for every required compliance regime."

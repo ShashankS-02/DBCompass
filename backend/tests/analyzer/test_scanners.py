@@ -102,3 +102,43 @@ def test_readme_rules() -> None:
 def test_readme_helpers() -> None:
     assert parse_number("1,500") == 1500 and parse_number("8k") == 8000 and parse_number("x") is None
     assert [latency_option(value) for value in (0.5, 1, 10, 50, 500)] == ["lt_1ms", "lt_1ms", "lt_10ms", "lt_100ms", "seconds_ok"]
+
+
+def test_tsql_procedures_count_as_stored_procedure_code() -> None:
+    tsql = "\n".join(["CREATE OR ALTER PROCEDURE claims.usp_Settle @ClaimId BIGINT AS", "BEGIN"] + ["    SET @x = @x + 1;"] * 520 + ["END"])
+    signals, report, _ = scan_sql([SourceFile("database/procedures/usp_Settle.sql", tsql)], CONFIG)
+    assert by_field(signals)["data.proc_code"] == ["heavy"]
+    assert report is None  # T-SQL is not an Oracle report
+
+
+def test_sql_server_partitioning_and_agent_jobs() -> None:
+    files = [
+        SourceFile("db/000_partitioning.sql", "CREATE PARTITION FUNCTION pf_Year (DATE) AS RANGE RIGHT FOR VALUES ('2024-01-01');"),
+        SourceFile("db/jobs.sql", "EXEC dbo.sp_add_job @job_name = N'Nightly';"),
+    ]
+    signals, _, _ = scan_sql(files, CONFIG)
+    assert {"partitioning", "sql_agent_jobs"} <= set(by_field(signals)["data.special_features"][0])
+
+
+@pytest.mark.parametrize(
+    "path, text",
+    [
+        ("migrations/001.sql", "CREATE INDEX ix_tsv ON chunks USING gin (content_tsv);"),
+        ("app/ingest.py", "VALUES (:id, to_tsvector('english', :content))"),
+        ("src/routes/products.js", "Product.find({ $text: { $search: q } })"),
+        ("db/fts.sql", "CREATE FULLTEXT INDEX ON dbo.Docs(Body) KEY INDEX PK_Docs;"),
+    ],
+)
+def test_in_database_full_text_is_detected(path: str, text: str) -> None:
+    signals, _, _ = scan_sql([SourceFile(path, text)], CONFIG)
+    assert "in_db_full_text" in by_field(signals)["data.special_features"][0]
+
+
+def test_empty_code_file_does_not_break_profiling() -> None:
+    signals, _, _ = scan_sql([SourceFile("app/__init__.py", ""), SourceFile("q.sql", "SELECT 1 FROM t WHERE id = :id;")], CONFIG)
+    assert "wl.query_types" in by_field(signals)
+
+
+def test_readme_size_after_colon() -> None:
+    signals = scan_readme([SourceFile("README.md", "- Dataset: about 150 GB today, growing 10 GB per month.")], CONFIG)
+    assert by_field(signals)["vol.current_gb"] == [150]

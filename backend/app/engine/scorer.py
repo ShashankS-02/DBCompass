@@ -196,10 +196,22 @@ def score_service(
 
 
 def cost_basis(services: list[ServiceEntry], sizings: dict[str, SizingResult], usd: dict[str, float | None]) -> dict[str, float | None]:
-    """Monthly USD when any candidate is priced (unpriced ones score neutral); else relative units for all."""
+    """Monthly USD when any candidate is priced (unpriced ones are filled in later); else relative units for all."""
     if any(usd.get(service.id) is not None for service in services):
         return {service.id: usd.get(service.id) for service in services}
     return {service.id: sizings[service.id].relative_cost_units for service in services}
+
+
+def fill_unknown_costs(costs: dict[str, float | None]) -> dict[str, float | None]:
+    """Unpriced candidates are scored at the highest known cost: a missing price can never win on cost."""
+    known_costs = [cost for cost in costs.values() if cost is not None]
+    if not known_costs:
+        return costs
+    highest_cost = max(known_costs)
+    filled: dict[str, float | None] = {}
+    for service_id, cost in costs.items():
+        filled[service_id] = highest_cost if cost is None else cost
+    return filled
 
 
 def score_all(
@@ -214,7 +226,7 @@ def score_all(
     """Score every service; cost is normalised against the cheapest known cost in this group."""
     if not services:
         return {}
-    costs = cost_basis(services, sizings, usd)
+    costs = fill_unknown_costs(cost_basis(services, sizings, usd))
     known_costs = [cost for cost in costs.values() if cost is not None]
     cheapest = min(known_costs) if known_costs else None
     scores: dict[str, ServiceScore] = {}

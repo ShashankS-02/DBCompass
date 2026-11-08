@@ -1,0 +1,20 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: docs
+      POSTGRES_USER: docs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+  broker:
+    image: redis:7
+  api:
+    build: .
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on: [db]
+  worker:
+    build: .
+    command: celery -A app.ingest worker --beat
+    depends_on: [db, broker]
