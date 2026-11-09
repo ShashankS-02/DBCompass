@@ -18,6 +18,9 @@ from app.models.knowledge import (
     ServiceEntry,
     SizingConstants,
 )
+from app.models.justification import JustificationConfig
+from app.models.licensing import LicensingConfig
+from app.models.migration import MigrationKnowledge
 from app.models.pricing import PricingConfig
 from app.models.repo import AnalyzerConfig
 from app.pricing.price_cache import PriceIndex, read_snapshots
@@ -33,6 +36,9 @@ SCORING_FILE = "scoring.yaml"
 HARDWARE_FILE = "hardware_profiles.yaml"
 PRICING_FILE = "pricing.yaml"
 ANALYZER_FILE = "analyzer.yaml"
+LICENSING_FILE = "licensing.yaml"
+MIGRATION_FILE = "migration_tools.yaml"
+JUSTIFICATION_FILE = "justification.yaml"
 SERVICES_DIR = "databases"
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
@@ -142,6 +148,24 @@ def get_analyzer_config() -> AnalyzerConfig:
 
 
 @lru_cache
+def get_licensing_config() -> LicensingConfig:
+    """Return the cached database licence prices and counting rules."""
+    return load_model(knowledge_base_dir() / LICENSING_FILE, LicensingConfig)
+
+
+@lru_cache
+def get_migration_knowledge() -> MigrationKnowledge:
+    """Return the cached migration planner knowledge (tools, phases, risks, settings)."""
+    return load_model(knowledge_base_dir() / MIGRATION_FILE, MigrationKnowledge)
+
+
+@lru_cache
+def get_justification_config() -> JustificationConfig:
+    """Return the cached justification gate reasons and thresholds."""
+    return load_model(knowledge_base_dir() / JUSTIFICATION_FILE, JustificationConfig)
+
+
+@lru_cache
 def get_price_index() -> PriceIndex:
     """Return the cached index over knowledge_base/price_snapshots/*.json."""
     return PriceIndex(read_snapshots(knowledge_base_dir()))
@@ -160,6 +184,7 @@ class KnowledgeBundle:
     hardware: HardwareProfiles
     pricing: PricingConfig
     prices: PriceIndex
+    licensing: LicensingConfig | None = None
     inr_per_usd: float | None = None
     inr_rate_date: str = ""
 
@@ -176,6 +201,7 @@ def get_knowledge() -> KnowledgeBundle:
         hardware=get_hardware_profiles(),
         pricing=get_pricing_config(),
         prices=get_price_index(),
+        licensing=get_licensing_config(),
         inr_per_usd=get_settings().inr_per_usd,
         inr_rate_date=get_settings().inr_rate_date,
     )

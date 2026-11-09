@@ -1,10 +1,13 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthProvider";
 import History from "./pages/History";
+import JustificationForm from "./pages/JustificationForm";
+import MigrationPlanPage from "./pages/MigrationPlan";
 import Home from "./pages/Home";
 import NewAssessment from "./pages/NewAssessment";
-import Placeholder from "./pages/Placeholder";
 import RepoInput from "./pages/RepoInput";
+import RequestDetail from "./pages/RequestDetail";
+import Requests from "./pages/Requests";
 import Results from "./pages/Results";
 
 const NAV_ITEMS = [
@@ -12,6 +15,7 @@ const NAV_ITEMS = [
   { to: "/assessments/new", label: "New assessment" },
   { to: "/repo", label: "Analyze repo" },
   { to: "/migrations/new", label: "Migration plan" },
+  { to: "/requests", label: "Requests" },
   { to: "/history", label: "History" },
 ];
 
@@ -68,7 +72,12 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/assessments/new" element={<NewAssessment />} />
           <Route path="/repo" element={<RepoInput />} />
-          <Route path="/migrations/new" element={<Placeholder title="Migration plan" milestone="M6" />} />
+          <Route path="/migrations/new" element={<MigrationPlanPage />} />
+          <Route path="/migrations/:id" element={<MigrationPlanPage />} />
+          <Route path="/requests" element={<Requests />} />
+          <Route path="/requests/new" element={<JustificationForm />} />
+          <Route path="/requests/:id" element={<RequestDetail />} />
+          <Route path="/requests/:id/edit" element={<JustificationForm />} />
           <Route path="/assessments/:id" element={<Results />} />
           <Route path="/history" element={<History />} />
         </Routes>

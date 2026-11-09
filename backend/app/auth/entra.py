@@ -18,7 +18,7 @@ DEV_USER = CurrentUser(
     user_id="dev-user",
     name="Dev User",
     email="dev.user@localhost",
-    roles=["user", "dba_admin"],
+    roles=["user", "dba_admin", "db_approver"],
     auth_mode="dev_bypass",
 )
 

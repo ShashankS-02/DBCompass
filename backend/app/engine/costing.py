@@ -8,6 +8,7 @@ from app.models.knowledge import ServiceEntry
 from app.models.pricing import TierSpec
 from app.models.results import CostEstimate, CostLine, FilterReason, PricingSummary, SizingResult
 from app.pricing.estimator import PricingContext, estimate
+from app.pricing.licensing import licence_cost
 
 BUDGET_FILTER_ID = "BUDGET-FILTER"
 TIER_ORDER = ("budget", "balanced", "performance")
@@ -56,8 +57,23 @@ def service_estimate(service: ServiceEntry, values: dict[str, Any], tier_name: s
         if not compute_missing(result):
             if attempt > 0:
                 result.notes.append(f"The {tier.label} tier's instance size is not offered for this service; the recommended size is priced instead.")
-            return result
-    return result
+            return with_licence(result, service, sizing, values, knowledge)
+    return with_licence(result, service, sizing, values, knowledge)
+
+
+def with_licence(result: CostEstimate, service: ServiceEntry, sizing: SizingResult, values: dict[str, Any], knowledge: KnowledgeBundle) -> CostEstimate:
+    """Add database licence lines when the CSP price excludes the licence (BYOL / self-managed)."""
+    if knowledge.licensing is None:
+        return result
+    licence = licence_cost(service, sizing, values, knowledge.licensing)
+    if not licence.lines and not licence.notes:
+        return result
+    licence_total = sum(line.monthly_usd for line in licence.lines) * result.environment_multiplier
+    return result.model_copy(update={
+        "lines": result.lines + licence.lines,
+        "monthly_usd": round(result.monthly_usd + licence_total, 2),
+        "notes": result.notes + licence.notes,
+    })
 
 
 def priced_cost(estimate_result: CostEstimate) -> float | None:

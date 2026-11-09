@@ -1,0 +1,95 @@
+# Database licence costs (M6). Added to the Budget / Balanced / Performance estimates of services
+# whose CSP price does NOT include the database licence (BYOL services and self-managed VMs).
+#
+# Prices are vendor LIST prices in USD. Real contracts are negotiated: set org_discount_fraction
+# once the licence team confirms the discount. Entries with verified: false were taken from widely
+# published copies of the vendor price list and must be checked against the vendor's own document
+# (see docs/OPEN_QUESTIONS.md #42–#44) before figures are quoted outside the team.
+version: 1
+last_verified: 2026-11-09
+
+# Perpetual licences are spread over this many months in the monthly estimate (3-year view, doc 01).
+amortise_perpetual_months: 36
+
+# Fraction taken off list price for licence AND support (0.0 = list price).
+org_discount_fraction:
+  oracle: 0.0
+  microsoft: 0.0
+
+# Oracle "Licensing Oracle Software in the Cloud Computing Environment" (Authorized Cloud Environments):
+# with multi-threading enabled, 2 vCPUs count as 1 Processor licence; the core factor table does not apply.
+cloud_vcpus_per_processor:
+  aws: 2
+  azure: 2
+  gcp: 2
+cloud_counting_source_url: https://www.oracle.com/a/ocom/docs/cloud-licensing-070579.pdf
+cloud_counting_verified: false
+
+# eco.licenses option that means the organisation already owns licences for this vendor.
+owned_licence_options:
+  oracle: oracle_byol
+  microsoft: sql_server_hybrid_benefit
+
+products:
+  oracle_ee:
+    label: Oracle Database Enterprise Edition
+    vendor: oracle
+    metric: processor              # priced per Processor licence
+    licence_usd: 47500             # perpetual, per Processor
+    annual_support_fraction: 0.22  # Software Update License & Support, per year, of net licence
+    source_url: https://www.oracle.com/corporate/pricing/
+    last_verified: 2026-11-09
+    verified: false
+  oracle_se2:
+    label: Oracle Database Standard Edition 2
+    vendor: oracle
+    metric: processor
+    licence_usd: 17500
+    annual_support_fraction: 0.22
+    max_vcpus_per_instance: 16     # SE2 limit in Authorized Cloud Environments
+    source_url: https://www.oracle.com/corporate/pricing/
+    last_verified: 2026-11-09
+    verified: false
+  sql_server_enterprise:
+    label: SQL Server 2022 Enterprise (subscription)
+    vendor: microsoft
+    metric: core_subscription      # priced per 2-core pack per year
+    subscription_usd_per_year: 5434
+    cores_per_pack: 2
+    min_cores_per_instance: 4
+    source_url: https://www.microsoft.com/en-us/sql-server/sql-server-2022-pricing
+    last_verified: 2026-11-09
+    verified: true                 # price verified; the 4-core minimum is from the licensing guide (OPEN_QUESTIONS #44)
+  sql_server_standard:
+    label: SQL Server 2022 Standard (subscription)
+    vendor: microsoft
+    metric: core_subscription
+    subscription_usd_per_year: 1418
+    cores_per_pack: 2
+    min_cores_per_instance: 4
+    source_url: https://www.microsoft.com/en-us/sql-server/sql-server-2022-pricing
+    last_verified: 2026-11-09
+    verified: true
+
+# Which product each service needs, by the engine it runs. Services not listed include the licence
+# in the CSP price (e.g. RDS for SQL Server, Azure SQL) or are open source.
+# count_all_nodes: standbys and replicas need licences too (Data Guard / Multi-AZ standby with BYOL).
+services:
+  aws.rds_oracle:
+    by_engine: {oracle: oracle_ee}
+    count_all_nodes: true
+  aws.ec2_self_managed:
+    by_engine: {oracle: oracle_ee, sql_server: sql_server_enterprise}
+    count_all_nodes: true
+  azure.vm_self_managed:
+    by_engine: {oracle: oracle_ee}   # SQL Server on Azure VMs is the separate azure.sql_server_vm service
+    count_all_nodes: true
+  gcp.compute_engine_self_managed:
+    by_engine: {oracle: oracle_ee, sql_server: sql_server_enterprise}
+    count_all_nodes: true
+  gcp.bare_metal_solution_oracle:
+    by_engine: {oracle: oracle_ee}
+    count_all_nodes: true
+
+# Engines that need a commercial licence wherever they run (used by the justification gate).
+commercial_engines: [oracle, sql_server, db2]

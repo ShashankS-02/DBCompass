@@ -21,6 +21,7 @@ Quick flags, tier defaults and the priority sliders. `GET /api/questions` serves
 | app.env | Environments needed | Prod, DR, UAT, Dev (multi) | Multiplies cost |
 | app.lifecycle | Expected lifespan | <1 yr, 1–3 yr, 3+ yr | Commitment discounts, refactor worth |
 | app.existing_db | Current database (if any) | engine + version | Compatibility, migration path |
+| app.requested_engine **Q** | Database you have in mind (if any) | engine + version | Compared with DBCompass's ranking; licensed engines (Oracle, SQL Server, Db2) need a justification before approval (M6) |
 
 ## B. Data model
 | id | Question | Type / options | Why it matters |

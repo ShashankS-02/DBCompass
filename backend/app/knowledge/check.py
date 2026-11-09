@@ -18,6 +18,9 @@ from app.config import get_settings
 from app.knowledge.catalog import AnswerError, validate_answer
 from app.knowledge.loader import (
     ANALYZER_FILE,
+    JUSTIFICATION_FILE,
+    LICENSING_FILE,
+    MIGRATION_FILE,
     HARDWARE_FILE,
     PRICING_FILE,
     QUESTIONS_FILE,
@@ -43,6 +46,9 @@ from app.models.knowledge import (
     SizingConstants,
 )
 from app.models.pricing import PricingConfig
+from app.models.justification import JustificationConfig
+from app.models.licensing import LicensingConfig
+from app.models.migration import MigrationKnowledge
 from app.models.repo import AnalyzerConfig
 from app.models.questions import QuestionCatalog
 
@@ -438,6 +444,51 @@ def check_analyzer(analyzer: AnalyzerConfig, catalog: QuestionCatalog) -> list[s
 # ---------- entry point ----------
 
 
+def check_licensing(licensing: LicensingConfig, services: dict[Path, ServiceEntry], catalog: QuestionCatalog) -> list[str]:
+    """Licensed services exist and run the engines they are licensed for; owned-licence options exist."""
+    problems: list[str] = []
+    by_id = {service.id: service for service in services.values()}
+    for service_id, service_licensing in licensing.services.items():
+        service = by_id.get(service_id)
+        if service is None:
+            problems.append(f"licensing.yaml: unknown service '{service_id}'")
+            continue
+        for engine in service_licensing.by_engine:
+            if engine not in service.engines:
+                problems.append(f"licensing.yaml: {service_id} does not run engine '{engine}'")
+    licence_question = catalog.questions_by_id().get("eco.licenses")
+    known_options = set(licence_question.option_values()) if licence_question else set()
+    for vendor, option in licensing.owned_licence_options.items():
+        if option not in known_options:
+            problems.append(f"licensing.yaml: owned_licence_options.{vendor} '{option}' is not an eco.licenses option")
+    return problems
+
+
+PLAN_FACT_PREFIX = "plan."
+
+
+def check_justification(config: JustificationConfig, catalog: QuestionCatalog) -> list[str]:
+    """Reason conditions use real requirement fields and option values."""
+    problems: list[str] = []
+    for reason_id, reason in config.reasons.items():
+        for condition in reason.verify + reason.contradict:
+            problems.extend(check_condition(f"justification.{reason_id}", condition, catalog))
+    return problems
+
+
+def check_migration(migration: MigrationKnowledge, catalog: QuestionCatalog) -> list[str]:
+    """Risk conditions use requirement fields (or planner plan.* facts); phase ids are unique."""
+    problems: list[str] = []
+    for risk in migration.risks:
+        for condition in risk.when:
+            if not condition.field.startswith(PLAN_FACT_PREFIX):
+                problems.extend(check_condition(risk.id, condition, catalog))
+    phase_ids = [phase.id for phase in migration.phases]
+    if len(phase_ids) != len(set(phase_ids)):
+        problems.append("migration_tools.yaml: duplicate phase ids")
+    return problems
+
+
 def run_all_checks(kb_dir: Path) -> list[str]:
     """Load every KB file and run all cross-checks. Load errors are reported, not raised."""
     try:
@@ -450,6 +501,9 @@ def run_all_checks(kb_dir: Path) -> list[str]:
         hardware = load_model(kb_dir / HARDWARE_FILE, HardwareProfiles)
         pricing = load_model(kb_dir / PRICING_FILE, PricingConfig)
         analyzer = load_model(kb_dir / ANALYZER_FILE, AnalyzerConfig)
+        licensing = load_model(kb_dir / LICENSING_FILE, LicensingConfig)
+        migration = load_model(kb_dir / MIGRATION_FILE, MigrationKnowledge)
+        justification = load_model(kb_dir / JUSTIFICATION_FILE, JustificationConfig)
     except KnowledgeBaseError as error:
         return str(error).split("\n")
 
@@ -465,6 +519,9 @@ def run_all_checks(kb_dir: Path) -> list[str]:
     problems.extend(check_pricing_coverage(pricing, services))
     problems.extend(check_pricing_specs(pricing, services, regions, catalog))
     problems.extend(check_analyzer(analyzer, catalog))
+    problems.extend(check_licensing(licensing, services, catalog))
+    problems.extend(check_migration(migration, catalog))
+    problems.extend(check_justification(justification, catalog))
     return problems
 
 

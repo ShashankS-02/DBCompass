@@ -45,12 +45,23 @@ GCP needs `GCP_SERVICE_ACCOUNT_FILE` (path to a service-account JSON key, kept o
 or `GCP_BILLING_API_KEY` in `.env`. A `dba_admin` can refresh Azure live with
 `POST /api/pricing/refresh/azure`.
 
+## Migration planning and database requests (M6)
+- **Licences**: Oracle (BYOL / self-managed) and SQL Server on VMs carry licence lines in every cost
+  tier, from `knowledge_base/licensing.yaml`. Set the org discount there once the licence team confirms it.
+- **Migration plan** (Results → Plan migration): Rehost, Replatform and Refactor compared over three
+  years including licences, checked against the 2028-12-31 on-prem exit, with method, tools,
+  runbook, risks and rollback. Settings in `knowledge_base/migration_tools.yaml`.
+- **Database requests** (Requests page): a team asking for, or keeping, Oracle / SQL Server / Db2
+  gives reasons; DBCompass checks them against the assessment, compares the cost with the best
+  licence-free option and gives an advisory verdict. A user with the `db_approver` Entra app role
+  approves, sends back or rejects; every step is in the audit trail and the packet exports as Markdown.
+
 ## Auth
 - Local dev: `DEV_AUTH_BYPASS=true` (backend) and `VITE_DEV_AUTH_BYPASS=true` (frontend). Every
   request runs as a fixed dev user. Never enable in a shared environment.
 - Real sign-in: set the `ENTRA_*` variables in `.env` and the `VITE_ENTRA_*` variables in
   `frontend/.env.local`, and turn both bypass flags off. The backend accepts Entra ID v2 access
-  tokens whose audience is the API app registration.
+  tokens whose audience is the API app registration. App roles: `dba_admin`, `db_approver`.
 
 ## Layout
 ```

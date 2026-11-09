@@ -1,0 +1,57 @@
+# Database justification gate (M6). When a team asks for, or wants to keep, a commercially licensed
+# engine, they pick reasons from this list. Each reason carries points; the system checks what it can
+# against the requirements / repo analysis, and compares the licence cost with DBCompass's best
+# licence-free option. The verdict ADVISES; a db_approver decides.
+version: 1
+last_verified: 2026-11-09
+
+# Reasons are counted at full weight when verified by DBCompass or backed by evidence the team gave,
+# at claimed_fraction when only claimed, and at zero when DBCompass's own findings contradict them.
+claimed_fraction: 0.5
+justified_points: 3
+review_points: 1.5
+min_justification_chars: 80
+
+# Reasons that can never justify a licensed engine on their own.
+weak_only: [familiarity, team_skills]
+
+# A licence-free option cheaper by more than this over the compared period needs architecture review
+# unless a strong reason is verified or evidenced.
+review_if_saving_over_usd: 250000
+strong_reasons: [vendor_certified, performance_tested]
+
+reasons:
+  vendor_certified:
+    label: The application vendor only certifies / supports this database
+    evidence_prompt: Vendor, product and a link to its supported-platforms page
+    weight: 3
+  heavy_procedural_code:
+    label: Heavy PL/SQL or T-SQL that would be costly to rewrite
+    weight: 2
+    verify: [{field: data.proc_code, op: eq, value: heavy}]
+    contradict: [{field: data.proc_code, op: eq, value: none}]
+  engine_features:
+    label: Needs features only this engine has (e.g. RAC, Active Data Guard, Advanced Queuing)
+    evidence_prompt: Which features, and what they are used for
+    weight: 2
+    verify: [{field: data.special_features, op: contains_any, value: [rac, db_links, hierarchical_queries, sql_agent_jobs]}]
+  existing_licences:
+    label: Licences we already own cover this deployment (ULA / BYOL / Hybrid Benefit)
+    evidence_prompt: Contract or licence entitlement reference
+    weight: 1
+    verify: [{field: eco.licenses, op: contains_any, value: [oracle_byol, sql_server_hybrid_benefit]}]
+  performance_tested:
+    label: A performance test showed alternatives cannot meet the requirement
+    evidence_prompt: Link to the test report
+    weight: 2
+  short_lifespan:
+    label: The application retires soon, so a rewrite would not pay back
+    weight: 2
+    verify: [{field: app.lifecycle, op: eq, value: lt_1y}]
+    contradict: [{field: app.lifecycle, op: eq, value: gt_3y}]
+  team_skills:
+    label: Our team's skills are in this database
+    weight: 0.5
+  familiarity:
+    label: It is what we normally use
+    weight: 0

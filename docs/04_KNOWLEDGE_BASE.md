@@ -159,4 +159,22 @@ is either in `services` or in `not_priced` with a reason (checked).
 Built by `python -m app.pricing.snapshot <csp>`; never edited by hand. Each price keeps its SKU,
 unit, region, term and `fetched_at`.
 ### migration_tools.yaml
-See doc 07.
+Planner settings (deadline 2028-12-31, link utilisation, thresholds, team size, day rate), strategy
+effort ranges, the tool matrix (each tool links to its docs), methods with rollback, the 8 phases with
+tasks and go / no-go checks, risk rules (rules.yaml condition grammar plus `plan.*` facts) and
+validation checks. See doc 07.
+
+### licensing.yaml (M6)
+Vendor list prices for licences the CSP price does not include: Oracle EE / SE2 per Processor
+(perpetual, spread over 36 months, plus annual support) and SQL Server Enterprise / Standard
+subscriptions per 2-core pack; Oracle's cloud counting rule (2 vCPUs = 1 Processor licence on
+AWS / Azure / GCP); which services need which product per engine (BYOL and self-managed only;
+licence-included services are not listed); `org_discount_fraction` per vendor; and the
+`commercial_engines` the justification gate covers. Owned licences (`eco.licenses`) drop the purchase
+line; Oracle support continues. Entries marked `verified: false` await the vendor's own document.
+
+### justification.yaml (M6)
+Reasons a team can give for a licensed engine, each with a weight, an optional evidence prompt and
+optional `verify` / `contradict` conditions over the requirements; thresholds for "justified" and
+"needs review"; reasons that can never justify on their own; and the saving above which an architect
+review is needed unless a strong reason (vendor certification, performance test) is backed.

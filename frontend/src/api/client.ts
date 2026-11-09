@@ -2,47 +2,64 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public detail: string | null = null,
   ) {
     super(message);
   }
 }
 
-export async function apiGet<T>(
-  path: string,
-  getAccessToken: () => Promise<string | null>,
-): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+type TokenGetter = () => Promise<string | null>;
+
+async function authHeaders(getAccessToken: TokenGetter, json: boolean): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { Accept: json ? "application/json" : "*/*" };
+  if (json) {
+    headers["Content-Type"] = "application/json";
+  }
   const token = await getAccessToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-
-  const response = await fetch(`/api${path}`, { headers });
-  if (!response.ok) {
-    throw new ApiError(response.status, `${response.status} ${response.statusText}`);
-  }
-  return (await response.json()) as T;
+  return headers;
 }
 
-export async function apiPost<T>(
-  path: string,
-  body: unknown,
-  getAccessToken: () => Promise<string | null>,
-): Promise<T> {
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  };
-  const token = await getAccessToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+/** The server's `detail` when it is a plain message (409 / 400 / 403 / 404), else null. */
+async function errorDetail(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    return typeof body.detail === "string" ? body.detail : null;
+  } catch {
+    return null;
   }
+}
 
-  const response = await fetch(`/api${path}`, { method: "POST", headers, body: JSON.stringify(body) });
+async function send(method: string, path: string, body: unknown, getAccessToken: TokenGetter): Promise<Response> {
+  const headers = await authHeaders(getAccessToken, body !== undefined);
+  const response = await fetch(`/api${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (!response.ok) {
-    throw new ApiError(response.status, `${response.status} ${response.statusText}`);
+    const detail = await errorDetail(response);
+    throw new ApiError(response.status, detail ?? `${response.status} ${response.statusText}`, detail);
   }
-  return (await response.json()) as T;
+  return response;
+}
+
+export async function apiGet<T>(path: string, getAccessToken: TokenGetter): Promise<T> {
+  return (await (await send("GET", path, undefined, getAccessToken)).json()) as T;
+}
+
+export async function apiPost<T>(path: string, body: unknown, getAccessToken: TokenGetter): Promise<T> {
+  return (await (await send("POST", path, body ?? {}, getAccessToken)).json()) as T;
+}
+
+export async function apiPut<T>(path: string, body: unknown, getAccessToken: TokenGetter): Promise<T> {
+  return (await (await send("PUT", path, body, getAccessToken)).json()) as T;
+}
+
+export async function apiGetText(path: string, getAccessToken: TokenGetter): Promise<string> {
+  return (await send("GET", path, undefined, getAccessToken)).text();
 }
 
 export interface HealthResponse {

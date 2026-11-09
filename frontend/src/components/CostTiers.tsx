@@ -13,6 +13,10 @@ export function formatMoney(usd: number, currency: Currency, inrPerUsd: number |
   return `$${usd.toLocaleString("en-US", { maximumFractionDigits: usd < 100 ? 2 : 0 })}`;
 }
 
+function licenceShare(estimate: CostEstimate): number {
+  return estimate.lines.filter((line) => line.component.endsWith("licence")).reduce((total, line) => total + line.monthly_usd, 0);
+}
+
 function termsUsed(estimate: CostEstimate): string {
   const terms = new Set(estimate.lines.filter((line) => line.component.endsWith("compute")).map((line) => line.term));
   return [...terms].map((term) => TERM_LABELS[term] ?? term).join(", ");
@@ -99,6 +103,9 @@ export default function CostTiers({ tiers, currency, inrPerUsd }: CostTiersProps
                 {!estimate.complete && <span title="Some parts are not priced">*</span>}
               </div>
               <div className="text-[11px] text-slate-500">/month · {termsUsed(estimate) || "—"}</div>
+              {licenceShare(estimate) > 0 && (
+                <div className="text-[11px] text-rose-700">incl. {formatMoney(licenceShare(estimate), currency, inrPerUsd)} licence</div>
+              )}
             </button>
           );
         })}

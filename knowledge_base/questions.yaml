@@ -103,6 +103,14 @@ sections:
         type: engine_version
         why: Determines compatibility and the migration path.
         options: *engine_options
+      - id: app.requested_engine
+        label: Database you have in mind (if any)
+        type: engine_version
+        quick: true
+        why: >-
+          DBCompass compares your choice with its own ranking. Licensed engines (Oracle, SQL Server, Db2)
+          need a short justification before a request is approved.
+        options: *engine_options
 
   - id: data
     title: Data model

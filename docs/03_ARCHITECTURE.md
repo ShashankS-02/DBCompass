@@ -124,7 +124,17 @@ dbcompass/
 | POST | /api/assessments/{id}/whatif | partial RequirementsInput | AssessmentResult (not stored) |
 | POST | /api/repo/analyze | {repo_url, branch?, token?} — GitHub URL (optionally /tree/<branch>/<folder>) or `sample:<name>` | InferredRequirements {fields: {id: {value, confidence, evidence, source, hint}}, prefill, oracle_report, summary, llm_used, warnings}; 400 bad URL / repo, 502 GitHub unreachable |
 | GET | /api/repo/samples | | names of bundled demo repos |
-| POST | /api/migrations/plan | MigrationInput | MigrationPlan |
+| POST | /api/migrations/plan | MigrationPlanRequest {assessment_id?, answers (override / add mig.* etc.), target_service_id?, refactor_person_days? [low, high], team_size?, start_date?} | MigrationPlan (201, stored): source, strategies (Rehost / Replatform / Refactor priced over 3 years incl. licences), considered (Retire / Retain / Relocate / Repurchase), recommended strategy, two_step, method + transfer estimate, tools, 8 phases, deadline fit, risks, rollback, validation, assumptions; 404 unknown assessment, 400 no source engine / unknown target, 422 invalid answers |
+| GET | /api/migrations/{id} | | MigrationPlan (owner, dba_admin, db_approver) |
+| GET | /api/justification/reasons | | JustificationConfig (reasons, weights, thresholds) |
+| POST | /api/justification/evaluate | JustificationInput {kind, application_name, requested_engine, assessment_id, migration_plan_id?, reasons [{reason_id, evidence?}], justification_text, alternatives_considered, refactor_person_days?} | JustificationEvaluation (advisory verdict, reason statuses, requested vs best licence-free option, net saving, break-even, problems); nothing stored |
+| POST | /api/requests | JustificationInput | DbRequest (201, draft, evaluated) |
+| PUT | /api/requests/{id} | JustificationInput | DbRequest (owner; draft or sent_back only, else 409; re-evaluated) |
+| POST | /api/requests/{id}/submit | | DbRequest (owner; 409 while the justification has problems) |
+| POST | /api/requests/{id}/decision | {decision: approve\|reject\|send_back, note?} | DbRequest (db_approver, never on own request outside dev bypass → 403; reject / send back / approving a needs_review or not_justified verdict need a note → 409) |
+| GET | /api/requests | ?scope=mine\|review\|all&limit | list[DbRequestSummary] (review / all for db_approver) |
+| GET | /api/requests/{id} | | DbRequest with audit events (owner, db_approver, dba_admin) |
+| GET | /api/requests/{id}/export | | text/markdown justification packet |
 | GET | /api/assessments/{id}/export?format=md\|pdf | | file |
 | GET | /api/pricing/status | | snapshot date, regions, price count and unmatched components per CSP; priced / not-priced service counts; INR rate |
 | POST | /api/pricing/refresh/{csp} | | dba_admin only; `azure` only (AWS and GCP via the CLI). Rebuilds and saves the snapshot |
@@ -192,8 +202,13 @@ breakdown and adjustments for every scored primary) and `combination_notes`.
 
 ## Persistence (app DB)
 Tables: users, assessments (input JSON, result JSON, created_by, created_at),
-repo_scans (repo_url, commit_sha, analyzer_version, result JSON, created_by; the GitHub token is never stored), migration_plans, feedback
-(assessment_id, accepted_option, comment). Feedback is used later to tune weights.
+repo_scans (repo_url, commit_sha, analyzer_version, result JSON, created_by; the GitHub token is never stored),
+migration_plans (assessment_id?, request JSON, plan JSON, created_by), db_requests (status, input JSON,
+evaluation JSON, created_by, timestamps), request_events (request_id, actor, action, note, at: the audit trail),
+feedback (assessment_id, accepted_option, comment). Feedback is used later to tune weights.
+
+Roles (Entra app roles): `user`, `dba_admin` (pricing refresh, reads everything), `db_approver` (decides
+database requests; cannot decide their own). The dev bypass user has all three.
 
 ## Security
 - Entra ID SSO; role claims: `user`, `dba_admin` (can edit KB via UI later).

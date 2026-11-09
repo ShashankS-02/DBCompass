@@ -95,6 +95,12 @@ enterprise discounts". The LLM never produces numbers.
   backup beyond free allowances, data egress, licences on BYOL / self-managed, discounts and taxes.
 - When a tier's instance size is not sold (e.g. Aurora has no db.t4g.xlarge) the recommended size
   is priced and noted. A recommendation with an unpriced component shows a partial total (*).
+- Licences (M6, licensing.yaml): services whose CSP price excludes the database licence (RDS for
+  Oracle BYOL, EC2 / Azure VM / Compute Engine self-managed, Bare Metal Solution) get licence lines
+  in every tier: Oracle Processor licences = ceil(instance vCPUs ÷ 2) × licensed nodes (primary,
+  standby, replicas, DR), purchase ÷ 36 months plus 22 % support a year; SQL Server core-pack
+  subscriptions (4-core minimum per instance). They count in the cost score, the budget filter
+  and every total, and the UI shows "incl. $X licence" per tier.
 - Cost score for an unpriced candidate: it is scored as if it cost the highest known price in its
   group, so a missing price can never win on cost (an infrastructure-only or absent price usually
   understates the real bill). When nothing in the group is priced, cost falls back to relative units.

@@ -21,6 +21,7 @@ VALID_QUICK_ANSWERS = {
     "ops.skills": ["oracle"],
     "cost.monthly_cap": {"amount": 5000, "currency": "usd"},
     "pref.csp": "no_preference",
+    "app.requested_engine": {"engine": "postgresql", "version": None},
 }
 
 
@@ -62,7 +63,7 @@ def test_unknown_tier_assumes_default_tier(client: TestClient) -> None:
     assumed = {field["field_id"]: field["value"] for field in report["assumed_fields"]}
     assert assumed["app.tier"] == "tier_2"
     assert assumed["ha.sla"] == "sla_99_9"
-    assert len(report["unanswered_quick_fields"]) == 15
+    assert len(report["unanswered_quick_fields"]) == 16
 
 
 def test_answered_field_is_not_assumed(client: TestClient) -> None:

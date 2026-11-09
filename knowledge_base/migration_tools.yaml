@@ -1,0 +1,259 @@
+# Migration planner knowledge (doc 07): settings, tools, the tool matrix, methods, phases, risks, rollback.
+# Effort figures are heuristics for planning conversations, not quotes; the DBA team tunes them.
+version: 1
+last_verified: 2026-11-09
+
+settings:
+  migration_deadline: 2028-12-31      # org programme: all on-prem databases in the cloud by this date
+  effective_link_utilisation: 0.7     # doc 07: 70% effective use of the link
+  offline_device_threshold_hours: 168 # > 7 days over the network → ship a device and catch up with CDC
+  cdc_max_share_of_bandwidth: 0.5     # change rate must stay well below the daily link capacity
+  offline_logical_max_gb: 500         # above this, offline moves use physical backups (same engine)
+  downtime_safety_factor: 0.5         # an offline copy must fit in half the allowed downtime
+  default_team_size: 3
+  working_days_per_week: 5
+  day_rate_usd: 800                   # ASSUMPTION: blended engineer day rate; replace with the org's figure
+  months_compared: 36                 # 3-year view (doc 01)
+
+# Person-days of migration work per strategy (low, high), before any code refactoring.
+strategy_effort:
+  rehost: [10, 20]
+  replatform: [15, 30]
+  refactor: [25, 45]
+
+# Code refactoring effort (low, high) when the engine changes and no Oracle report is available.
+refactor_effort_by_proc_code:
+  none: [5, 15]
+  light: [20, 60]
+  heavy: [80, 250]
+
+strategies:
+  retire: {label: Retire, summary: "Switch it off; no active users or replaced by another system."}
+  retain: {label: Retain, summary: "Keep it where it is for now (hard dependencies, licensing or latency)."}
+  rehost: {label: Rehost, summary: "Same engine on cloud VMs (lift and shift)."}
+  relocate: {label: Relocate, summary: "Move a VMware estate as-is (Azure VMware Solution, Google Cloud VMware Engine, VMware Cloud on AWS)."}
+  replatform: {label: Replatform, summary: "Same engine on a managed service."}
+  repurchase: {label: Repurchase, summary: "Replace with a SaaS product."}
+  refactor: {label: Refactor, summary: "Change engine (e.g. Oracle → PostgreSQL) to cut licences or modernise."}
+
+methods:
+  offline_logical:
+    label: Offline logical (export / import)
+    rollback: "Keep the source read-only and untouched until validation passes; roll back by repointing the application."
+  offline_physical:
+    label: Offline physical (backup / restore)
+    rollback: "Keep the source read-only and untouched until validation passes; roll back by repointing the application."
+  online_physical:
+    label: Online physical replication
+    rollback: "Reverse the replication direction after cutover (Data Guard switchback / reverse log shipping) until hypercare ends."
+  online_logical:
+    label: Online logical / CDC
+    rollback: "Run a reverse CDC task (target → source) from cutover until hypercare ends, so the source stays current."
+  offline_device:
+    label: Offline device seed + CDC catch-up
+    rollback: "Seed by device, catch up with CDC, then run a reverse CDC task until hypercare ends."
+
+rollback_triggers:
+  - "Error rate or p99 latency above the pre-migration baseline for more than 30 minutes after cutover"
+  - "Row count or checksum mismatch on any critical table"
+  - "A failed smoke test on a business-critical transaction"
+
+tools:
+  awr: {name: Oracle AWR reports, url: "https://docs.oracle.com/en/database/oracle/oracle-database/19/tgdba/"}
+  oracle_data_pump: {name: Oracle Data Pump, url: "https://docs.oracle.com/en/database/oracle/oracle-database/19/sutil/oracle-data-pump-overview.html"}
+  oracle_rman: {name: Oracle RMAN, url: "https://docs.oracle.com/en/database/oracle/oracle-database/19/bradv/"}
+  oracle_data_guard: {name: Oracle Data Guard, url: "https://docs.oracle.com/en/database/oracle/oracle-database/19/sbydb/"}
+  oracle_zdm: {name: Oracle Zero Downtime Migration, url: "https://docs.oracle.com/en/database/oracle/zero-downtime-migration/"}
+  oracle_goldengate: {name: Oracle GoldenGate, url: "https://docs.oracle.com/en/middleware/goldengate/"}
+  ora2pg: {name: Ora2Pg, url: "https://ora2pg.darold.net/"}
+  aws_dms: {name: AWS Database Migration Service, url: "https://docs.aws.amazon.com/dms/latest/userguide/Welcome.html"}
+  aws_dms_schema_conversion: {name: AWS DMS Schema Conversion, url: "https://docs.aws.amazon.com/dms/latest/userguide/CHAP_SchemaConversion.html"}
+  aws_sct: {name: AWS Schema Conversion Tool, url: "https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Welcome.html"}
+  rds_sqlserver_native_backup: {name: RDS for SQL Server native backup / restore, url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/SQLServer.Procedural.Importing.html"}
+  azure_migrate: {name: Azure Migrate, url: "https://learn.microsoft.com/en-us/azure/migrate/migrate-services-overview"}
+  azure_dms: {name: Azure Database Migration Service, url: "https://learn.microsoft.com/en-us/azure/dms/dms-overview"}
+  mi_link: {name: Managed Instance link, url: "https://learn.microsoft.com/en-us/azure/azure-sql/managed-instance/managed-instance-link-feature-overview"}
+  log_replay_service: {name: Log Replay Service (SQL Managed Instance), url: "https://learn.microsoft.com/en-us/azure/azure-sql/managed-instance/log-replay-service-overview"}
+  sql_server_backup: {name: SQL Server native backup / restore, url: "https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/back-up-and-restore-of-sql-server-databases"}
+  distributed_ag: {name: SQL Server distributed availability groups, url: "https://learn.microsoft.com/en-us/sql/database-engine/availability-groups/windows/distributed-availability-groups"}
+  google_migration_center: {name: Google Migration Center, url: "https://cloud.google.com/migration-center/docs"}
+  google_dms: {name: Google Database Migration Service, url: "https://cloud.google.com/database-migration/docs"}
+  google_dvt: {name: Google Data Validation Tool, url: "https://github.com/GoogleCloudPlatform/professional-services-data-validator"}
+  pg_dump: {name: pg_dump / pg_restore, url: "https://www.postgresql.org/docs/current/app-pgdump.html"}
+  pg_logical_replication: {name: PostgreSQL logical replication, url: "https://www.postgresql.org/docs/current/logical-replication.html"}
+  mysqldump: {name: mysqldump, url: "https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html"}
+  mysql_replication: {name: MySQL replication, url: "https://dev.mysql.com/doc/refman/8.0/en/replication.html"}
+  mongodump: {name: mongodump / mongorestore, url: "https://www.mongodb.com/docs/database-tools/mongodump/"}
+  debezium: {name: Debezium, url: "https://debezium.io/documentation/"}
+  row_counts_checksums: {name: Row counts and checksums (scripted), url: "https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Validating.html"}
+  aws_snowball: {name: AWS Snowball, url: "https://docs.aws.amazon.com/snowball/", review: "AWS restricted Snowball for new customers; confirm availability for your account."}
+  azure_data_box: {name: Azure Data Box, url: "https://learn.microsoft.com/en-us/azure/databox/"}
+  google_transfer_appliance: {name: Google Transfer Appliance, url: "https://cloud.google.com/transfer-appliance/docs"}
+  aws_direct_connect: {name: AWS Direct Connect, url: "https://docs.aws.amazon.com/directconnect/"}
+  azure_expressroute: {name: Azure ExpressRoute, url: "https://learn.microsoft.com/en-us/azure/expressroute/"}
+  google_interconnect: {name: Google Cloud Interconnect, url: "https://cloud.google.com/network-connectivity/docs/interconnect"}
+
+# Per-CSP supporting tools.
+csp_tools:
+  aws: {dms: aws_dms, device: aws_snowball, network: aws_direct_connect}
+  azure: {dms: azure_dms, device: azure_data_box, network: azure_expressroute}
+  gcp: {dms: google_dms, device: google_transfer_appliance, network: google_interconnect}
+
+# First matching row wins. sources / targets are engine families; targets: [same] means target engine = source engine.
+# csps empty = any CSP. Tool ids "csp:dms" resolve through csp_tools for the target CSP.
+tool_matrix:
+  - {sources: [oracle], targets: [same], csps: [aws], assessment: [awr], schema_conversion: [], data_movement: [oracle_data_pump, oracle_rman, oracle_data_guard, oracle_zdm, aws_dms, oracle_goldengate], validation: [row_counts_checksums, aws_dms]}
+  - {sources: [oracle], targets: [postgresql, mysql], csps: [aws], assessment: [aws_dms_schema_conversion], schema_conversion: [aws_dms_schema_conversion, aws_sct, ora2pg], data_movement: [aws_dms], validation: [aws_dms]}
+  - {sources: [oracle], targets: [same], csps: [azure], assessment: [azure_migrate, awr], schema_conversion: [], data_movement: [oracle_zdm, oracle_data_guard, oracle_rman, oracle_goldengate], validation: [row_counts_checksums]}
+  - {sources: [oracle], targets: [postgresql], csps: [azure], assessment: [ora2pg], schema_conversion: [ora2pg], data_movement: [ora2pg, oracle_goldengate, debezium], validation: [row_counts_checksums]}
+  - {sources: [oracle], targets: [same], csps: [gcp], assessment: [google_migration_center, awr], schema_conversion: [], data_movement: [oracle_zdm, oracle_data_guard, oracle_rman], validation: [row_counts_checksums]}
+  - {sources: [oracle], targets: [postgresql], csps: [gcp], assessment: [google_dms], schema_conversion: [google_dms, ora2pg], data_movement: [google_dms], validation: [google_dvt]}
+  - {sources: [sql_server], targets: [same], csps: [azure], assessment: [azure_migrate], schema_conversion: [], data_movement: [azure_dms, mi_link, log_replay_service, sql_server_backup], validation: [row_counts_checksums]}
+  - {sources: [sql_server], targets: [same], csps: [aws], assessment: [aws_dms_schema_conversion], schema_conversion: [], data_movement: [rds_sqlserver_native_backup, aws_dms, distributed_ag], validation: [aws_dms]}
+  - {sources: [sql_server], targets: [same], csps: [gcp], assessment: [google_migration_center], schema_conversion: [], data_movement: [google_dms, sql_server_backup], validation: [google_dvt]}
+  - {sources: [sql_server], targets: [postgresql, mysql], csps: [aws], assessment: [aws_dms_schema_conversion], schema_conversion: [aws_dms_schema_conversion, aws_sct], data_movement: [aws_dms], validation: [aws_dms]}
+  - {sources: [postgresql], targets: [same], csps: [], assessment: [], schema_conversion: [], data_movement: [pg_dump, pg_logical_replication, "csp:dms"], validation: [row_counts_checksums]}
+  - {sources: [mysql, mariadb], targets: [same, mysql, mariadb], csps: [], assessment: [], schema_conversion: [], data_movement: [mysqldump, mysql_replication, "csp:dms"], validation: [row_counts_checksums]}
+  - {sources: [mongodb], targets: [same, mongodb], csps: [], assessment: [], schema_conversion: [], data_movement: [mongodump, "csp:dms"], validation: [row_counts_checksums]}
+  - {sources: [], targets: [], csps: [], assessment: [], schema_conversion: [], data_movement: ["csp:dms", debezium], validation: [row_counts_checksums]}
+
+# doc 07 step 4. base_days are working days; the planner adds size / effort-driven days on top.
+phases:
+  - id: discover
+    name: Discover & assess
+    base_days: 5
+    days_per_dependency: 1
+    owner_role: DBA
+    tasks:
+      - "Inventory schemas, sizes, versions and character set"
+      - "Map dependencies: DB links, ETL jobs, schedulers, consuming applications"
+      - "Capture performance baselines (AWR / Query Store / pg_stat_statements)"
+    go_no_go: ["Every dependency has an owner and a wave", "Baseline captured for peak and normal load"]
+  - id: plan
+    name: Plan
+    base_days: 5
+    owner_role: Solution architect
+    tasks:
+      - "Confirm strategy, target service and sizing"
+      - "Design network path, security, encryption and identity"
+      - "Agree rollback criteria and the cutover window with the business"
+    go_no_go: ["Strategy and target signed off", "Rollback triggers agreed", "Justification approved when a licensed engine is kept"]
+  - id: build_target
+    name: Build target
+    base_days: 5
+    owner_role: Cloud engineer
+    tasks:
+      - "Provision landing zone and private connectivity with Terraform"
+      - "Create the target, parameter groups, users / roles and encryption keys"
+      - "Store credentials in the CSP secrets manager"
+    go_no_go: ["Target reachable privately from source and app", "Backups and monitoring enabled"]
+  - id: schema
+    name: Schema migrate & convert
+    base_days: 3
+    owner_role: DBA + developers
+    tasks:
+      - "Run schema conversion / export"
+      - "Fix manual conversion items and unit test procedures"
+      - "Pilot the hardest package or procedure first"
+    go_no_go: ["Schema objects compile on target", "Converted code passes unit tests"]
+  - id: data
+    name: Data migrate
+    base_days: 2
+    owner_role: DBA
+    tasks:
+      - "Full load"
+      - "Start change data capture and monitor lag"
+    go_no_go: ["Full load complete", "Replication lag stable and below the cutover threshold"]
+  - id: validate
+    name: Validate
+    base_days: 3
+    days_per_tb: 1
+    owner_role: QA + DBA
+    tasks:
+      - "Row counts and checksums per table"
+      - "Run sample business queries and reports"
+      - "Performance test against the captured baseline"
+    go_no_go: ["No data mismatches", "Performance within 10% of baseline"]
+  - id: cutover
+    name: Cutover
+    base_days: 1
+    owner_role: DBA + app team
+    tasks:
+      - "Freeze writes, drain replication lag to zero"
+      - "Switch connection strings / DNS"
+      - "Smoke test critical transactions"
+    go_no_go: ["Smoke tests pass", "Rollback path tested and ready"]
+  - id: hypercare
+    name: Hypercare & optimise
+    base_days: 15
+    owner_role: DBA
+    tasks:
+      - "Watch errors, latency and cost daily"
+      - "Right-size after 2–4 weeks"
+      - "Decommission the source and release its licences"
+    go_no_go: ["Two weeks without a rollback trigger", "Source decommissioned"]
+
+# Risk rules use the rules.yaml condition grammar over the requirement values plus plan.* facts:
+# plan.strategy, plan.method, plan.homogeneous, plan.has_db_links, plan.cdc_feasible,
+# plan.fits_deadline, plan.charset_risk.
+risks:
+  - id: RISK-CHARSET
+    when: [{field: plan.charset_risk, op: eq, value: true}]
+    severity: high
+    title: Character set conversion
+    impact: "A non-UTF8 source can corrupt or truncate characters on load."
+    mitigation: "Convert a full copy first and compare checksums of text columns before the real run."
+  - id: RISK-DBLINKS
+    when: [{field: plan.has_db_links, op: eq, value: true}]
+    severity: high
+    title: Database links and cross-database queries
+    impact: "Queries over DB links break after the move."
+    mitigation: "Map every link; move linked databases in the same wave or replace links with APIs."
+  - id: RISK-CDC-LAG
+    when: [{field: plan.cdc_feasible, op: eq, value: false}]
+    severity: high
+    title: Change rate too high for the link
+    impact: "CDC lag never drains, so cutover cannot finish inside the window."
+    mitigation: "Increase bandwidth (private interconnect), or seed offline and cut over at a low-change time."
+  - id: RISK-REFACTOR-PLSQL
+    when: [{field: plan.strategy, op: eq, value: refactor}, {field: data.proc_code, op: eq, value: heavy}]
+    severity: high
+    title: Heavy stored-procedure refactor
+    impact: "Converting large PL/SQL or T-SQL code bases slips schedules."
+    mitigation: "Pilot the hardest package first and re-estimate before committing the wave."
+  - id: RISK-DEADLINE
+    when: [{field: plan.fits_deadline, op: eq, value: false}]
+    severity: high
+    title: Misses the migration deadline
+    impact: "This plan finishes after the organisation's on-prem exit date."
+    mitigation: "Replatform first to meet the date, then refactor after the exit; or add people to the team."
+  - id: RISK-LARGE-DB
+    when: [{field: mig.size_gb, op: gte, value: 10240}]
+    severity: medium
+    title: Very large database
+    impact: "Full loads and validation take days; a failed load costs the window."
+    mitigation: "Partition the load, validate incrementally and rehearse the cutover."
+  - id: RISK-NEAR-ZERO-DOWNTIME
+    when: [{field: mig.downtime_minutes, op: lte, value: 15}]
+    severity: medium
+    title: Near-zero downtime required
+    impact: "Little room to recover from a failed switch."
+    mitigation: "Use online replication, rehearse cutover twice and keep reverse replication running."
+  - id: RISK-OFFLINE-DEVICE
+    when: [{field: plan.method, op: eq, value: offline_device}]
+    severity: medium
+    title: Offline device logistics
+    impact: "Shipping and import add one to two weeks and need physical security handling."
+    mitigation: "Book the device early, encrypt it and keep CDC running from the backup point."
+  - id: RISK-SHORT-LIFE-REFACTOR
+    when: [{field: plan.strategy, op: eq, value: refactor}, {field: app.lifecycle, op: eq, value: lt_1y}]
+    severity: medium
+    title: Refactoring an application that ends within a year
+    impact: "The refactor cost may never pay back."
+    mitigation: "Consider rehost / replatform, or retiring the application."
+
+validation_checks:
+  - "Row counts per table match"
+  - "Checksums on key tables match"
+  - "Sample business queries return the same results"
+  - "Performance within 10% of the captured baseline"

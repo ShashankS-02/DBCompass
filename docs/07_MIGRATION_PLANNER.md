@@ -72,6 +72,25 @@ Auto-generated risk list from inputs, e.g.:
 Rollback: keep reverse replication (GoldenGate / DMS reverse task / Data Guard switchback)
 until hypercare ends; define rollback trigger metrics.
 
+## As implemented (M6)
+- `POST /api/migrations/plan` re-runs the engine on the assessment's answers (plus overrides), then
+  prices the best-ranked target for each of Rehost (same engine, IaaS), Replatform (same engine,
+  managed) and Refactor (different engine): Balanced monthly cost including licences × 36 months +
+  effort mid-point × day rate. Effort = strategy base + code refactor (repo analyzer's Oracle report
+  when given, else by `data.proc_code`).
+- Duration = the runbook's total for that strategy (phase base days + dependencies + code refactor
+  ÷ team + transfer days + CDC soak + validation per TB), so the table and the runbook agree.
+- Recommended = cheapest 3-year total among options that finish by the deadline (2028-12-31,
+  migration_tools.yaml); none on time → the fastest. When Refactor is cheapest but late, the plan
+  suggests a two-step move (replatform first, refactor after the exit).
+- Retire / Retain / Relocate / Repurchase are listed with whether they apply; Retain conflicts with
+  the on-prem exit for on-prem sources.
+- Method follows step 2; tools come from the first matching tool-matrix row (`csp:dms` resolves to the
+  target CSP's DMS); risks are YAML rules over requirements plus `plan.*` facts; rollback follows the
+  method.
+- A plan that keeps a licensed engine links to the justification gate (doc 01 non-goal untouched:
+  DBCompass never runs a migration).
+
 ## Stretch: wave planning for a fleet
 Ingest a CSV of databases + DB link inventory → build dependency graph →
 connected components become candidate waves → order waves by risk and criticality.

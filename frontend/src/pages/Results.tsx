@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { CSP_LABELS, ROLE_LABELS, fetchAssessment, type AssessmentResult, type Recommendation } from "../api/assessments";
 import { describeValue, fetchQuestions, type Question } from "../api/questions";
 import { useAuth } from "../auth/AuthProvider";
+import { engineLabel } from "../api/labels";
+import { COMMERCIAL_ENGINES } from "../api/requests";
 import CostTiers, { type Currency } from "../components/CostTiers";
 import ScoreRadar from "../components/ScoreRadar";
 import WhyNotPanel from "../components/WhyNotPanel";
@@ -75,6 +77,45 @@ function RecommendationCard({ recommendation, currency, inrPerUsd }: CardProps) 
         </>
       )}
     </article>
+  );
+}
+
+function engineOf(value: unknown): string | null {
+  const engine = (value as { engine?: string } | undefined)?.engine;
+  return engine && engine !== "none" ? engine : null;
+}
+
+function NextSteps({ result }: { result: AssessmentResult }) {
+  const answers = result.input.answers;
+  const requested = engineOf(answers["app.requested_engine"]);
+  const source = engineOf(answers["mig.source_engine"]) ?? engineOf(answers["app.existing_db"]);
+  const licensedEngine = [requested, source].find((engine) => engine && COMMERCIAL_ENGINES.includes(engine)) ?? null;
+  const kind = requested && requested !== source ? "new_database" : source ? "migration" : "new_database";
+  return (
+    <section className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="mr-auto text-sm">
+        <h2 className="font-medium text-slate-900">Next steps</h2>
+        {licensedEngine ? (
+          <p className="text-amber-800">
+            {engineLabel(licensedEngine)} needs a commercial licence. Before a request is approved the team must explain why, and DBCompass
+            compares it with the best licence-free option.
+          </p>
+        ) : (
+          <p className="text-slate-600">Plan the migration, or raise a database request for approval.</p>
+        )}
+      </div>
+      {source && (
+        <Link to={`/migrations/new?assessment=${result.id}`} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:border-slate-500">
+          Plan migration
+        </Link>
+      )}
+      <Link
+        to={`/requests/new?assessment=${result.id}&kind=${kind}${licensedEngine ? `&engine=${licensedEngine}` : requested ? `&engine=${requested}` : ""}`}
+        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+      >
+        {licensedEngine ? `Justify ${engineLabel(licensedEngine)}` : "Raise a database request"}
+      </Link>
+    </section>
   );
 }
 
@@ -155,6 +196,8 @@ export default function Results() {
           {result.pricing.notes.join(" ")}
         </p>
       )}
+
+      <NextSteps result={result} />
 
       {result.recommendations.length === 0 ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
