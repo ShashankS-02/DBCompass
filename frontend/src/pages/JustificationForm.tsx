@@ -16,9 +16,10 @@ import {
   type RequestKind,
 } from "../api/requests";
 import { useAuth } from "../auth/AuthProvider";
+import { Spinner } from "../components/Loader";
 import VerdictPanel from "../components/VerdictPanel";
 
-const inputClass = "w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none";
+const inputClass = "w-full btn-ghost px-3 py-1.5 focus:border-slate-500 focus:outline-none";
 const PREVIEW_DELAY_MS = 500;
 
 function emptyInput(search: URLSearchParams): JustificationInput {
@@ -49,7 +50,7 @@ function ReasonPicker({ config, input, onChange }: { config: JustificationConfig
     <fieldset className="space-y-2">
       <legend className="text-sm font-medium text-slate-900">Why this database?</legend>
       {Object.entries(config.reasons).map(([reasonId, spec]) => (
-        <div key={reasonId} className="rounded border border-slate-100 p-2">
+        <div key={reasonId} className="rounded-xl border border-sand-200 bg-white p-2.5 transition hover:border-coral-200 hover:bg-coral-50/40">
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" className="mt-1" checked={selected.has(reasonId)} onChange={() => toggle(reasonId)} />
             <span>{spec.label}</span>
@@ -130,14 +131,14 @@ export default function JustificationForm() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">{id ? "Edit database request" : "New database request"}</h1>
+        <h1 className="text-3xl font-bold text-slate-900">{id ? "Edit database request" : "New database request"}</h1>
         <p className="mt-1 text-sm text-slate-600">
           Commercially licensed engines (Oracle, SQL Server, Db2) need a reason before they are approved. DBCompass checks
           what it can against the assessment and shows what a licence-free option would cost.
         </p>
       </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+        <div className="space-y-4 card p-4">
           <label className="block text-sm">
             <span className="text-slate-600">Application</span>
             <input className={`${inputClass} mt-1`} value={input.application_name} onChange={(event) => set({ application_name: event.target.value })} />
@@ -188,9 +189,9 @@ export default function JustificationForm() {
             type="button"
             onClick={save}
             disabled={busy || !input.assessment_id || !input.application_name.trim()}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="btn-primary"
           >
-            {busy ? "Saving…" : "Save draft"}
+            {busy ? <><Spinner /> Saving…</> : "Save draft"}
           </button>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </div>

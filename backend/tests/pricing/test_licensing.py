@@ -57,5 +57,14 @@ def test_no_licence_lines_when_price_includes_it_or_engine_is_open(service_id: s
 
 
 def test_unverified_figures_are_flagged() -> None:
-    cost = licence_cost(SERVICES["aws.rds_oracle"], sizing("oracle", 8), {}, get_licensing_config())
+    config = get_licensing_config()
+    unverified_products = dict(config.products)
+    unverified_products["oracle_ee"] = config.products["oracle_ee"].model_copy(update={"verified": False})
+    unverified_config = config.model_copy(update={"products": unverified_products})
+    cost = licence_cost(SERVICES["aws.rds_oracle"], sizing("oracle", 8), {}, unverified_config)
     assert any("pending verification" in note for note in cost.notes)
+
+
+def test_verified_oracle_figures_carry_no_verification_flag() -> None:
+    cost = licence_cost(SERVICES["aws.rds_oracle"], sizing("oracle", 8), {}, get_licensing_config())
+    assert not any("pending verification" in note for note in cost.notes)

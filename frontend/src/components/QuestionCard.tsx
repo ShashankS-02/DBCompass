@@ -11,7 +11,7 @@ interface QuestionCardProps {
 }
 
 const inputClass =
-  "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-slate-500 focus:outline-none";
+  "btn-ghost px-3 py-1.5 text-slate-900 focus:border-slate-500 focus:outline-none";
 
 function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: string }) {
   return (
@@ -19,10 +19,10 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+      className={`rounded-full border px-3 py-1 text-sm font-medium transition duration-200 ${
         selected
-          ? "border-slate-900 bg-slate-900 text-white"
-          : "border-slate-300 bg-white text-slate-700 hover:border-slate-500"
+          ? "scale-[1.03] border-teal-600 bg-teal-600 text-white shadow-soft"
+          : "border-sand-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-coral-300 hover:text-coral-700 hover:shadow-soft"
       }`}
     >
       {children}
@@ -156,7 +156,7 @@ function ListInput({ value, onChange }: QuestionCardProps) {
             }
           }}
         />
-        <button type="button" onClick={addDraft} className="rounded-md border border-slate-300 px-3 text-sm">
+        <button type="button" onClick={addDraft} className="btn-ghost px-3 py-1.5">
           Add
         </button>
       </div>

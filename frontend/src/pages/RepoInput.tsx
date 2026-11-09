@@ -4,9 +4,10 @@ import { ApiError } from "../api/client";
 import { describeValue, fetchQuestions, type Question } from "../api/questions";
 import { analyzeRepo, listSamples, type InferredRequirements, type RepoPrefill } from "../api/repo";
 import { useAuth } from "../auth/AuthProvider";
+import { BusyOverlay, Spinner } from "../components/Loader";
 
 const SOURCE_LABELS: Record<string, string> = { static: "code", readme: "README", llm: "LLM" };
-const inputClass = "w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none";
+const inputClass = "w-full btn-ghost px-3 py-1.5 focus:border-slate-500 focus:outline-none";
 
 function ConfidenceBar({ value }: { value: number }) {
   const colour = value >= 0.75 ? "bg-emerald-500" : value >= 0.5 ? "bg-amber-400" : "bg-slate-300";
@@ -111,15 +112,16 @@ export default function RepoInput() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Analyze a repository</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Analyze a repository</h1>
         <p className="mt-1 text-sm text-slate-600">
           DBCompass reads the code (it never runs it), masks secrets, and pre-fills the requirements form with evidence. Private
           repos need a token; it is used once and never stored.
         </p>
       </div>
 
+      {busy && <BusyOverlay label="Analysing the repository" steps={["Fetching the file tree", "Reading drivers and ORMs", "Scanning schema and SQL", "Redacting secrets", "Asking the model for signals", "Pre-filling the form"]} />}
       <form
-        className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_160px_200px_auto]"
+        className="grid gap-3 card p-4 sm:grid-cols-[minmax(0,1fr)_160px_200px_auto]"
         onSubmit={(event) => {
           event.preventDefault();
           if (repoUrl.trim()) run(repoUrl.trim());
@@ -128,8 +130,8 @@ export default function RepoInput() {
         <input className={inputClass} placeholder="https://github.com/owner/repo" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} aria-label="Repository URL" />
         <input className={inputClass} placeholder="Branch (optional)" value={branch} onChange={(event) => setBranch(event.target.value)} aria-label="Branch" />
         <input className={inputClass} type="password" autoComplete="off" placeholder="Token (private repos)" value={token} onChange={(event) => setToken(event.target.value)} aria-label="GitHub token" />
-        <button type="submit" disabled={busy || !repoUrl.trim()} className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
-          {busy ? "Analysing…" : "Analyze"}
+        <button type="submit" disabled={busy || !repoUrl.trim()} className="btn-primary">
+          {busy ? <><Spinner /> Analysing…</> : "Analyze"}
         </button>
       </form>
 
@@ -137,7 +139,7 @@ export default function RepoInput() {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-slate-500">Or try a demo repo:</span>
           {samples.map((sample) => (
-            <button key={sample} type="button" disabled={busy} onClick={() => run(`sample:${sample}`)} className="rounded-full border border-slate-300 bg-white px-3 py-1 hover:border-slate-500 disabled:opacity-50">
+            <button key={sample} type="button" disabled={busy} onClick={() => run(`sample:${sample}`)} className="rounded-full border border-sand-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-soft transition hover:-translate-y-0.5 hover:border-coral-300 hover:text-coral-700 disabled:opacity-50">
               {sample}
             </button>
           ))}
@@ -157,7 +159,7 @@ export default function RepoInput() {
                 <p key={warning} className="text-xs text-slate-500">{warning}</p>
               ))}
             </div>
-            <button type="button" onClick={useAnswers} className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            <button type="button" onClick={useAnswers} className="btn-primary">
               Use these answers →
             </button>
           </div>
@@ -172,7 +174,7 @@ export default function RepoInput() {
 
           {result.oracle_report && <OracleReportView report={result.oracle_report} />}
 
-          <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <section className="overflow-x-auto card">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-slate-500">

@@ -41,7 +41,7 @@ function OptionColumn({ title, option, months }: { title: string; option: Costed
 
 export default function VerdictPanel({ evaluation }: { evaluation: JustificationEvaluation }) {
   return (
-    <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <section className="space-y-4 card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-medium text-slate-900">DBCompass verdict (advisory)</h2>
         <VerdictBadge verdict={evaluation.verdict} />

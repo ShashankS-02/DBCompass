@@ -36,7 +36,7 @@ export default function PrioritySliders({ sliders, fixedWeights, priorities, onC
               step={5}
               value={sliderValue}
               onChange={(event) => onChange({ ...priorities, [slider.id]: Number(event.target.value) })}
-              className="w-full accent-slate-900"
+              className="w-full accent-coral-500"
             />
             <p className="text-xs text-slate-500">{slider.description}</p>
           </div>

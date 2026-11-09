@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { BusyOverlay, PageLoader, Spinner } from "../components/Loader";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { RepoPrefill } from "../api/repo";
 import { createAssessment } from "../api/assessments";
@@ -41,7 +42,7 @@ function ModeToggle({ mode, onChange }: { mode: FormMode; onChange: (mode: FormM
     { value: "expert", label: "Expert" },
   ];
   return (
-    <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5" role="group">
+    <div className="inline-flex rounded-xl border border-sand-200 bg-white p-1 shadow-soft" role="group">
       {modes.map((item) => (
         <button
           key={item.value}
@@ -49,7 +50,7 @@ function ModeToggle({ mode, onChange }: { mode: FormMode; onChange: (mode: FormM
           aria-pressed={mode === item.value}
           onClick={() => onChange(item.value)}
           className={`rounded px-3 py-1 text-sm ${
-            mode === item.value ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+            mode === item.value ? "bg-teal-600 text-white shadow-soft" : "text-slate-600 hover:bg-sand-50 hover:text-slate-900"
           }`}
         >
           {item.label}
@@ -75,7 +76,7 @@ function SectionCard({ section, open, onToggle, answers, onAnswer, errors, defau
   const hasError = section.questions.some((question) => errors.has(question.id));
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="card">
       <button
         type="button"
         onClick={onToggle}
@@ -252,7 +253,7 @@ export default function NewAssessment() {
     return <p className="text-rose-600">Could not load questions: {loadError}</p>;
   }
   if (!schema) {
-    return <p className="text-slate-500">Loading questions…</p>;
+    return <PageLoader label="Preparing the questionnaire" steps={["Loading questions", "Applying defaults"]} />;
   }
 
   const tier = (answers["app.tier"] as string | undefined) ?? schema.default_tier;
@@ -315,7 +316,7 @@ export default function NewAssessment() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">New assessment</h1>
+          <h1 className="text-3xl font-bold text-slate-900">New assessment</h1>
           <p className="mt-1 text-sm text-slate-600">
             {repoPrefill && (
               <span className="mb-1 block font-medium text-indigo-700">
@@ -332,7 +333,7 @@ export default function NewAssessment() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           {hasMigrationSection && (
-            <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm">
+            <label className="flex items-center gap-2 card px-4 py-3 text-sm">
               <input
                 type="checkbox"
                 checked={migrating}
@@ -340,7 +341,7 @@ export default function NewAssessment() {
                   setMigrating(event.target.checked);
                   setReportStale(true);
                 }}
-                className="accent-slate-900"
+                className="accent-coral-500"
               />
               Planning a migration from an existing database?
             </label>
@@ -361,7 +362,7 @@ export default function NewAssessment() {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="card p-4">
             <h2 className="mb-3 font-medium text-slate-900">Priorities</h2>
             <PrioritySliders
               sliders={schema.priority_sliders}
@@ -377,10 +378,11 @@ export default function NewAssessment() {
             type="button"
             onClick={submit}
             disabled={submitting}
-            className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="w-full btn-primary"
           >
-            {submitting ? "Working…" : "Get recommendations"}
+            {submitting ? <><Spinner /> Working…</> : "Get recommendations"}
           </button>
+          {submitting && <BusyOverlay label="Finding your database" steps={["Validating answers", "Filtering services", "Scoring seven dimensions", "Sizing and pricing", "Ranking combinations"]} />}
           {submitError && <p className="text-sm text-rose-600">Could not validate: {submitError}</p>}
           {report && (
             <ReportPanel

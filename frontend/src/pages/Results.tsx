@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PageLoader } from "../components/Loader";
 import { Link, useParams } from "react-router-dom";
 import { CSP_LABELS, ROLE_LABELS, fetchAssessment, type AssessmentResult, type Recommendation } from "../api/assessments";
 import { describeValue, fetchQuestions, type Question } from "../api/questions";
@@ -17,7 +18,7 @@ interface CardProps {
 
 function RecommendationCard({ recommendation, currency, inrPerUsd }: CardProps) {
   return (
-    <article className="flex flex-col rounded-lg border border-slate-200 bg-white p-4">
+    <article className={`card card-hover flex flex-col p-5 ${recommendation.rank === 1 ? "border-t-4 border-t-coral-500" : ""}`}>
       <header className="flex items-start justify-between gap-2">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -27,7 +28,7 @@ function RecommendationCard({ recommendation, currency, inrPerUsd }: CardProps) 
             {recommendation.components.map((component) => component.service_name).join(" + ")}
           </h2>
         </div>
-        <span className="rounded bg-slate-900 px-2 py-0.5 text-sm font-medium tabular-nums text-white">
+        <span className="rounded-lg bg-coral-500 px-2 py-0.5 text-sm font-bold tabular-nums text-white shadow-glow">
           {recommendation.total_score.toFixed(1)}
         </span>
       </header>
@@ -36,7 +37,7 @@ function RecommendationCard({ recommendation, currency, inrPerUsd }: CardProps) 
 
       <dl className="space-y-2 text-sm">
         {recommendation.components.map((component) => (
-          <div key={component.service_id} className="rounded bg-slate-50 p-2">
+          <div key={component.service_id} className="rounded-xl bg-sand-50 p-2.5">
             <dt className="text-xs font-medium text-slate-500">
               {ROLE_LABELS[component.role] ?? component.role} · {component.engine}
               {component.engine_version ? ` ${component.engine_version}` : ""}
@@ -92,7 +93,7 @@ function NextSteps({ result }: { result: AssessmentResult }) {
   const licensedEngine = [requested, source].find((engine) => engine && COMMERCIAL_ENGINES.includes(engine)) ?? null;
   const kind = requested && requested !== source ? "new_database" : source ? "migration" : "new_database";
   return (
-    <section className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-4">
+    <section className="flex flex-wrap items-center gap-3 card p-4">
       <div className="mr-auto text-sm">
         <h2 className="font-medium text-slate-900">Next steps</h2>
         {licensedEngine ? (
@@ -105,13 +106,13 @@ function NextSteps({ result }: { result: AssessmentResult }) {
         )}
       </div>
       {source && (
-        <Link to={`/migrations/new?assessment=${result.id}`} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:border-slate-500">
+        <Link to={`/migrations/new?assessment=${result.id}`} className="btn-ghost px-3 py-1.5 hover:border-slate-500">
           Plan migration
         </Link>
       )}
       <Link
         to={`/requests/new?assessment=${result.id}&kind=${kind}${licensedEngine ? `&engine=${licensedEngine}` : requested ? `&engine=${requested}` : ""}`}
-        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+        className="btn-primary"
       >
         {licensedEngine ? `Justify ${engineLabel(licensedEngine)}` : "Raise a database request"}
       </Link>
@@ -150,14 +151,14 @@ export default function Results() {
     return <p className="text-rose-600">Could not load this assessment: {error}</p>;
   }
   if (!result) {
-    return <p className="text-slate-500">Loading results…</p>;
+    return <PageLoader label="Loading recommendations" steps={["Fetching the assessment", "Laying out cost tiers", "Drawing score charts"]} />;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Recommendations</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Recommendations</h1>
           <p className="mt-1 text-sm text-slate-600">
             {new Date(result.created_at).toLocaleString()} · engine {result.engine_version} · {result.trace.rules_fired.length} rules
             fired · {new Set(result.trace.filtered_out.map((reason) => reason.service_id)).size} services filtered out
@@ -165,21 +166,21 @@ export default function Results() {
         </div>
         <div className="flex items-center gap-2">
           {result.pricing?.inr_per_usd && (
-            <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5" role="group" aria-label="Currency">
+            <div className="inline-flex rounded-xl border border-sand-200 bg-white p-1 shadow-soft" role="group" aria-label="Currency">
               {(["usd", "inr"] as Currency[]).map((option) => (
                 <button
                   key={option}
                   type="button"
                   aria-pressed={currency === option}
                   onClick={() => setCurrency(option)}
-                  className={`rounded px-2 py-1 text-xs ${currency === option ? "bg-slate-900 text-white" : "text-slate-600"}`}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${currency === option ? "bg-teal-600 text-white shadow-soft" : "text-slate-600 hover:bg-sand-50"}`}
                 >
                   {option.toUpperCase()}
                 </button>
               ))}
             </div>
           )}
-          <Link to="/assessments/new" className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:border-slate-500">
+          <Link to="/assessments/new" className="btn-ghost px-3 py-1.5 hover:border-slate-500">
             New assessment
           </Link>
         </div>
@@ -206,7 +207,7 @@ export default function Results() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="stagger grid gap-5 lg:grid-cols-3">
           {result.recommendations.map((recommendation) => (
             <RecommendationCard
               key={recommendation.rank}
@@ -221,7 +222,7 @@ export default function Results() {
       <div className="grid gap-4 lg:grid-cols-2">
         <WhyNotPanel filteredOut={result.trace.filtered_out} scores={result.trace.scores} recommendedIds={recommendedIds} />
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <section className="card p-4">
           <h2 className="font-medium text-slate-900">Assumptions ({result.trace.assumed_fields.length})</h2>
           <p className="mt-1 text-sm text-slate-600">Fields you left empty, filled from defaults.</p>
           <ul className="mt-3 space-y-1 text-sm text-slate-700">

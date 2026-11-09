@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageLoader } from "../components/Loader";
 import { Link } from "react-router-dom";
 import { listRequests, STATUS_LABELS, type DbRequestSummary } from "../api/requests";
 import { engineLabel } from "../api/labels";
@@ -28,12 +29,12 @@ export default function Requests() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-slate-900">Database requests</h1>
-        <Link to="/requests/new" className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+        <h1 className="text-3xl font-bold text-slate-900">Database requests</h1>
+        <Link to="/requests/new" className="btn-primary">
           New request
         </Link>
       </div>
-      <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5" role="tablist">
+      <div className="inline-flex rounded-xl border border-sand-200 bg-white p-1 shadow-soft" role="tablist">
         {scopes.map((option) => (
           <button
             key={option}
@@ -41,20 +42,20 @@ export default function Requests() {
             role="tab"
             aria-selected={scope === option}
             onClick={() => setScope(option)}
-            className={`rounded px-3 py-1 text-sm ${scope === option ? "bg-slate-900 text-white" : "text-slate-600"}`}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${scope === option ? "bg-teal-600 text-white shadow-soft" : "text-slate-600 hover:bg-sand-50 hover:text-slate-900"}`}
           >
             {SCOPE_LABELS[option]}
           </button>
         ))}
       </div>
       {error && <p className="text-rose-600">{error}</p>}
-      {!rows && !error && <p className="text-slate-500">Loading…</p>}
+      {!rows && !error && <PageLoader label="Loading requests" steps={["Fetching requests", "Checking verdicts"]} />}
       {rows && rows.length === 0 && <p className="text-sm text-slate-600">Nothing here yet.</p>}
       {rows && rows.length > 0 && (
-        <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+        <ul className="stagger divide-y divide-sand-100 card overflow-hidden">
           {rows.map((row) => (
             <li key={row.id}>
-              <Link to={`/requests/${row.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-slate-50">
+              <Link to={`/requests/${row.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 transition-all duration-200 hover:bg-sand-50 hover:pl-5">
                 <span className="font-medium text-slate-900">{row.application_name}</span>
                 <span className="text-sm text-slate-500">{row.kind === "migration" ? "Migration" : "New database"} · {engineLabel(row.requested_engine)}</span>
                 <VerdictBadge verdict={row.verdict} />

@@ -28,7 +28,7 @@ function Badge({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
 
 function StrategyTable({ plan, onChooseTarget }: { plan: MigrationPlan; onChooseTarget?: (option: StrategyOption) => void }) {
   return (
-    <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <section className="overflow-x-auto card">
       <h2 className="px-4 pt-4 font-medium text-slate-900">Strategies compared (3-year view, list prices incl. licences)</h2>
       <table className="mt-2 w-full text-sm">
         <thead>
@@ -48,7 +48,7 @@ function StrategyTable({ plan, onChooseTarget }: { plan: MigrationPlan; onChoose
             <tr key={option.strategy} className={`border-t border-slate-100 align-top ${option.strategy === plan.strategy ? "bg-slate-50" : ""}`}>
               <td className="px-4 py-2 font-medium">
                 {option.label}
-                {option.recommended && <span className="ml-2 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] text-white">Recommended</span>}
+                {option.recommended && <span className="ml-2 rounded-full bg-coral-500 px-2 py-0.5 text-[10px] font-semibold text-white">Recommended</span>}
               </td>
               <td className="px-3 py-2">
                 {option.target_name}
@@ -117,7 +117,7 @@ function ToolList({ title, tools }: { title: string; tools: ToolRef[] }) {
 function MethodAndTools({ plan }: { plan: MigrationPlan }) {
   const method = plan.method;
   return (
-    <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-2">
+    <section className="grid gap-4 card p-4 md:grid-cols-2">
       <div>
         <h2 className="font-medium text-slate-900">Method: {method.label}</h2>
         <p className="mt-1 text-sm text-slate-700">{method.reason}</p>
@@ -143,12 +143,12 @@ function MethodAndTools({ plan }: { plan: MigrationPlan }) {
 
 function Runbook({ plan }: { plan: MigrationPlan }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
+    <section className="card p-4">
       <h2 className="font-medium text-slate-900">Runbook ({plan.total_duration_weeks} weeks)</h2>
       <ol className="mt-3 space-y-2">
         {plan.phases.map((phase) => (
           <li key={phase.id}>
-            <details className="rounded border border-slate-100 px-3 py-2">
+            <details className="rounded-xl border border-sand-200 bg-white px-3 py-2 transition hover:border-coral-200">
               <summary className="cursor-pointer text-sm">
                 <span className="font-medium">{phase.order}. {phase.name}</span>
                 <span className="ml-2 text-xs text-slate-500">{phase.duration_days} days · {phase.owner_role}</span>
@@ -175,7 +175,7 @@ function Runbook({ plan }: { plan: MigrationPlan }) {
 function RisksAndRollback({ plan }: { plan: MigrationPlan }) {
   return (
     <section className="grid gap-4 md:grid-cols-2">
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="card p-4">
         <h2 className="font-medium text-slate-900">Risks ({plan.risks.length})</h2>
         <ul className="mt-2 space-y-3 text-sm">
           {plan.risks.map((risk) => (
@@ -189,7 +189,7 @@ function RisksAndRollback({ plan }: { plan: MigrationPlan }) {
           {plan.risks.length === 0 && <li className="text-slate-500">No risk rules matched.</li>}
         </ul>
       </div>
-      <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 text-sm">
+      <div className="space-y-4 card p-4 text-sm">
         <div>
           <h2 className="font-medium text-slate-900">Rollback</h2>
           <p className="mt-1 text-slate-700">{plan.rollback.approach}</p>
@@ -227,7 +227,7 @@ export default function PlanView({ plan, onChooseTarget }: { plan: MigrationPlan
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
+          <h1 className="text-3xl font-bold text-slate-900">
             {engineLabel(plan.source.engine)} {plan.source.version ?? ""} → {plan.target_name}
           </h1>
           <p className="mt-1 text-sm text-slate-600">
@@ -241,7 +241,7 @@ export default function PlanView({ plan, onChooseTarget }: { plan: MigrationPlan
           {keepsLicensedEngine && plan.request.assessment_id && (
             <Link
               to={`/requests/new?assessment=${plan.request.assessment_id}&engine=${chosen?.engine}&kind=migration&plan=${plan.id}`}
-              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+              className="btn-primary"
             >
               Justify keeping {engineLabel(chosen?.engine)} →
             </Link>

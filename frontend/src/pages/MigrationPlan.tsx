@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { BusyOverlay, PageLoader, Spinner } from "../components/Loader";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { fetchAssessment, fetchHistory, type AssessmentSummary } from "../api/assessments";
 import { ApiError } from "../api/client";
@@ -7,7 +8,7 @@ import type { Answers } from "../api/questions";
 import { useAuth } from "../auth/AuthProvider";
 import PlanView from "../components/PlanView";
 
-const inputClass = "w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none";
+const inputClass = "w-full btn-ghost px-3 py-1.5 focus:border-slate-500 focus:outline-none";
 
 interface FormState {
   assessmentId: string;
@@ -128,11 +129,11 @@ export default function MigrationPlanPage() {
 
   if (id) {
     if (error) return <p className="text-rose-600">Could not load this plan: {error}</p>;
-    if (!plan) return <p className="text-slate-500">Loading plan…</p>;
+    if (!plan) return <PageLoader label="Loading migration plan" steps={["Fetching the plan", "Pricing strategies", "Building the runbook"]} />;
     return (
       <>
         <PlanView plan={plan} onChooseTarget={chooseTarget} />
-        {busy && <p className="mt-2 text-sm text-slate-500">Re-planning…</p>}
+        {busy && <BusyOverlay label="Re-planning the migration" steps={["Pricing the new target", "Checking the deadline", "Rebuilding the runbook"]} />}
       </>
     );
   }
@@ -146,13 +147,13 @@ export default function MigrationPlanPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Plan a migration</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Plan a migration</h1>
         <p className="mt-1 text-sm text-slate-600">
           Pick an assessment of the application. DBCompass compares Rehost, Replatform and Refactor over three years
           (including database licences) and builds the method, tools, runbook, risks and rollback for the best one.
         </p>
       </div>
-      <form onSubmit={submit} className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-3">
+      <form onSubmit={submit} className="grid gap-4 card p-4 md:grid-cols-3">
         <div className="md:col-span-3">
           <Field label="Assessment">
             <select
@@ -196,8 +197,8 @@ export default function MigrationPlanPage() {
         <Field label="Code refactor estimate, low (person-days)"><input className={inputClass} type="number" min={0} value={form.refactorLow} onChange={set("refactorLow")} /></Field>
         <Field label="Code refactor estimate, high (person-days)"><input className={inputClass} type="number" min={0} value={form.refactorHigh} onChange={set("refactorHigh")} /></Field>
         <div className="flex items-end">
-          <button type="submit" disabled={busy || !form.assessmentId} className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
-            {busy ? "Planning…" : "Create plan"}
+          <button type="submit" disabled={busy || !form.assessmentId} className="w-full btn-primary">
+            {busy ? <><Spinner /> Planning…</> : "Create plan"}
           </button>
         </div>
         <p className="text-xs text-slate-500 md:col-span-3">
@@ -205,6 +206,7 @@ export default function MigrationPlanPage() {
         </p>
       </form>
       {error && <p className="text-sm text-rose-600">{error}</p>}
+      {busy && <BusyOverlay label="Building the migration plan" steps={["Comparing rehost, replatform and refactor", "Estimating transfer time", "Choosing tools", "Writing the runbook", "Checking risks"]} />}
     </div>
   );
 }

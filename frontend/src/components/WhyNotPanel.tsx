@@ -24,11 +24,11 @@ export default function WhyNotPanel({ filteredOut, scores, recommendedIds }: Why
   const selectedScore = scores.find((score) => score.service_id === selected);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
+    <section className="card p-4">
       <h2 className="font-medium text-slate-900">Why not…?</h2>
       <p className="mt-1 text-sm text-slate-600">Pick any service that was not recommended to see why.</p>
       <select
-        className="mt-3 w-full max-w-md rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm"
+        className="mt-3 w-full max-w-md btn-ghost px-3 py-1.5"
         value={selected}
         onChange={(event) => setSelected(event.target.value)}
         aria-label="Service to explain"

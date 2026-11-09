@@ -1,3 +1,191 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-sand-50 font-sans text-slate-800;
+    background-image:
+      radial-gradient(1200px 600px at 100% -10%, rgba(249, 98, 70, 0.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, rgba(72, 96, 97, 0.08), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+
+  h1 {
+    @apply text-slate-900;
+  }
+
+  ::selection {
+    @apply bg-coral-200 text-slate-900;
+  }
+
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary {
+    @apply transition duration-200 ease-out;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    @apply rounded-lg border-slate-200 bg-white;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+  select:focus,
+  textarea:focus {
+    @apply border-coral-400 outline-none ring-4 ring-coral-100;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"] {
+    accent-color: #f96246;
+  }
+
+  button:not(:disabled):active {
+    transform: scale(0.97);
+  }
+
+  details > summary {
+    list-style: none;
+  }
+
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  details > summary::before {
+    content: "";
+    display: inline-block;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin-right: 0.6rem;
+    border-right: 2px solid #f96246;
+    border-bottom: 2px solid #f96246;
+    transform: translateY(-2px) rotate(-45deg);
+    transition: transform 0.25s ease;
+  }
+
+  details[open] > summary::before {
+    transform: translateY(-3px) rotate(45deg);
+  }
+
+  details[open] > *:not(summary) {
+    animation: fade-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+}
+
+@layer components {
+  /* Surfaces */
+  .card {
+    @apply rounded-2xl border border-sand-200/80 bg-white shadow-soft transition duration-300;
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-1 hover:border-coral-200 hover:shadow-lift;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-coral-500 text-white shadow-glow hover:-translate-y-0.5 hover:bg-coral-600 disabled:translate-y-0 disabled:shadow-none;
+  }
+
+  .btn-dark {
+    @apply btn bg-teal-600 text-white hover:-translate-y-0.5 hover:bg-teal-700 hover:shadow-lift;
+  }
+
+  .btn-ghost {
+    @apply btn border border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-coral-300 hover:text-coral-700 hover:shadow-soft;
+  }
+
+  /* Animated underline for text links */
+  .link-underline {
+    @apply relative;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1.5px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 0.3s ease;
+  }
+
+  .link-underline:hover {
+    background-size: 100% 1.5px;
+  }
+
+  /* Skeleton placeholder */
+  .skeleton {
+    @apply rounded-lg animate-shimmer;
+    background-image: linear-gradient(90deg, #f6ece4 0%, #fcf8f5 40%, #f6ece4 80%);
+    background-size: 200% 100%;
+  }
+
+  /* Children enter one after another */
+  .stagger > * {
+    animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .stagger > *:nth-child(2) {
+    animation-delay: 60ms;
+  }
+
+  .stagger > *:nth-child(3) {
+    animation-delay: 120ms;
+  }
+
+  .stagger > *:nth-child(4) {
+    animation-delay: 180ms;
+  }
+
+  .stagger > *:nth-child(5) {
+    animation-delay: 240ms;
+  }
+
+  .stagger > *:nth-child(6) {
+    animation-delay: 300ms;
+  }
+
+  .stagger > *:nth-child(n + 7) {
+    animation-delay: 360ms;
+  }
+
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.18em] text-coral-600;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(100deg, #f96246 0%, #d4ac47 50%, #f96246 100%);
+    background-size: 200% auto;
+    animation: gradient-pan 8s ease infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

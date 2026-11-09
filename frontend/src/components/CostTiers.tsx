@@ -95,7 +95,7 @@ export default function CostTiers({ tiers, currency, inrPerUsd }: CostTiersProps
               type="button"
               onClick={() => setOpenTier(openTier === tierName ? null : tierName)}
               aria-expanded={openTier === tierName}
-              className={`rounded border p-2 text-left ${openTier === tierName ? "border-slate-900" : "border-slate-200 hover:border-slate-400"}`}
+              className={`rounded-xl border p-2.5 text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-soft ${openTier === tierName ? "border-coral-400 bg-coral-50/60 ring-2 ring-coral-100" : "border-sand-200 bg-white hover:border-coral-200"}`}
             >
               <div className="text-xs text-slate-500">{estimate.label}</div>
               <div className="font-semibold tabular-nums text-slate-900">
