@@ -3,7 +3,34 @@
 Internal portal that recommends databases, cloud provider (AWS / GCP / Azure), sizing and design
 for an application, and plans migrations. See `CLAUDE.md` and `docs/` for the full picture.
 
-## Run everything
+## Quick setup (teammates start here)
+You need **Python 3.11+** and **Node.js 20+**. The scripts check for them and offer to install them
+(Homebrew on Mac, winget on Windows). They create the local settings, install everything and start
+the app at http://localhost:5173 with a local SQLite database and the dev sign-in bypass. No Docker,
+no Azure account needed.
+
+**Mac** (Terminal, in the project folder):
+```bash
+./setup-mac.sh
+```
+**Windows** (PowerShell, in the project folder):
+```
+powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1
+```
+Next time, start the app with `./setup-mac.sh start` or `... setup-windows.ps1 start`. Press Ctrl+C
+to stop it.
+
+If something goes wrong:
+- **Port 8000 or 5173 in use**: stop the other app (often `docker compose up`), or pick other ports:
+  `DBCOMPASS_BACKEND_PORT=8010 DBCOMPASS_FRONTEND_PORT=5180 ./setup-mac.sh start` on Mac,
+  `$env:DBCOMPASS_BACKEND_PORT="8010"; $env:DBCOMPASS_FRONTEND_PORT="5180"` then the start command on Windows.
+- **pip or npm cannot download (corporate proxy)**: set `HTTPS_PROXY` / `HTTP_PROXY` to your proxy
+  address (and `npm config set proxy ...` if needed), then run the script again. Re-running is safe.
+- **"running scripts is disabled" on Windows**: use the exact command above (it bypasses the policy
+  for this one script only).
+- Backend errors are written to `backend/backend.log` (Mac) or `backend\backend.err.log` (Windows).
+
+## Run everything (Docker)
 ```
 cp .env.example .env
 docker compose up --build
@@ -73,7 +100,10 @@ or `GCP_BILLING_API_KEY` in `.env`. A `dba_admin` can refresh Azure live with
 - **What the estimate covers.** Every cost tier lists compute, licence, storage, I/O, backup, HA
   standby, DR copy, egress, private endpoints, connection proxy, customer-managed keys, audit logging
   and environments, each marked priced, estimated, included, not priced or not needed.
-- **Price difference.** For an existing database, each option shows its monthly difference from
+- **Migrate to any recommendation.** For an existing application the migration page lists all of
+  the assessment's recommendations as targets (plus "let DBCompass decide"), each result card has
+  "Plan migration to this option", and a finished plan can be switched to another recommendation.
+- **Price difference.** A banner above the recommendations and a large figure on each card show, for an existing database, each option's monthly and yearly difference from
   staying on the current engine on the same cloud (compute and licences only; storage, backup and
   network would be the same). Partial snapshot rebuild:
   `python -m app.pricing.snapshot aws --sources AmazonRDS AWSDataTransfer`.

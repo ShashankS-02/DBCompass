@@ -21,6 +21,7 @@ interface CardProps {
   currency: Currency;
   inrPerUsd: number | null;
   move?: RankMove;
+  planLink?: string; // existing application: plan the migration to this option
 }
 
 function optionTitle(recommendation: Recommendation): string {
@@ -65,47 +66,105 @@ function VersusBaseline({ recommendation, currency, inrPerUsd }: { recommendatio
   const versus = recommendation.versus_baseline;
   if (!versus) return null;
   if (versus.same_service) {
-    return <p className="mt-2 rounded-lg border border-sand-200 bg-sand-50 px-3 py-2 text-xs text-slate-600">This is the like-for-like option: staying on {versus.engine_label}.</p>;
+    return (
+      <p className="mt-3 rounded-xl border-2 border-sand-300 bg-sand-50 px-3 py-2 text-sm font-semibold text-slate-700">
+        Like-for-like: this is staying on {versus.engine_label}
+      </p>
+    );
   }
   if (versus.delta_usd === null) {
-    return <p className="mt-2 rounded-lg border border-sand-200 bg-sand-50 px-3 py-2 text-xs text-slate-600">Versus staying on {versus.engine_label}: {versus.message}</p>;
+    return <p className="mt-3 rounded-xl border border-sand-200 bg-sand-50 px-3 py-2 text-xs text-slate-600">Versus staying on {versus.engine_label}: {versus.message}</p>;
   }
   const cheaper = versus.delta_usd < 0;
   const same = Math.abs(versus.delta_usd) < 1;
-  const tone = same ? "border-sand-200 bg-sand-50 text-slate-700" : cheaper ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-rose-200 bg-rose-50 text-rose-900";
+  const tone = same ? "border-sand-300 bg-sand-50 text-slate-800" : cheaper ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-rose-300 bg-rose-50 text-rose-900";
+  const percent = versus.baseline_core_usd ? Math.round((Math.abs(versus.delta_usd) / versus.baseline_core_usd) * 100) : null;
   return (
-    <div className={`mt-2 rounded-lg border px-3 py-2 text-xs ${tone}`}>
-      <p className="font-semibold">
-        {same ? "About the same" : `${cheaper ? "−" : "+"}${formatMoney(Math.abs(versus.delta_usd), currency, inrPerUsd)} a month`} versus staying on {versus.engine_label}
+    <div className={`mt-3 rounded-xl border-2 px-3 py-2 ${tone}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide opacity-80">vs staying on {versus.engine_label}</p>
+      <p className="text-2xl font-extrabold tabular-nums leading-tight">
+        {same ? "About the same" : `${cheaper ? "−" : "+"}${formatMoney(Math.abs(versus.delta_usd), currency, inrPerUsd)}`}
+        {!same && <span className="text-sm font-semibold"> / month{percent !== null ? ` (${cheaper ? "−" : "+"}${percent}%)` : ""}</span>}
       </p>
-      <p className="mt-0.5 opacity-80">
-        Compute and licences only, Balanced tier: {formatMoney(versus.recommendation_core_usd ?? 0, currency, inrPerUsd)} here against{" "}
-        {formatMoney(versus.baseline_core_usd ?? 0, currency, inrPerUsd)} on {versus.baseline_service_name}. Storage, backup and network are left out because they would be about the same.
-      </p>
+      {!same && <p className="text-xs font-medium opacity-80">{cheaper ? "Saves" : "Costs"} {formatMoney(Math.abs(versus.delta_usd) * 12, currency, inrPerUsd)} a year on compute and licences</p>}
     </div>
   );
 }
 
-function BaselinePanel({ baselines, currency, inrPerUsd }: { baselines: Record<string, Baseline>; currency: Currency; inrPerUsd: number | null }) {
+function ComparisonBar({ label, value, max, tone, currency, inrPerUsd }: { label: string; value: number; max: number; tone: string; currency: Currency; inrPerUsd: number | null }) {
+  const width = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="text-xs">
+      <div className="flex justify-between gap-2 text-slate-600">
+        <span className="truncate">{label}</span>
+        <span className="tabular-nums font-semibold text-slate-800">{formatMoney(value, currency, inrPerUsd)}</span>
+      </div>
+      <div className="mt-0.5 h-2.5 w-full rounded-full bg-sand-100">
+        <div className={`h-2.5 rounded-full ${tone}`} style={{ width: `${width}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/** The headline comparison with staying on the current engine, shown above the recommendation cards (M9). */
+function PriceDifferenceBanner({ recommendations, baselines, currency, inrPerUsd }: { recommendations: Recommendation[]; baselines: Record<string, Baseline>; currency: Currency; inrPerUsd: number | null }) {
+  const compared = recommendations.filter((item) => item.versus_baseline && !item.versus_baseline.same_service && item.versus_baseline.delta_usd !== null);
   const entries = Object.values(baselines);
   if (!entries.length) return null;
+  const engine = entries[0].engine_label;
+  const bestSaving = compared.reduce((best, item) => Math.min(best, item.versus_baseline?.delta_usd ?? 0), 0);
   return (
-    <section className="card p-4">
-      <p className="eyebrow">Price difference against staying on {entries[0].engine_label}</p>
-      <p className="mt-1 text-sm text-slate-600">
-        On-prem costs are rarely known, so the comparison is cloud to cloud: the cheapest managed {entries[0].engine_label} service on each cloud, sized
-        like your database, at the Balanced tier. Each option above shows its difference on compute and licence lines; storage, backup and network are
-        the same for both and are left out.
-      </p>
-      <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+    <section className="card overflow-hidden border-2 border-emerald-200">
+      <div className="bg-gradient-to-r from-emerald-50 to-white p-5">
+        <p className="eyebrow">Price difference against staying on {engine}</p>
+        <h2 className="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">
+          {bestSaving < -1 ? (
+            <>
+              Up to <span className="text-emerald-700">{formatMoney(Math.abs(bestSaving), currency, inrPerUsd)} less a month</span>{" "}
+              <span className="text-lg font-semibold text-slate-600">({formatMoney(Math.abs(bestSaving) * 12, currency, inrPerUsd)} a year)</span>
+            </>
+          ) : compared.length ? (
+            <>No recommended option is cheaper than staying on {engine}</>
+          ) : (
+            <>Staying on {engine} cannot be priced for comparison</>
+          )}
+        </h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Compute and licences at the Balanced tier, compared with running {engine} on the same cloud. Storage, backup and network would be about the
+          same either way and are left out. On-prem costs are not needed.
+        </p>
+      </div>
+      {compared.length > 0 && (
+        <div className="grid gap-4 border-t border-emerald-100 p-5 md:grid-cols-3">
+          {compared.map((item) => {
+            const versus = item.versus_baseline!;
+            const delta = versus.delta_usd ?? 0;
+            const cheaper = delta < 0;
+            const baseline = versus.baseline_core_usd ?? 0;
+            const option = versus.recommendation_core_usd ?? 0;
+            const max = Math.max(baseline, option);
+            const percent = baseline ? Math.round((Math.abs(delta) / baseline) * 100) : null;
+            return (
+              <div key={`${item.rank}-${item.components[0].service_id}`} className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">#{item.rank} · {CSP_LABELS[item.csp]}</p>
+                <p className="font-semibold text-slate-900">{optionTitle(item)}</p>
+                <p className={`text-3xl font-extrabold tabular-nums ${cheaper ? "text-emerald-700" : "text-rose-700"}`}>
+                  {cheaper ? "−" : "+"}{formatMoney(Math.abs(delta), currency, inrPerUsd)}
+                  <span className="text-sm font-semibold text-slate-500"> / month{percent !== null ? ` · ${cheaper ? "−" : "+"}${percent}%` : ""}</span>
+                </p>
+                <ComparisonBar label={`Staying: ${versus.baseline_service_name}`} value={baseline} max={max} tone="bg-slate-400" currency={currency} inrPerUsd={inrPerUsd} />
+                <ComparisonBar label={`Moving: ${optionTitle(item)}`} value={option} max={max} tone={cheaper ? "bg-emerald-500" : "bg-rose-500"} currency={currency} inrPerUsd={inrPerUsd} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <ul className="space-y-1 border-t border-emerald-100 bg-white px-5 py-3 text-xs text-slate-500">
         {entries.map((baseline) => (
-          <li key={baseline.csp} className="rounded-xl border border-sand-200 bg-sand-50/60 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{CSP_LABELS[baseline.csp]}</p>
-            <p className="font-semibold text-slate-900">{baseline.service_name}</p>
-            <p className="tabular-nums text-slate-800">
-              {baseline.core_monthly_usd !== null ? `${formatMoney(baseline.core_monthly_usd, currency, inrPerUsd)} / month compute + licence` : "Not priced"}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">{baseline.note}</p>
+          <li key={baseline.csp}>
+            <span className="font-semibold text-slate-700">{CSP_LABELS[baseline.csp]} baseline:</span>{" "}
+            {baseline.core_monthly_usd !== null ? `${formatMoney(baseline.core_monthly_usd, currency, inrPerUsd)} a month on ${baseline.service_name}. ` : ""}
+            {baseline.note}
           </li>
         ))}
       </ul>
@@ -147,7 +206,7 @@ function AddOnsPanel({ result, intake }: { result: AssessmentResult; intake: Int
   );
 }
 
-function RecommendationCard({ recommendation, currency, inrPerUsd, move }: CardProps) {
+function RecommendationCard({ recommendation, currency, inrPerUsd, move, planLink }: CardProps) {
   return (
     <article className={`card card-hover flex flex-col p-5 ${recommendation.rank === 1 ? "border-t-4 border-t-coral-500" : ""}`}>
       <header className="flex items-start justify-between gap-2">
@@ -164,6 +223,8 @@ function RecommendationCard({ recommendation, currency, inrPerUsd, move }: CardP
           {recommendation.total_score.toFixed(1)}
         </span>
       </header>
+
+      <VersusBaseline recommendation={recommendation} currency={currency} inrPerUsd={inrPerUsd} />
 
       <ScoreRadar scores={recommendation.dimension_scores} />
 
@@ -188,7 +249,6 @@ function RecommendationCard({ recommendation, currency, inrPerUsd, move }: CardP
           <dt className="mb-1 text-xs font-medium text-slate-500">Monthly cost (list price)</dt>
           <dd>
             <CostTiers tiers={recommendation.cost_tiers} currency={currency} inrPerUsd={inrPerUsd} />
-            <VersusBaseline recommendation={recommendation} currency={currency} inrPerUsd={inrPerUsd} />
           </dd>
         </div>
       </dl>
@@ -209,6 +269,11 @@ function RecommendationCard({ recommendation, currency, inrPerUsd, move }: CardP
             ))}
           </ul>
         </>
+      )}
+      {planLink && (
+        <Link to={planLink} className="btn-ghost mt-4 justify-center px-3 py-1.5 text-sm hover:border-slate-500">
+          Plan migration to this option
+        </Link>
       )}
     </article>
   );
@@ -299,6 +364,7 @@ export default function Results() {
   if (error) {
     return <p className="text-rose-600">Could not load this assessment: {error}</p>;
   }
+  const isExisting = Boolean(engineOf(result?.input.answers["mig.source_engine"]) ?? engineOf(result?.input.answers["app.existing_db"]));
   if (!result || !view) {
     return <PageLoader label="Loading recommendations" steps={["Fetching the assessment", "Laying out cost tiers", "Drawing score charts"]} />;
   }
@@ -364,7 +430,9 @@ export default function Results() {
         </div>
       )}
 
-      {sliders.length > 0 && <WhatIfPanel result={result} sliders={sliders} questions={questions} scenario={scenario} onScenario={setScenario} />}
+      {Object.keys(view.baselines ?? {}).length > 0 && view.recommendations.length > 0 && (
+        <PriceDifferenceBanner recommendations={view.recommendations} baselines={view.baselines} currency={currency} inrPerUsd={result.pricing?.inr_per_usd ?? null} />
+      )}
 
       {scenario && (
         <p className="flex items-center gap-2 text-sm font-semibold text-coral-700">
@@ -387,12 +455,13 @@ export default function Results() {
               move={moves.get(`${optionTitle(recommendation)}|${recommendation.csp}`)}
               currency={currency}
               inrPerUsd={result.pricing?.inr_per_usd ?? null}
+              planLink={!scenario && isExisting ? `/migrations/new?assessment=${result.id}&target=${recommendation.components[0].service_id}` : undefined}
             />
           ))}
         </div>
       )}
 
-      {Object.keys(result.baselines ?? {}).length > 0 && <BaselinePanel baselines={result.baselines} currency={currency} inrPerUsd={result.pricing?.inr_per_usd ?? null} />}
+      {sliders.length > 0 && <WhatIfPanel result={result} sliders={sliders} questions={questions} scenario={scenario} onScenario={setScenario} />}
 
       <AddOnsPanel result={view} intake={intake} />
 

@@ -55,3 +55,15 @@ def test_sybase_source_plans_a_refactor_with_sybase_tools(client: TestClient) ->
     assert "RISK-SUNSET-SOURCE" in [risk["id"] for risk in plan["risks"]]
     tool_ids = {tool["id"] for group in ("assessment", "schema_conversion", "data_movement") for tool in plan["tools"][group]}
     assert tool_ids & {"aws_sct_sybase", "azure_dms_sybase", "sybase_bcp", "pgloader"}
+
+
+def test_every_recommendation_of_an_existing_app_can_be_planned(client: TestClient) -> None:
+    app.dependency_overrides.pop(get_current_user, None)
+    answers = {**ORACLE_VENDOR_APP, "app.vendor_migration_support": "yes_supported"}
+    created = client.post("/api/assessments", json={"mode": "expert", "migrating": True, "answers": answers}).json()
+    targets = [item["components"][0]["service_id"] for item in created["recommendations"]]
+    assert len(targets) == 3
+    for target in targets:
+        response = client.post("/api/migrations/plan", json={"assessment_id": created["id"], "target_service_id": target})
+        assert response.status_code == 201, response.text
+        assert response.json()["target_service_id"] == target

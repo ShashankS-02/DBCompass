@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { BusyOverlay, PageLoader, Spinner } from "../components/Loader";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { fetchAssessment, fetchHistory, type AssessmentSummary } from "../api/assessments";
+import { CSP_LABELS, fetchAssessment, fetchHistory, type AssessmentResult, type AssessmentSummary, type Recommendation } from "../api/assessments";
 import { ApiError } from "../api/client";
 import { createPlan, fetchPlan, type MigrationPlan, type MigrationPlanRequest, type StrategyOption } from "../api/migrations";
 import { fetchQuestions, type Answers, type QuestionOption } from "../api/questions";
@@ -25,14 +25,74 @@ interface FormState {
   teamSize: string;
   refactorLow: string;
   refactorHigh: string;
+  target: string; // primary service id of the chosen recommendation; "" lets DBCompass pick per strategy
 }
 
 const PLAN_DRAFT_KEY = "dbcompass.migration-plan.draft.v1";
 
 const EMPTY: FormState = {
   assessmentId: "", sourceEngine: "", sourceVersion: "", platform: "on_prem", sizeGb: "", changeRate: "", downtime: "", bandwidth: "",
-  charset: "", dependencies: "", teamSize: "3", refactorLow: "", refactorHigh: "",
+  charset: "", dependencies: "", teamSize: "3", refactorLow: "", refactorHigh: "", target: "",
 };
+const AUTO_TARGET = "";
+
+function optionName(recommendation: Recommendation): string {
+  return recommendation.components.map((component) => component.service_name).join(" + ");
+}
+
+function balancedPrice(recommendation: Recommendation): string {
+  const balanced = recommendation.cost_tiers.balanced;
+  if (!balanced || !balanced.lines.length) return "not priced";
+  return `$${Math.round(balanced.monthly_usd).toLocaleString("en-US")} / month${balanced.complete ? "" : "*"}`;
+}
+
+/** The assessment's recommendations as migration targets; the primary database is what gets planned. */
+function TargetPicker({
+  recommendations, value, onChange, busy,
+}: { recommendations: Recommendation[]; value: string; onChange: (serviceId: string) => void; busy?: boolean }) {
+  if (!recommendations.length) return null;
+  return (
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="Migration target">
+      {recommendations.map((recommendation) => {
+        const serviceId = recommendation.components[0].service_id;
+        const selected = value === serviceId;
+        const delta = recommendation.versus_baseline?.delta_usd;
+        return (
+          <button
+            key={`${serviceId}-${recommendation.rank}`}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            disabled={busy}
+            onClick={() => onChange(serviceId)}
+            className={`rounded-xl border p-3 text-left text-sm transition hover:-translate-y-0.5 hover:shadow-soft ${selected ? "border-coral-400 bg-coral-50/60 ring-2 ring-coral-100" : "border-sand-200 bg-white hover:border-coral-200"}`}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">#{recommendation.rank} · {CSP_LABELS[recommendation.csp]}</p>
+            <p className="font-semibold text-slate-900">{optionName(recommendation)}</p>
+            <p className="text-xs text-slate-600">Score {recommendation.total_score.toFixed(1)} · {balancedPrice(recommendation)}</p>
+            {typeof delta === "number" && !recommendation.versus_baseline?.same_service && (
+              <p className={`mt-1 text-xs font-semibold ${delta < 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                {delta < 0 ? "−" : "+"}${Math.round(Math.abs(delta)).toLocaleString("en-US")} / month vs staying on {recommendation.versus_baseline?.engine_label}
+              </p>
+            )}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        role="radio"
+        aria-checked={value === AUTO_TARGET}
+        disabled={busy}
+        onClick={() => onChange(AUTO_TARGET)}
+        className={`rounded-xl border border-dashed p-3 text-left text-sm transition ${value === AUTO_TARGET ? "border-coral-400 bg-coral-50/60 ring-2 ring-coral-100" : "border-sand-300 bg-sand-50/60 hover:border-coral-200"}`}
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Let DBCompass decide</p>
+        <p className="font-semibold text-slate-900">Best strategy</p>
+        <p className="text-xs text-slate-600">Compares rehost, replatform and refactor and plans the cheapest that meets the deadline.</p>
+      </button>
+    </div>
+  );
+}
 
 function text(value: unknown): string {
   return value === undefined || value === null ? "" : String(value);
@@ -49,11 +109,12 @@ function sourceOf(answers: Answers): EngineAnswer {
   return undefined;
 }
 
-function fromAnswers(assessmentId: string, answers: Answers): FormState {
+function fromAnswers(assessmentId: string, answers: Answers, target: string): FormState {
   const source = sourceOf(answers);
   return {
     ...EMPTY,
     assessmentId,
+    target,
     sourceEngine: source?.engine ?? "",
     sourceVersion: source?.version ?? "",
     platform: text(answers["mig.source_platform"]) || "on_prem",
@@ -116,6 +177,7 @@ export default function MigrationPlanPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [engines, setEngines] = useState<QuestionOption[]>([]);
+  const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
   useDraft(PLAN_DRAFT_KEY, form, !id);
 
   useEffect(() => {
@@ -130,7 +192,14 @@ export default function MigrationPlanPage() {
   useEffect(() => {
     setError(null);
     if (id) {
-      fetchPlan(id, getAccessToken).then(setPlan).catch((loadError: Error) => setError(loadError.message));
+      fetchPlan(id, getAccessToken)
+        .then((loaded) => {
+          setPlan(loaded);
+          const assessmentId = loaded.request.assessment_id;
+          if (assessmentId) fetchAssessment(assessmentId, getAccessToken).then(setAssessment).catch(() => setAssessment(null));
+          else setAssessment(null);
+        })
+        .catch((loadError: Error) => setError(loadError.message));
       return;
     }
     setPlan(null);
@@ -138,8 +207,14 @@ export default function MigrationPlanPage() {
     const assessmentId = search.get("assessment");
     if (assessmentId) {
       fetchAssessment(assessmentId, getAccessToken)
-        .then((assessment) => setForm(fromAnswers(assessmentId, assessment.input.answers)))
+        .then((loaded) => {
+          setAssessment(loaded);
+          const firstTarget = loaded.recommendations[0]?.components[0]?.service_id ?? AUTO_TARGET;
+          setForm(fromAnswers(assessmentId, loaded.input.answers, search.get("target") ?? firstTarget));
+        })
         .catch((loadError: Error) => setError(loadError.message));
+    } else {
+      setAssessment(null);
     }
   }, [id, search, getAccessToken]);
 
@@ -160,12 +235,23 @@ export default function MigrationPlanPage() {
   const chooseTarget = (option: StrategyOption) => {
     if (plan) run({ ...plan.request, target_service_id: option.target_service_id, start_date: null });
   };
+  const replanFor = (serviceId: string) => {
+    if (plan && serviceId !== plan.target_service_id) run({ ...plan.request, target_service_id: serviceId || null, start_date: null });
+  };
 
   if (id) {
     if (error) return <p className="text-rose-600">Could not load this plan: {error}</p>;
     if (!plan) return <PageLoader label="Loading migration plan" steps={["Fetching the plan", "Pricing strategies", "Building the runbook"]} />;
+    const recommendations = assessment?.recommendations ?? [];
     return (
       <>
+        {recommendations.length > 0 && (
+          <section className="card mb-6 p-4">
+            <p className="eyebrow">Recommendations from {(assessment?.input.answers["app.name"] as string | undefined) ?? "this assessment"}</p>
+            <p className="mb-3 mt-1 text-sm text-slate-600">This plan targets {plan.target_name}. Pick another recommendation to plan its migration instead.</p>
+            <TargetPicker recommendations={recommendations} value={plan.request.target_service_id ?? AUTO_TARGET} onChange={replanFor} busy={busy} />
+          </section>
+        )}
         <PlanView plan={plan} onChooseTarget={chooseTarget} />
         {busy && <BusyOverlay label="Re-planning the migration" steps={["Pricing the new target", "Checking the deadline", "Rebuilding the runbook"]} />}
       </>
@@ -179,7 +265,7 @@ export default function MigrationPlanPage() {
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (form.assessmentId) run(toRequest(form, null));
+    if (form.assessmentId) run(toRequest(form, form.target || null));
   };
 
   return (
@@ -213,6 +299,12 @@ export default function MigrationPlanPage() {
             </select>
           </Field>
         </div>
+        {assessment && assessment.id === form.assessmentId && assessment.recommendations.length > 0 && (
+          <div className="md:col-span-3">
+            <p className="mb-2 text-sm text-slate-600">Migrate to which recommendation?</p>
+            <TargetPicker recommendations={assessment.recommendations} value={form.target} onChange={(target) => setForm({ ...form, target })} busy={busy} />
+          </div>
+        )}
         <Field label="Source database engine (required)">
           <select className={inputClass} value={form.sourceEngine} onChange={set("sourceEngine")} aria-invalid={!form.sourceEngine}>
             <option value="">Choose the engine you are migrating from…</option>

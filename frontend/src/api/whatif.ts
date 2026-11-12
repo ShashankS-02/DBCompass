@@ -32,7 +32,7 @@ export interface WhatIfChanges {
 export interface WhatIfResult {
   base_assessment_id: string;
   input: RequirementsInput;
-  outcome: Pick<AssessmentResult, "engine_version" | "recommendations" | "trace" | "pricing">;
+  outcome: Pick<AssessmentResult, "engine_version" | "recommendations" | "trace" | "pricing" | "readiness" | "baselines">;
   changes: WhatIfChanges;
 }
 

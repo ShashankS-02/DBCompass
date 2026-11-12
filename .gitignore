@@ -26,3 +26,6 @@ frontend/.env.local
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Local logs (setup scripts)
+*.log
