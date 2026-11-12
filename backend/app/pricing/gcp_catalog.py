@@ -11,7 +11,7 @@ import httpx
 
 from app.models.pricing import PricePoint, PricingConfig
 from app.pricing.gcp_auth import GcpAuth, GcpAuthError
-from app.pricing.matching import component_specs, match_row
+from app.pricing.matching import component_specs, match_row, sources_for
 
 logger = logging.getLogger(__name__)
 
@@ -104,11 +104,8 @@ def extract_prices(skus: list[dict], config: PricingConfig, source: str, regions
 def fetch_gcp_prices(config: PricingConfig, regions: list[str], auth: GcpAuth, client: httpx.Client) -> list[PricePoint]:
     """All matching GCP prices for the configured services."""
     sources = []
-    for service_id, pricing in config.services.items():
-        if service_id.startswith("gcp."):
-            for spec in pricing.components:
-                if spec.matcher.source not in sources:
-                    sources.append(spec.matcher.source)
+    for source, _odata in sources_for(config, "gcp"):
+        sources.append(source)
     if not sources:
         logger.warning("No GCP services have a price model in pricing.yaml; nothing to fetch.")
         return []

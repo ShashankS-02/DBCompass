@@ -75,3 +75,11 @@ export interface CurrentUser {
   roles: string[];
   auth_mode: "entra" | "dev_bypass";
 }
+
+/** A file download (export): the body as a Blob plus the server's suggested filename. */
+export async function apiGetFile(path: string, getAccessToken: TokenGetter): Promise<{ blob: Blob; filename: string | null }> {
+  const response = await send("GET", path, undefined, getAccessToken);
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  return { blob: await response.blob(), filename: match ? match[1] : null };
+}

@@ -4,14 +4,17 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { fetchAssessment, fetchHistory, type AssessmentSummary } from "../api/assessments";
 import { ApiError } from "../api/client";
 import { createPlan, fetchPlan, type MigrationPlan, type MigrationPlanRequest, type StrategyOption } from "../api/migrations";
-import type { Answers } from "../api/questions";
+import { fetchQuestions, type Answers, type QuestionOption } from "../api/questions";
 import { useAuth } from "../auth/AuthProvider";
+import { clearDraft, readDraft, useDraft } from "../hooks/useDraft";
 import PlanView from "../components/PlanView";
 
 const inputClass = "w-full btn-ghost px-3 py-1.5 focus:border-slate-500 focus:outline-none";
 
 interface FormState {
   assessmentId: string;
+  sourceEngine: string;
+  sourceVersion: string;
   platform: string;
   sizeGb: string;
   changeRate: string;
@@ -24,8 +27,10 @@ interface FormState {
   refactorHigh: string;
 }
 
+const PLAN_DRAFT_KEY = "dbcompass.migration-plan.draft.v1";
+
 const EMPTY: FormState = {
-  assessmentId: "", platform: "on_prem", sizeGb: "", changeRate: "", downtime: "", bandwidth: "",
+  assessmentId: "", sourceEngine: "", sourceVersion: "", platform: "on_prem", sizeGb: "", changeRate: "", downtime: "", bandwidth: "",
   charset: "", dependencies: "", teamSize: "3", refactorLow: "", refactorHigh: "",
 };
 
@@ -33,10 +38,24 @@ function text(value: unknown): string {
   return value === undefined || value === null ? "" : String(value);
 }
 
+type EngineAnswer = { engine?: string; version?: string | null } | undefined;
+
+/** The engine being migrated: the migration answer, else the app's existing database. */
+function sourceOf(answers: Answers): EngineAnswer {
+  for (const key of ["mig.source_engine", "app.existing_db"]) {
+    const value = answers[key] as EngineAnswer;
+    if (value?.engine && value.engine !== "none") return value;
+  }
+  return undefined;
+}
+
 function fromAnswers(assessmentId: string, answers: Answers): FormState {
+  const source = sourceOf(answers);
   return {
     ...EMPTY,
     assessmentId,
+    sourceEngine: source?.engine ?? "",
+    sourceVersion: source?.version ?? "",
     platform: text(answers["mig.source_platform"]) || "on_prem",
     sizeGb: text(answers["mig.size_gb"] ?? answers["vol.current_gb"]),
     changeRate: text(answers["mig.change_rate_gb_day"]),
@@ -55,6 +74,9 @@ function numberOrSkip(answers: Answers, key: string, value: string) {
 
 function toRequest(form: FormState, targetServiceId: string | null): MigrationPlanRequest {
   const answers: Answers = { "mig.source_platform": form.platform };
+  if (form.sourceEngine) {
+    answers["mig.source_engine"] = { engine: form.sourceEngine, version: form.sourceVersion.trim() || null };
+  }
   numberOrSkip(answers, "mig.size_gb", form.sizeGb);
   numberOrSkip(answers, "mig.change_rate_gb_day", form.changeRate);
   numberOrSkip(answers, "mig.downtime_minutes", form.downtime);
@@ -89,10 +111,21 @@ export default function MigrationPlanPage() {
   const navigate = useNavigate();
   const { getAccessToken } = useAuth();
   const [plan, setPlan] = useState<MigrationPlan | null>(null);
-  const [form, setForm] = useState<FormState>(EMPTY);
+  const [form, setForm] = useState<FormState>(() => (search.get("assessment") ? EMPTY : readDraft<FormState>(PLAN_DRAFT_KEY) ?? EMPTY));
   const [history, setHistory] = useState<AssessmentSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [engines, setEngines] = useState<QuestionOption[]>([]);
+  useDraft(PLAN_DRAFT_KEY, form, !id);
+
+  useEffect(() => {
+    fetchQuestions("expert", getAccessToken)
+      .then((schema) => {
+        const question = schema.sections.flatMap((section) => section.questions).find((item) => item.id === "app.requested_engine");
+        setEngines((question?.options ?? []).filter((option) => option.value !== "none"));
+      })
+      .catch(() => setEngines([]));
+  }, [getAccessToken]);
 
   useEffect(() => {
     setError(null);
@@ -115,6 +148,7 @@ export default function MigrationPlanPage() {
     setError(null);
     try {
       const created = await createPlan(request, getAccessToken);
+      clearDraft(PLAN_DRAFT_KEY);
       navigate(`/migrations/${created.id}`);
     } catch (caught) {
       setError(caught instanceof ApiError && caught.detail ? caught.detail : (caught as Error).message);
@@ -139,6 +173,10 @@ export default function MigrationPlanPage() {
   }
 
   const set = (key: keyof FormState) => (event: { target: { value: string } }) => setForm({ ...form, [key]: event.target.value });
+  const resetForm = () => {
+    clearDraft(PLAN_DRAFT_KEY);
+    setForm(EMPTY);
+  };
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (form.assessmentId) run(toRequest(form, null));
@@ -169,12 +207,23 @@ export default function MigrationPlanPage() {
               {form.assessmentId && !history.some((row) => row.id === form.assessmentId) && <option value={form.assessmentId}>{form.assessmentId}</option>}
               {history.map((row) => (
                 <option key={row.id} value={row.id}>
-                  {new Date(row.created_at).toLocaleString()} · {row.top_recommendation ?? "no recommendation"}
+                  {row.app_name ?? "Unnamed application"} · {new Date(row.created_at).toLocaleDateString()} · {row.top_recommendation ?? "no recommendation"}
                 </option>
               ))}
             </select>
           </Field>
         </div>
+        <Field label="Source database engine (required)">
+          <select className={inputClass} value={form.sourceEngine} onChange={set("sourceEngine")} aria-invalid={!form.sourceEngine}>
+            <option value="">Choose the engine you are migrating from…</option>
+            {engines.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Source version">
+          <input className={inputClass} placeholder="e.g. 19c, 2019" value={form.sourceVersion} onChange={set("sourceVersion")} />
+        </Field>
         <Field label="Source platform">
           <select className={inputClass} value={form.platform} onChange={set("platform")}>
             <option value="on_prem">On-prem</option>
@@ -197,12 +246,16 @@ export default function MigrationPlanPage() {
         <Field label="Code refactor estimate, low (person-days)"><input className={inputClass} type="number" min={0} value={form.refactorLow} onChange={set("refactorLow")} /></Field>
         <Field label="Code refactor estimate, high (person-days)"><input className={inputClass} type="number" min={0} value={form.refactorHigh} onChange={set("refactorHigh")} /></Field>
         <div className="flex items-end">
-          <button type="submit" disabled={busy || !form.assessmentId} className="w-full btn-primary">
+          <button type="submit" disabled={busy || !form.assessmentId || !form.sourceEngine} className="w-full btn-primary">
             {busy ? <><Spinner /> Planning…</> : "Create plan"}
           </button>
         </div>
         <p className="text-xs text-slate-500 md:col-span-3">
-          The repo analyzer's Oracle report gives a code refactor estimate; leave it empty to use DBCompass's estimate from stored-procedure use.
+          Your entries are kept in this browser until the plan is created.{" "}
+          <button type="button" onClick={resetForm} className="link-underline font-semibold text-slate-500 hover:text-coral-700">Clear the form</button>
+        </p>
+        <p className="text-xs text-slate-500 md:col-span-3">
+          Enter your team's code refactor estimate from a code review; leave it empty to use DBCompass's estimate from stored-procedure use.
         </p>
       </form>
       {error && <p className="text-sm text-rose-600">{error}</p>}

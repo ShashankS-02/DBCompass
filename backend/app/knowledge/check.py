@@ -6,7 +6,6 @@ Each check returns a list of problems; an empty list means OK.
 """
 
 import logging
-import re
 import sys
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
@@ -17,7 +16,9 @@ from pydantic import BaseModel
 from app.config import get_settings
 from app.knowledge.catalog import AnswerError, validate_answer
 from app.knowledge.loader import (
-    ANALYZER_FILE,
+    ENGINE_FEATURES_FILE,
+    EXPLAINER_FILE,
+    ORG_SUPPORT_FILE,
     JUSTIFICATION_FILE,
     LICENSING_FILE,
     MIGRATION_FILE,
@@ -46,10 +47,11 @@ from app.models.knowledge import (
     SizingConstants,
 )
 from app.models.pricing import PricingConfig
+from app.models.explain import ExplainerConfig
+from app.models.intake import EngineFeaturesConfig, OrgSupportConfig
 from app.models.justification import JustificationConfig
 from app.models.licensing import LicensingConfig
 from app.models.migration import MigrationKnowledge
-from app.models.repo import AnalyzerConfig
 from app.models.questions import QuestionCatalog
 
 logger = logging.getLogger(__name__)
@@ -69,7 +71,12 @@ OFFICIAL_DOMAINS = (
     "www.oracle.com",
 )
 # Requirement fields the engine computes; rules may use them like catalog fields.
-DERIVED_ANSWER_FIELDS = {"vol.projected_3y_gb": "number", "ha.sla_percent": "number", "mig.source_engine_family": "engine"}
+DERIVED_ANSWER_FIELDS = {
+    "vol.projected_3y_gb": "number",
+    "ha.sla_percent": "number",
+    "mig.source_engine_family": "engine",
+    "app.vendor_certified_engine": "engine",
+}
 DERIVED_SERVICE_FIELDS = {"best_sla_percent"}
 NUMERIC_OPS = {"gte", "lte", "gt", "lt"}
 NON_ENGINE_CATALOG_VALUES = {"none", "other"}
@@ -393,54 +400,6 @@ def check_pricing_specs(pricing: PricingConfig, services: dict[Path, ServiceEntr
     return problems
 
 
-# ---------- repo analyzer ----------
-
-
-def regex_problems(label: str, pattern: str) -> list[str]:
-    try:
-        re.compile(pattern)
-    except re.error as error:
-        return [f"analyzer.yaml {label}: invalid regex ({error})"]
-    return []
-
-
-def check_analyzer(analyzer: AnalyzerConfig, catalog: QuestionCatalog) -> list[str]:
-    """Every regex compiles; every field, engine, shape and option named exists in the catalog."""
-    questions = catalog.questions_by_id()
-    engines = {option.value for option in catalog.engine_options}
-    shapes = set(questions["data.shape"].option_values())
-    problems: list[str] = []
-    for rule in analyzer.dependencies:
-        problems += regex_problems(f"dependency '{rule.label}'", rule.match)
-        if rule.engine and rule.engine not in engines:
-            problems.append(f"analyzer.yaml dependency '{rule.label}': unknown engine '{rule.engine}'")
-        if rule.shape and rule.shape not in shapes:
-            problems.append(f"analyzer.yaml dependency '{rule.label}': unknown data shape '{rule.shape}'")
-    problems += expect_keys("analyzer query_types", set(analyzer.query_types), set(questions["wl.query_types"].option_values()))
-    special_options = set(questions["data.special_features"].option_values())
-    for option in list(analyzer.special_features) + [rule.special_feature for rule in analyzer.oracle_features.values() if rule.special_feature]:
-        if option not in special_options:
-            problems.append(f"analyzer.yaml: '{option}' is not a data.special_features option")
-    for pattern_list in list(analyzer.query_types.values()) + list(analyzer.special_features.values()):
-        for pattern in pattern_list:
-            problems += regex_problems("pattern", pattern)
-    for key, rule in analyzer.oracle_features.items():
-        problems += regex_problems(f"oracle feature '{key}'", rule.pattern)
-    for rule in analyzer.readme_rules:
-        problems += regex_problems(f"readme rule {rule.field_id}", rule.pattern)
-        question = questions.get(rule.field_id)
-        if question is None:
-            problems.append(f"analyzer.yaml readme rule: unknown field '{rule.field_id}'")
-            continue
-        for value in rule.value_map.values():
-            if question.options and value not in question.option_values():
-                problems.append(f"analyzer.yaml readme rule {rule.field_id}: '{value}' is not an option")
-    for field_id in analyzer.llm_fields:
-        if field_id not in questions:
-            problems.append(f"analyzer.yaml llm_fields: unknown field '{field_id}'")
-    return problems
-
-
 # ---------- entry point ----------
 
 
@@ -477,15 +436,56 @@ def check_justification(config: JustificationConfig, catalog: QuestionCatalog) -
 
 
 def check_migration(migration: MigrationKnowledge, catalog: QuestionCatalog) -> list[str]:
-    """Risk conditions use requirement fields (or planner plan.* facts); phase ids are unique."""
+    """Risk and phase conditions use requirement fields (or planner plan.* facts); phase ids are unique."""
     problems: list[str] = []
-    for risk in migration.risks:
-        for condition in risk.when:
-            if not condition.field.startswith(PLAN_FACT_PREFIX):
-                problems.extend(check_condition(risk.id, condition, catalog))
+    conditions = [(risk.id, condition) for risk in migration.risks for condition in risk.when]
+    conditions += [(f"phase {phase.id}", condition) for phase in migration.phases for condition in phase.when]
+    for owner, condition in conditions:
+        if not condition.field.startswith(PLAN_FACT_PREFIX):
+            problems.extend(check_condition(owner, condition, catalog))
     phase_ids = [phase.id for phase in migration.phases]
     if len(phase_ids) != len(set(phase_ids)):
         problems.append("migration_tools.yaml: duplicate phase ids")
+    return problems
+
+
+def check_catalog_against_support_list(org_support: OrgSupportConfig, services: dict[Path, ServiceEntry]) -> list[str]:
+    """Every target service runs a supported engine, unless it is a declared special-purpose service (M9)."""
+    problems: list[str] = []
+    for path, service in services.items():
+        if service.special_case is not None:
+            continue
+        for engine in service.engines:
+            if not org_support.is_target_supported(engine):
+                problems.append(f"{path.name}: engine '{engine}' is not a supported target in org_support.yaml and the service has no special_case")
+    return problems
+
+
+def check_intake(org_support: OrgSupportConfig, features: EngineFeaturesConfig, catalog: QuestionCatalog) -> list[str]:
+    """Support-list engines and special-case conditions are catalog entries; every checklist feature is a data.special_features option."""
+    problems: list[str] = []
+    engines = {option.value for option in catalog.engine_options}
+    questions = catalog.questions_by_id()
+    for engine in org_support.engines:
+        if engine not in engines:
+            problems.append(f"org_support.yaml: '{engine}' is not a catalog engine")
+    for kind, rule in org_support.special_cases.items():
+        for condition in rule.primary_when:
+            problems += check_condition(f"org_support.yaml special_cases.{kind}", condition, catalog)
+    feature_options = set(catalog.questions_by_id()["data.special_features"].option_values())
+    for engine, feature_list in features.engines.items():
+        if engine not in engines:
+            problems.append(f"engine_features.yaml: '{engine}' is not a catalog engine")
+        seen: set[str] = set()
+        for feature in feature_list.features:
+            if feature.feature not in feature_options:
+                problems.append(f"engine_features.yaml {engine}: '{feature.feature}' is not a data.special_features option")
+            if feature.feature in seen:
+                problems.append(f"engine_features.yaml {engine}: '{feature.feature}' listed twice")
+            seen.add(feature.feature)
+    for feature_id in features.sticky_features:
+        if feature_id not in feature_options:
+            problems.append(f"engine_features.yaml sticky_features: '{feature_id}' is not a data.special_features option")
     return problems
 
 
@@ -500,10 +500,12 @@ def run_all_checks(kb_dir: Path) -> list[str]:
         scoring = load_model(kb_dir / SCORING_FILE, ScoringConfig)
         hardware = load_model(kb_dir / HARDWARE_FILE, HardwareProfiles)
         pricing = load_model(kb_dir / PRICING_FILE, PricingConfig)
-        analyzer = load_model(kb_dir / ANALYZER_FILE, AnalyzerConfig)
         licensing = load_model(kb_dir / LICENSING_FILE, LicensingConfig)
         migration = load_model(kb_dir / MIGRATION_FILE, MigrationKnowledge)
         justification = load_model(kb_dir / JUSTIFICATION_FILE, JustificationConfig)
+        load_model(kb_dir / EXPLAINER_FILE, ExplainerConfig)
+        org_support = load_model(kb_dir / ORG_SUPPORT_FILE, OrgSupportConfig)
+        engine_features = load_model(kb_dir / ENGINE_FEATURES_FILE, EngineFeaturesConfig)
     except KnowledgeBaseError as error:
         return str(error).split("\n")
 
@@ -518,10 +520,11 @@ def run_all_checks(kb_dir: Path) -> list[str]:
     problems.extend(check_scoring(scoring, sizing, catalog))
     problems.extend(check_pricing_coverage(pricing, services))
     problems.extend(check_pricing_specs(pricing, services, regions, catalog))
-    problems.extend(check_analyzer(analyzer, catalog))
     problems.extend(check_licensing(licensing, services, catalog))
     problems.extend(check_migration(migration, catalog))
     problems.extend(check_justification(justification, catalog))
+    problems.extend(check_intake(org_support, engine_features, catalog))
+    problems.extend(check_catalog_against_support_list(org_support, services))
     return problems
 
 

@@ -20,7 +20,11 @@ engine_options: &engine_options
   - {value: db2, label: Db2}
   - {value: mongodb, label: MongoDB}
   - {value: cassandra, label: Cassandra}
+  - {value: couchbase, label: Couchbase}
   - {value: redis, label: Redis}
+  - {value: sybase, label: Sybase ASE}
+  - {value: informix, label: Informix}
+  - {value: vertica, label: Vertica}
   - {value: other, label: Other}
 
 priority_sliders:
@@ -59,6 +63,43 @@ sections:
   - id: app
     title: Application context
     questions:
+      - id: app.name
+        label: Application name
+        type: text
+        quick: true
+        placeholder: e.g. Order Management
+        why: Names the assessment in history, plan and request lists.
+      - id: app.origin
+        label: Who builds and supports the application?
+        type: single_select
+        quick: true
+        why: Vendor-built applications are tied to the databases the vendor certifies and may need vendor help to migrate.
+        options:
+          - {value: internal, label: Internal team}
+          - {value: vendor, label: A vendor (bought or built for us)}
+      - id: app.vendor_name
+        label: Vendor name
+        type: text
+        required_when: {field: app.origin, equals: vendor}
+        why: Names the vendor in the plan and the justification packet. Required for a vendor application.
+      - id: app.vendor_certified_db
+        label: Database the vendor certifies or built the application for
+        type: engine_version
+        why: A vendor-certified engine is strongly favoured and counts as evidence in a justification.
+        options: *engine_options
+      - id: app.vendor_migration_support
+        label: Will the vendor support the migration?
+        type: single_select
+        why: Without vendor help the in-house team must have the skills and the time.
+        options:
+          - {value: yes_supported, label: "Yes, the vendor will help"}
+          - {value: no_support, label: "No, we are on our own"}
+          - {value: unknown, label: Not asked yet}
+      - id: app.notes
+        label: Anything else about the database (metadata only, no customer data)
+        type: text
+        placeholder: e.g. nightly batch window 01:00-04:00, 3 downstream ETL feeds
+        why: Shown with the result and the plan so the reviewer sees the exceptions the team raised.
       - id: app.tier
         label: Business criticality
         type: single_select
@@ -158,15 +199,30 @@ sections:
         type: multi_select
         why: Used for compatibility scoring against each target.
         options:
-          - {value: db_links, label: DB links}
+          - {value: db_links, label: "DB links / linked servers / federation"}
           - {value: sequences, label: Sequences}
           - {value: hierarchical_queries, label: Hierarchical queries}
-          - {value: materialized_views, label: Materialized views}
+          - {value: materialized_views, label: "Materialized views / projections"}
           - {value: partitioning, label: Partitioning}
-          - {value: rac, label: RAC}
+          - {value: rac, label: "Clustered HA (RAC, Always On, pureScale, HDR)"}
           - {value: spatial, label: Spatial}
           - {value: sql_agent_jobs, label: SQL Server Agent jobs}
           - {value: in_db_full_text, label: Full-text search inside the database}
+          - {value: advanced_queuing, label: "Queuing inside the database (AQ, Service Broker)"}
+          - {value: scheduler_jobs, label: "Scheduled jobs inside the database"}
+          - {value: clr_or_java, label: "Code inside the database (Java, CLR, C, UDx)"}
+          - {value: flashback, label: "Flashback / temporal history"}
+          - {value: replication, label: "Built-in replication (GoldenGate, XDCR, ER, …)"}
+          - {value: compression, label: Compression}
+          - {value: tde, label: "In-engine encryption (TDE)"}
+          - {value: xml_data, label: "XML / semi-structured columns"}
+          - {value: external_tables, label: "External tables / non-default storage engines"}
+          - {value: extensions, label: "PostgreSQL extensions"}
+          - {value: sharding, label: Sharding}
+          - {value: change_streams, label: "Change streams / CDC consumers"}
+          - {value: ttl_expiry, label: "TTL / document expiry"}
+          - {value: time_series, label: "Time-series collections"}
+          - {value: secondary_indexes, label: "Secondary / SASI / GSI indexes"}
 
   - id: wl
     title: Workload
@@ -425,7 +481,18 @@ sections:
           - {value: hipaa, label: HIPAA}
           - {value: gdpr, label: GDPR}
           - {value: dpdp, label: DPDP}
+          - {value: iso_27001, label: ISO 27001}
           - {value: none, label: None, exclusive: true}
+      - id: sec.personal_data
+        label: Does the application hold personal data?
+        type: single_select
+        quick: true
+        why: Personal data of customers or employees turns on encryption with your own keys, auditing and masking by default, and keeps the data in the required geography.
+        options:
+          - {value: customers, label: "Yes, of customers"}
+          - {value: employees, label: "Yes, of employees"}
+          - {value: both, label: "Yes, of customers and employees"}
+          - {value: none, label: No personal data}
       - id: sec.cmk
         label: Customer-managed encryption keys
         type: boolean
@@ -464,12 +531,20 @@ sections:
         label: Languages / frameworks
         type: multi_select
         why: Driver and ORM support.
+        quick: true
         options:
           - {value: python, label: Python}
           - {value: java, label: Java}
           - {value: dotnet, label: .NET}
-          - {value: node, label: Node}
+          - {value: node, label: Node.js}
           - {value: go, label: Go}
+          - {value: c_cpp, label: C / C++}
+          - {value: php, label: PHP}
+          - {value: ruby, label: Ruby}
+          - {value: scala_kotlin, label: Scala / Kotlin}
+          - {value: cobol, label: COBOL}
+          - {value: db_code_only, label: "Mostly database code (PL/SQL, T-SQL)"}
+          - {value: other, label: Other}
       - id: eco.cdc
         label: Needs change data capture / streaming
         type: boolean
@@ -566,6 +641,19 @@ sections:
         label: Heavy data egress expected
         type: boolean
         why: Penalises cross-cloud and hybrid designs.
+      - id: cost.egress_gb_month
+        label: Data leaving the cloud each month
+        type: number
+        unit: GB
+        min: 0
+        max: 1000000
+        why: Internet / cross-cloud egress is billed per GB; leave empty for the tier default.
+        tier_defaults: {tier_0: 500, tier_1: 200, tier_2: 50, tier_3: 10}
+      - id: cost.connection_proxy
+        label: Connection pooling proxy in front of the database
+        type: boolean
+        why: RDS Proxy, PgBouncer or the service's pooler is billed separately on some clouds.
+        tier_defaults: {tier_0: true, tier_1: true, tier_2: false, tier_3: false}
 
   - id: hw
     title: Hardware
@@ -635,6 +723,43 @@ sections:
         label: Services to exclude
         type: list
         why: Hard filter.
+      - id: pref.licence_status
+        label: Licences for the database you have in mind
+        type: single_select
+        why: Owned licences lower the cost of a licensed engine; new ones add to it and need procurement.
+        options:
+          - {value: owned, label: "We already own enough licences"}
+          - {value: to_buy, label: "They would have to be bought"}
+          - {value: unknown, label: Not sure}
+
+  - id: team
+    title: Team readiness
+    description: Only when the vendor will not help with the migration.
+    questions:
+      - id: team.source_skills
+        label: Do we have people who know the current database well?
+        type: single_select
+        why: Source expertise is needed for assessment, cutover and rollback.
+        options:
+          - {value: yes_enough, label: "Yes, enough of them"}
+          - {value: partial, label: "One or two, already busy"}
+          - {value: no_skills, label: "No"}
+      - id: team.target_skills
+        label: Do we have people who know the likely target database?
+        type: single_select
+        why: Target expertise decides whether a refactor or replatform is realistic in-house.
+        options:
+          - {value: yes_enough, label: "Yes, enough of them"}
+          - {value: partial, label: "One or two, already busy"}
+          - {value: no_skills, label: "No"}
+      - id: team.capacity
+        label: Can the team free up time for the migration in the next 12 months?
+        type: single_select
+        why: Without capacity the plan needs a partner or a later wave.
+        options:
+          - {value: yes_enough, label: "Yes"}
+          - {value: partial, label: "Partly"}
+          - {value: no_capacity, label: "No"}
 
   - id: mig
     title: Migration

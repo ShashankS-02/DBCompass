@@ -30,9 +30,12 @@ Level = Literal["low", "medium", "high"]
 FullTextSupport = Literal["none", "basic", "advanced"]
 StoredProcedures = Literal["none", "plpgsql", "plsql", "tsql", "sql_pl", "mysql", "javascript", "other"]
 Lifecycle = Literal["active", "not_for_new_projects", "retiring"]
+# Services kept only for a special need (M9). They are never the primary store unless org_support.yaml
+# says the application's answers justify it; otherwise they appear as add-on components of a combination.
+SpecialCase = Literal["caching", "vector_search", "analytics"]
 ReviewStatus = Literal["draft", "verified"]
 Consistency = Literal["strong", "read_your_writes", "eventual"]
-Compliance = Literal["sox", "pci_dss", "hipaa", "gdpr", "dpdp"]
+Compliance = Literal["sox", "pci_dss", "hipaa", "gdpr", "dpdp", "iso_27001"]
 Geo = Literal["india", "eu", "us", "apac"]
 ComponentRole = Literal["primary_oltp", "cache", "search", "analytics", "vector", "time_series"]
 Engine = Literal[
@@ -44,6 +47,10 @@ Engine = Literal[
     "db2",
     "mongodb",
     "cassandra",
+    "couchbase",
+    "sybase",
+    "informix",
+    "vertica",
     "redis",
     "valkey",
     "memcached",
@@ -134,6 +141,7 @@ class ServiceEntry(StrictModel):
     regions: list[str]
     good_for: list[str] = []
     avoid_when: list[str] = []
+    special_case: SpecialCase | None = None
     lifecycle: Lifecycle = "active"
     status_note: str | None = None
     review_status: ReviewStatus

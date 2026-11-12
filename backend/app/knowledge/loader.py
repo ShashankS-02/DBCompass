@@ -18,11 +18,12 @@ from app.models.knowledge import (
     ServiceEntry,
     SizingConstants,
 )
+from app.models.explain import ExplainerConfig
+from app.models.intake import EngineFeaturesConfig, OrgSupportConfig
 from app.models.justification import JustificationConfig
 from app.models.licensing import LicensingConfig
 from app.models.migration import MigrationKnowledge
 from app.models.pricing import PricingConfig
-from app.models.repo import AnalyzerConfig
 from app.pricing.price_cache import PriceIndex, read_snapshots
 from app.models.questions import QuestionCatalog
 
@@ -35,10 +36,12 @@ SIZING_FILE = "sizing.yaml"
 SCORING_FILE = "scoring.yaml"
 HARDWARE_FILE = "hardware_profiles.yaml"
 PRICING_FILE = "pricing.yaml"
-ANALYZER_FILE = "analyzer.yaml"
 LICENSING_FILE = "licensing.yaml"
 MIGRATION_FILE = "migration_tools.yaml"
 JUSTIFICATION_FILE = "justification.yaml"
+EXPLAINER_FILE = "explainer.yaml"
+ORG_SUPPORT_FILE = "org_support.yaml"
+ENGINE_FEATURES_FILE = "engine_features.yaml"
 SERVICES_DIR = "databases"
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
@@ -142,12 +145,6 @@ def get_pricing_config() -> PricingConfig:
 
 
 @lru_cache
-def get_analyzer_config() -> AnalyzerConfig:
-    """Return the cached repo analyzer patterns."""
-    return load_model(knowledge_base_dir() / ANALYZER_FILE, AnalyzerConfig)
-
-
-@lru_cache
 def get_licensing_config() -> LicensingConfig:
     """Return the cached database licence prices and counting rules."""
     return load_model(knowledge_base_dir() / LICENSING_FILE, LicensingConfig)
@@ -163,6 +160,24 @@ def get_migration_knowledge() -> MigrationKnowledge:
 def get_justification_config() -> JustificationConfig:
     """Return the cached justification gate reasons and thresholds."""
     return load_model(knowledge_base_dir() / JUSTIFICATION_FILE, JustificationConfig)
+
+
+@lru_cache
+def get_explainer_config() -> ExplainerConfig:
+    """Return the cached explainer prompts, limits and fact-check settings."""
+    return load_model(knowledge_base_dir() / EXPLAINER_FILE, ExplainerConfig)
+
+
+@lru_cache
+def get_org_support() -> OrgSupportConfig:
+    """Return the cached org supported-engine list."""
+    return load_model(knowledge_base_dir() / ORG_SUPPORT_FILE, OrgSupportConfig)
+
+
+@lru_cache
+def get_engine_features() -> EngineFeaturesConfig:
+    """Return the cached per-engine feature checklist."""
+    return load_model(knowledge_base_dir() / ENGINE_FEATURES_FILE, EngineFeaturesConfig)
 
 
 @lru_cache
@@ -185,6 +200,7 @@ class KnowledgeBundle:
     pricing: PricingConfig
     prices: PriceIndex
     licensing: LicensingConfig | None = None
+    org_support: OrgSupportConfig | None = None
     inr_per_usd: float | None = None
     inr_rate_date: str = ""
 
@@ -202,6 +218,7 @@ def get_knowledge() -> KnowledgeBundle:
         pricing=get_pricing_config(),
         prices=get_price_index(),
         licensing=get_licensing_config(),
+        org_support=get_org_support(),
         inr_per_usd=get_settings().inr_per_usd,
         inr_rate_date=get_settings().inr_rate_date,
     )

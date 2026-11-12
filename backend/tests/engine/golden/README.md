@@ -17,5 +17,5 @@ expect:
     roles_include: [cache]           # component roles in the top recommendation
     ha_topology_contains: Single-AZ
   excluded:         # service id -> rule id that must be among its removal reasons
-    aws.dynamodb: SHAPE-FILTER
+    aws.documentdb: SHAPE-FILTER
 ```

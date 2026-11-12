@@ -72,7 +72,7 @@ def strategy_effort(strategy: StrategyId, inputs: StrategyInputs) -> tuple[Effor
         return (low, high), []
     if inputs.refactor_person_days is not None:
         extra_low, extra_high = inputs.refactor_person_days
-        note = "Code refactor effort from the repo analyzer's compatibility report."
+        note = "Code refactor effort from the team's own estimate."
     else:
         proc_code = inputs.values.get("data.proc_code") or "none"
         extra_low, extra_high = inputs.migration.refactor_effort_by_proc_code[proc_code]

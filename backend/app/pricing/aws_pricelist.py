@@ -51,6 +51,22 @@ def is_paid_tier(row: dict[str, str]) -> bool:
     return row.get("EndingRange", "") in ("", "Inf")
 
 
+def is_first_paid_tier(row: dict[str, str]) -> bool:
+    """For egress-style tiers keep the first tier that costs money (the rate most customers pay)."""
+    try:
+        price = float(row.get("PricePerUnit", "0") or 0)
+    except ValueError:
+        return False
+    return price > 0 and row.get("StartingRange", "0") in ("", "0")
+
+
+def row_in_wanted_tier(row: dict[str, str], spec: PriceComponentSpec) -> bool:
+    """Apply the component's tier choice to a row."""
+    if spec.matcher.tier == "first_paid":
+        return is_first_paid_tier(row)
+    return is_paid_tier(row)
+
+
 def on_demand_point(row: dict[str, str], service_id: str, component_id: str, spec: PriceComponentSpec, region: str, dims: dict[str, str]) -> PricePoint:
     """PricePoint for an on-demand row."""
     return PricePoint(
@@ -115,9 +131,9 @@ def extract_prices(
     prices: list[PricePoint] = []
     reserved = ReservedCollector()
     for row in rows:
-        if not is_paid_tier(row):
-            continue
         for service_id, component_id, spec in specs:
+            if not row_in_wanted_tier(row, spec):
+                continue
             dims = match_dims(row, service_id, spec, allowed_instances)
             if dims is None:
                 continue

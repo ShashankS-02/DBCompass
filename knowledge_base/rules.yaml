@@ -14,6 +14,7 @@
 #   vol.projected_3y_gb      = vol.current_gb + vol.growth_gb_month * 36
 #   ha.sla_percent           = numeric form of ha.sla (sla_99_95 -> 99.95)
 #   mig.source_engine_family = engine of mig.source_engine, else app.existing_db
+#   app.vendor_certified_engine = engine of app.vendor_certified_db (vendor-built applications)
 # Derived service fields: best_sla_percent (highest value in sla_by_topology).
 
 version: 1
@@ -237,6 +238,33 @@ rules:
         by: 15
     message: "SQL Server Agent jobs in use: targets without Agent need the jobs rebuilt (for example as Elastic Jobs)."
 
+  - id: R-VENDOR-001
+    when:
+      - {field: app.vendor_certified_engine, op: is_set}
+    effects:
+      boost:
+        where:
+          - {field: engines, op: contains, value_from: app.vendor_certified_engine}
+        by: 20
+      penalise:
+        where:
+          - {field: engines, op: not_contains, value_from: app.vendor_certified_engine}
+        by: 15
+      add_guidance: "The vendor certifies one database engine; running another is normally unsupported by the vendor. Confirm the certified platform list before choosing a different engine."
+    message: "Vendor-certified engine: the application is supported only on it."
+
+  - id: R-FEAT-STICKY-001
+    when:
+      - {field: mig.source_engine_family, op: is_set}
+      - {field: data.special_features, op: contains_any, value: [advanced_queuing, clr_or_java, flashback, scheduler_jobs, replication, rac, db_links, sql_agent_jobs]}
+    effects:
+      boost:
+        where:
+          - {field: engines, op: contains, value_from: mig.source_engine_family}
+        by: 8
+      add_guidance: "Engine-specific features are in use (queuing, in-database code, flashback, jobs, replication, clustering or links). Each needs a replacement design on a different engine; list them in the migration plan."
+    message: "Engine-specific features in use favour staying on the same engine."
+
   - id: R-LOCK-001
     when:
       - {field: pref.lock_in, op: eq, value: low}
@@ -389,6 +417,13 @@ rules:
           - {field: supports.audit, op: eq, value: false}
         by: 15
     message: "Database-level auditing needed."
+
+  - id: R-PII-001
+    when:
+      - {field: sec.personal_data, op: in, value: [customers, employees, both]}
+    effects:
+      add_guidance: "Personal data is held: encrypt with customer-managed keys, enable database auditing, mask personal columns in non-production copies and keep backups in the same geography as the data."
+    message: "Application holds personal data."
 
   - id: R-RLS-001
     when:

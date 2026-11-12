@@ -6,9 +6,11 @@ Deterministic: no randomness, no clock, no LLM. Ties are broken by relative cost
 from dataclasses import dataclass
 from typing import Any
 
+from app.engine.baseline import build_baselines, versus_baseline
 from app.engine.combiner import Combination, build_combination, component_needs
 from app.engine.costing import apply_budget_filter, balanced_costs, pricing_summary, recommendation_tiers
 from app.engine.defaults import resolve_requirements
+from app.engine.readiness import assess_readiness
 from app.engine.filters import filter_services, rules_for_scope
 from app.engine.rules import fired_rules
 from app.engine.scorer import score_all
@@ -178,7 +180,7 @@ def find_candidates(
     values = resolved.values
     weights = resolved.dimension_weights
     primaries, filtered_out = filter_services(
-        knowledge.services, rules, values, knowledge.regions, knowledge.rules, check_shape=True
+        knowledge.services, rules, values, knowledge.regions, knowledge.rules, check_shape=True, org_support=knowledge.org_support
     )
     primaries, over_budget, pricing_notes = apply_budget_filter(primaries, values, knowledge)
     components, _ = filter_services(
@@ -226,6 +228,17 @@ def combination_notes(combinations: list[Combination], primaries: list[ServiceEn
     return notes
 
 
+def presented_recommendations(
+    combinations: list[Combination], sizings: "Sizings", resolved: ResolvedRequirements, guidance: list[str], knowledge: KnowledgeBundle
+) -> list[Recommendation]:
+    """The top-N ranked combinations as recommendations."""
+    ranked = rank_combinations(combinations, sizings)
+    recommendations = []
+    for rank, combination in enumerate(ranked[:TOP_N], start=1):
+        recommendations.append(to_recommendation(rank, combination, sizings, resolved, guidance, knowledge))
+    return recommendations
+
+
 def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) -> AssessmentOutcome:
     """Validate, then run the full pipeline. Raises RequirementsInvalid on bad input."""
     report = build_validation_report(knowledge.catalog, requirements)
@@ -241,9 +254,10 @@ def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) 
     for rule in rules:
         if rule.effects.add_guidance:
             guidance.append(rule.effects.add_guidance)
-    recommendations = []
-    for rank, combination in enumerate(rank_combinations(combinations, sizings)[:TOP_N], start=1):
-        recommendations.append(to_recommendation(rank, combination, sizings, resolved, guidance, knowledge))
+    recommendations = presented_recommendations(combinations, sizings, resolved, guidance, knowledge)
+    baselines = build_baselines(resolved, recommendations, knowledge)
+    for index, recommendation in enumerate(recommendations):
+        recommendations[index] = recommendation.model_copy(update={"versus_baseline": versus_baseline(recommendation, baselines)})
 
     trace = Trace(
         rules_fired=[rule.id for rule in rules],
@@ -258,4 +272,6 @@ def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) 
         recommendations=recommendations,
         trace=trace,
         pricing=pricing_summary(knowledge, candidates.pricing_notes),
+        readiness=assess_readiness(resolved.values),
+        baselines=baselines,
     )

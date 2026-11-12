@@ -8,7 +8,12 @@ export const ENGINE_LABELS: Record<string, string> = {
   db2: "Db2",
   mongodb: "MongoDB",
   cassandra: "Cassandra",
+  couchbase: "Couchbase",
   redis: "Redis",
+  sybase: "Sybase ASE",
+  informix: "Informix",
+  vertica: "Vertica",
+  proprietary: "proprietary engine",
 };
 
 export const PLATFORM_LABELS: Record<string, string> = { on_prem: "on-prem", aws: "AWS", gcp: "Google Cloud", azure: "Azure" };

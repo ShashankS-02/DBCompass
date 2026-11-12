@@ -8,6 +8,7 @@ secondary_families: []
 engines:
 - proprietary
 deployment: serverless
+special_case: analytics
 lifecycle: active
 status_note: null
 consistency:
@@ -37,6 +38,7 @@ supports:
   audit: true
   masking_rls: true
 compliance:
+- iso_27001
 - sox
 - pci_dss
 - hipaa

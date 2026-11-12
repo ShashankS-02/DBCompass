@@ -5,9 +5,9 @@ DBCompass is an internal portal that helps application teams choose the right da
 (or combination of databases), cloud provider, hardware and design for their application,
 and plans migrations between on-prem and AWS / GCP / Azure or between those clouds.
 
-Inputs come from two places:
-1. A guided requirements form (Quick mode ~12 questions, Expert mode full catalog).
-2. A GitHub repository URL, which the Repo Analyzer scans to pre-fill the form.
+Inputs come from the guided intake (docs/09): one topic per screen, an optional expert survey for
+the full catalog. The repo analyzer was removed in M9: internal application code must never be
+given to an AI.
 
 Outputs:
 - Ranked database recommendations (single DB or polyglot combinations) with a score breakdown.
@@ -28,7 +28,7 @@ Outputs:
 3. docs/03_ARCHITECTURE.md         — components, data flow, API contracts, repo layout
 4. docs/04_KNOWLEDGE_BASE.md       — database service catalog schema and service list
 5. docs/05_SCORING_AND_COST.md     — filter, score, combine, size, price algorithm
-6. docs/06_REPO_ANALYZER.md        — what to extract from a repo and how
+6. docs/06_REPO_ANALYZER.md        — why the repo analyzer was removed (M9)
 7. docs/07_MIGRATION_PLANNER.md    — migration strategy logic and tool matrix
 8. docs/08_BUILD_PLAN.md           — milestones, owners, demo script
 
@@ -43,8 +43,8 @@ Outputs:
 
 ## Architecture principles (non negotiable)
 1. The recommendation engine is DETERMINISTIC. Same inputs give the same ranking.
-   The LLM is used only for (a) extracting signals from repos, (b) writing human explanations
-   from the engine's rule trace, (c) answering follow-up questions grounded in the result.
+   The LLM is used only for (a) writing human explanations from the engine's rule trace and
+   (b) answering follow-up questions grounded in the result. It never sees application code.
 2. The LLM never invents prices, SLAs, limits or service names. These come from
    `knowledge_base/` YAML files and the pricing module.
 3. Every recommendation carries a `trace`: which rules fired, which filters removed which
@@ -53,8 +53,9 @@ Outputs:
    `last_verified` date and `source_url`.
 5. Unknown inputs get defaults derived from the application's criticality tier, and the
    result marks those fields as "assumed".
-6. Never execute code from an analysed repository. Read files only.
-7. Redact secrets (keys, passwords, connection strings) before any repo content goes to the LLM.
+6. Never read or ask for application code or customer data. Discovery queries return metadata only.
+7. Recommend only engines on the org support list (`org_support.yaml`); caching, search and
+   analytics services are kept as special-purpose add-ons.
 
 ## Python coding conventions
 - Explicit, readable code. No clever one-liners, no nested comprehensions.

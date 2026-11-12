@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from "./client";
+import type { Readiness } from "./intake";
 import type { AssumedField, RequirementsInput } from "./questions";
 
 export interface SizingResult {
@@ -41,6 +42,17 @@ export interface CostLine {
   term: string;
 }
 
+export type ComponentStatus = "priced" | "included" | "estimated" | "not_priced" | "not_applicable";
+
+export interface CostComponent {
+  id: string;
+  label: string;
+  status: ComponentStatus;
+  monthly_usd: number | null;
+  note: string;
+  service: string | null;
+}
+
 export interface CostEstimate {
   tier: string;
   label: string;
@@ -50,6 +62,30 @@ export interface CostEstimate {
   complete: boolean;
   missing: string[];
   notes: string[];
+  components: CostComponent[];
+}
+
+export interface Baseline {
+  csp: "aws" | "gcp" | "azure";
+  service_id: string;
+  service_name: string;
+  engine: string;
+  engine_label: string;
+  core_monthly_usd: number | null;
+  total_monthly_usd: number | null;
+  priced: boolean;
+  note: string;
+}
+
+export interface BaselineDelta {
+  baseline_service_id: string;
+  baseline_service_name: string;
+  engine_label: string;
+  baseline_core_usd: number | null;
+  recommendation_core_usd: number | null;
+  delta_usd: number | null;
+  same_service: boolean;
+  message: string;
 }
 
 export interface PricingSummary {
@@ -71,6 +107,7 @@ export interface Recommendation {
   design_guidance: string[];
   why: string[];
   explanation: string;
+  versus_baseline: BaselineDelta | null;
 }
 
 export interface FilterReason {
@@ -105,11 +142,14 @@ export interface AssessmentResult {
   recommendations: Recommendation[];
   trace: Trace;
   pricing: PricingSummary | null;
+  readiness: Readiness | null;
+  baselines: Record<string, Baseline>;
 }
 
 export interface AssessmentSummary {
   id: string;
   created_at: string;
+  app_name: string | null;
   app_type: string | null;
   top_recommendation: string | null;
   top_csp: "aws" | "gcp" | "azure" | null;

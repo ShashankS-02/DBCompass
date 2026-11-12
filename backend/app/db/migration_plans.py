@@ -1,5 +1,6 @@
 """Read and write stored migration plans."""
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.assessments import ADMIN_ROLE, ensure_user
@@ -30,3 +31,13 @@ def load_plan(session: Session, plan_id: str, current_user: CurrentUser) -> Migr
     if row.created_by != current_user.user_id and not readers.intersection(current_user.roles):
         return None
     return MigrationPlan.model_validate(row.plan_json)
+
+
+def latest_plan_for_assessment(session: Session, assessment_id: str, current_user: CurrentUser) -> MigrationPlan | None:
+    """The caller's newest plan made from this assessment (any reader role sees the newest of all)."""
+    statement = select(MigrationPlanRow).where(MigrationPlanRow.assessment_id == assessment_id).order_by(MigrationPlanRow.created_at.desc())
+    readers = {ADMIN_ROLE, "db_approver"}
+    for row in session.scalars(statement):
+        if row.created_by == current_user.user_id or readers.intersection(current_user.roles):
+            return MigrationPlan.model_validate(row.plan_json)
+    return None

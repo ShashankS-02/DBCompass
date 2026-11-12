@@ -6,26 +6,27 @@
                                    |
    +---------------+---------------+----------------+-----------------+
    |               |               |                |                 |
-[Assessment API] [Repo Analyzer] [Recommendation  [Pricing module]  [Migration Planner]
-                   |              Engine]           |                 |
-                   |               |                |                 |
-              [LLM extractor] [Knowledge Base YAML] [Price cache]  [Tool matrix YAML]
-                   \               |                                  /
-                    \------> [Explainer (LLM, grounded in trace)] <--/
+[Assessment API] [Guided intake] [Recommendation  [Pricing module]  [Migration Planner]
+                                  Engine]           |                 |
+                                   |                |                 |
+                         [Knowledge Base YAML] [Price cache]  [Tool matrix YAML]
+                                   |                                  /
+                          [Explainer (LLM, grounded in trace)] <-----/
                                    |
                             [App DB: PostgreSQL]
 ```
 
 ## Request flow (assessment)
-1. UI posts `RequirementsInput` (or a repo URL first, which returns `InferredRequirements`).
+1. UI posts `RequirementsInput` from the guided intake. No application code is read anywhere (M9: the repo analyzer was removed because sending internal code to an LLM is a security violation).
 2. `defaults.apply_tier_defaults()` fills unknowns and records `assumed_fields`.
 3. `engine.filters` removes ineligible candidates and records reasons.
 4. `engine.scorer` scores survivors on 7 dimensions, weighted by user priorities.
 5. `engine.combiner` builds polyglot combinations when multiple data shapes / query types exist.
 6. `engine.sizer` maps each option to instance class, storage tier, HA layout.
 7. `pricing.estimator` prices each option in Budget / Balanced / Performance tiers.
-8. `explain.writer` asks the LLM to turn the trace into prose. Prompt includes ONLY trace data.
-9. Result stored and returned as `AssessmentResult`.
+8. Result stored and returned as `AssessmentResult`.
+9. On request (M7), `explain.writer` asks the LLM to turn a fact sheet built from the stored result into
+   prose. The prompt includes ONLY that fact sheet; the text is fact-checked before it is shown or saved.
 
 ## Repo layout
 ```
@@ -64,19 +65,18 @@ dbcompass/
         scorer.py
         combiner.py
         sizer.py
-        explain.py
-      analyzer/
-        repo_fetch.py        # GitHub tarball API (no git clone), 200 MB cap, safe unpacking, sample: repos
-        scan_common.py       # line-numbered matching, redacted evidence
-        readme_scanner.py    # plainly stated scale / SLA / compliance in README and docs
-        analyze.py           # orchestrator; repo_scans cache by (url, commit, analyzer version)
-        secret_redactor.py
-        dependency_scanner.py
-        schema_extractor.py
-        sql_profiler.py
-        infra_scanner.py     # docker-compose, Terraform, k8s manifests
-        llm_extractor.py     # optional (Azure OpenAI); redacted excerpts only, validated, capped at 0.7
-        mapper.py            # signals -> InferredRequirements
+        whatif.py            # re-run with changed answers / priorities; deterministic diff (M7)
+      explain/               # M7
+        facts.py             # fact sheet from a stored result; vocabulary of service / engine names
+        grounding.py         # fact check: numbers and product names must come from the fact sheet
+        writer.py            # LLM explanation (checked, one retry) or rule-based paragraphs
+        qa.py                # one grounded answer per question; refuses rather than guesses
+      export/                # M7 design document
+        document.py          # one outline (headings, paragraphs, bullets, tables)
+        markdown.py
+        pdf.py               # reportlab, Helvetica (Latin-1; arrows and the rupee sign are written out)
+      llm/
+        client.py            # shared Azure OpenAI client (JSON mode), used by the explainer only
       pricing/
         azure_retail.py      # Retail Prices API (no auth), with retry/backoff
         aws_pricelist.py     # public bulk CSV per offer/region; reserved -> effective hourly
@@ -85,6 +85,7 @@ dbcompass/
         snapshot.py          # `python -m app.pricing.snapshot <csp>`
         price_cache.py       # snapshot files + PriceIndex lookup
         estimator.py         # monthly cost lines per service and tier
+        components.py        # M9: backup, I/O, proxy, egress, private endpoints, keys, audit logs; component summary
       migration/
         strategy.py          # 7 Rs selection
         method.py            # offline / physical / CDC selection
@@ -93,7 +94,6 @@ dbcompass/
         runbook.py
       knowledge/loader.py, knowledge/catalog.py   # YAML loading; answer validation
       knowledge/check.py   # `python -m app.knowledge.check` cross-checks the KB
-      db/repo_scans.py     # repo analysis cache / history
       db/session.py, db/tables.py, db/assessments.py
     tests/                 # pytest suite, run from backend/; tests/engine/golden/*.yaml = golden cases
   knowledge_base/
@@ -107,23 +107,25 @@ dbcompass/
     design_patterns.yaml
     migration_tools.yaml
     pricing.yaml             # how to find each service's prices; tiers; not_priced reasons
-    analyzer.yaml            # repo analyzer patterns: dependencies, SQL / Oracle features, README rules
+    org_support.yaml         # engines the DBA team supports; special-purpose services (caching, search, analytics)
+    engine_features.yaml     # per-engine feature checklist with metadata-only discovery queries
     price_snapshots/         # aws.json, azure.json (gcp.json once a key is set)
   frontend/
-    src/pages/ (NewAssessment, RepoInput, Results, MigrationPlan, History)
+    src/pages/ (Intake, Results, MigrationPlan, JustificationForm, History)
+    src/hooks/useDraft.ts    # keeps form drafts in the browser until submitted (M9)
     src/components/ (QuestionCard, PrioritySliders, ScoreRadar, CostTiers, WhyPanel, RunbookView)
-  sample_repos/              # small demo repos for the analyzer
 ```
 
 ## API contracts
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| POST | /api/assessments | RequirementsInput | AssessmentResult (201); 422 with ValidationReport in `detail` when input is invalid |
+| POST | /api/assessments | RequirementsInput | AssessmentResult (201); 422 with ValidationReport in `detail` when input is invalid. M9: each `CostEstimate` has `components` [{id, label, status: priced\|included\|estimated\|not_priced\|not_applicable, monthly_usd, note, service}]; for an existing database the result has `baselines` {csp: Baseline} and each recommendation `versus_baseline` (compute + licence difference against staying on the current engine) |
 | GET | /api/assessments | ?limit=1..100 | list[AssessmentSummary] — caller's own, newest first |
 | GET | /api/assessments/{id} | | AssessmentResult; 404 if missing or not the caller's (dba_admin can read all) |
-| POST | /api/assessments/{id}/whatif | partial RequirementsInput | AssessmentResult (not stored) |
-| POST | /api/repo/analyze | {repo_url, branch?, token?} — GitHub URL (optionally /tree/<branch>/<folder>) or `sample:<name>` | InferredRequirements {fields: {id: {value, confidence, evidence, source, hint}}, prefill, oracle_report, summary, llm_used, warnings}; 400 bad URL / repo, 502 GitHub unreachable |
-| GET | /api/repo/samples | | names of bundled demo repos |
+| POST | /api/assessments/{id}/whatif | WhatIfRequest {answers (null clears a field), priorities} | WhatIfResult {base_assessment_id, input (merged), outcome (AssessmentOutcome), changes {changed_fields, top_changed, rank_moves, newly_filtered, no_longer_filtered, rules_added, rules_removed, summary}}; not stored; 422 invalid answers |
+| GET | /api/assessments/{id}/explanation | | Explanation or null: the saved LLM explanation for the current prompt version |
+| POST | /api/assessments/{id}/explanation | ?refresh=true | Explanation {paragraphs, source: llm\|rules, model, prompt_version, generated_at, notes}. LLM text only if it passes the fact check (else rule-based); only LLM text is saved |
+| POST | /api/assessments/{id}/ask | {question} | AnswerOut {question, answer, answerable, source: llm\|unavailable, notes}; grounded in the result, nothing stored |
 | POST | /api/migrations/plan | MigrationPlanRequest {assessment_id?, answers (override / add mig.* etc.), target_service_id?, refactor_person_days? [low, high], team_size?, start_date?} | MigrationPlan (201, stored): source, strategies (Rehost / Replatform / Refactor priced over 3 years incl. licences), considered (Retire / Retain / Relocate / Repurchase), recommended strategy, two_step, method + transfer estimate, tools, 8 phases, deadline fit, risks, rollback, validation, assumptions; 404 unknown assessment, 400 no source engine / unknown target, 422 invalid answers |
 | GET | /api/migrations/{id} | | MigrationPlan (owner, dba_admin, db_approver) |
 | GET | /api/justification/reasons | | JustificationConfig (reasons, weights, thresholds) |
@@ -135,10 +137,11 @@ dbcompass/
 | GET | /api/requests | ?scope=mine\|review\|all&limit | list[DbRequestSummary] (review / all for db_approver) |
 | GET | /api/requests/{id} | | DbRequest with audit events (owner, db_approver, dba_admin) |
 | GET | /api/requests/{id}/export | | text/markdown justification packet |
-| GET | /api/assessments/{id}/export?format=md\|pdf | | file |
+| GET | /api/assessments/{id}/export?format=md\|pdf | | design document file (attachment): summary, requirements (answered / assumed), options with sizing and cost lines, explanation, services ruled out, latest migration plan, prices, rule trace |
 | GET | /api/pricing/status | | snapshot date, regions, price count and unmatched components per CSP; priced / not-priced service counts; INR rate |
 | POST | /api/pricing/refresh/{csp} | | dba_admin only; `azure` only (AWS and GCP via the CLI). Rebuilds and saves the snapshot |
 | GET | /api/questions?mode=quick\|expert | | QuestionSchema {mode, sections[questions], priority_sliders, fixed_dimension_weights, default_tier} |
+| GET | /api/intake | | IntakeConfig {org_support (statuses, engines, special_cases), engine_features (per-engine checklist with metadata-only `how_to_check` queries), commercial_engines} — what the guided intake needs beyond the catalog (M8) |
 | POST | /api/requirements/validate | RequirementsInput | ValidationReport {valid, errors, normalised, unanswered_quick_fields, assumed_fields, ignored_fields, dimension_weights} |
 | GET | /api/health | | HealthResponse {status, version, database} (no auth) |
 | GET | /api/me | | CurrentUser {user_id, name, email, roles, auth_mode} |
@@ -202,9 +205,9 @@ breakdown and adjustments for every scored primary) and `combination_notes`.
 
 ## Persistence (app DB)
 Tables: users, assessments (input JSON, result JSON, created_by, created_at),
-repo_scans (repo_url, commit_sha, analyzer_version, result JSON, created_by; the GitHub token is never stored),
 migration_plans (assessment_id?, request JSON, plan JSON, created_by), db_requests (status, input JSON,
 evaluation JSON, created_by, timestamps), request_events (request_id, actor, action, note, at: the audit trail),
+explanations (assessment_id, prompt_version, explanation JSON: fact-checked LLM text only),
 feedback (assessment_id, accepted_option, comment). Feedback is used later to tune weights.
 
 Roles (Entra app roles): `user`, `dba_admin` (pricing refresh, reads everything), `db_approver` (decides
@@ -212,7 +215,6 @@ database requests; cannot decide their own). The dev bypass user has all three.
 
 ## Security
 - Entra ID SSO; role claims: `user`, `dba_admin` (can edit KB via UI later).
-- GitHub tokens are used once and never stored.
-- Repo clones go to a temp dir, max 200 MB, deleted after scan.
-- Secret redaction runs before any LLM call.
+- DBCompass never reads application code. The LLM receives only questionnaire answers and the engine's own result (M9).
+- Feature checklists ask for catalog metadata only; no query reads table rows.
 - LLM calls go through Azure AI Foundry inside the corporate tenant.

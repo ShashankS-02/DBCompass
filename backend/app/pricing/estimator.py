@@ -8,12 +8,13 @@ Every line keeps the SKU, region and term it was priced from.
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from app.models.knowledge import RegionCatalog, ScoringConfig, ServiceEntry
 from app.models.pricing import PriceComponentSpec, PricingConfig, ServicePricing, Term, TierSpec
 from app.models.results import CostEstimate, CostLine, SizingResult
+from app.pricing.components import add_extra_lines, summarise_components
 from app.pricing.price_cache import PriceIndex
 
 RESIDENCY_GEOS = {"india_dpdp": "india", "eu_gdpr": "eu", "us_only": "us"}
@@ -117,6 +118,8 @@ class LineContext:
     lines: list[CostLine]
     missing: list[str]
     notes: list[str]
+    extras_missing: list[str] = field(default_factory=list)  # extra components with no price (M9)
+    component_notes: dict[str, tuple[str, float | None, str]] = field(default_factory=dict)  # component -> (status, usd, note)
 
 
 def add_line(
@@ -307,11 +310,13 @@ def estimate(
     add_compute_lines(line_context)
     add_storage_lines(line_context)
     add_request_lines(line_context)
+    core_complete = not line_context.missing and bool(line_context.lines)
+    add_extra_lines(line_context)
     multiplier = environment_multiplier(values, sizing, context.config)
     subtotal = sum(line.monthly_usd for line in line_context.lines)
     notes = line_context.notes + ([pricing.note] if pricing.note else [])
     return CostEstimate(
         tier=tier_name, label=tier.label, monthly_usd=round(subtotal * multiplier, 2), lines=line_context.lines,
-        environment_multiplier=multiplier, complete=not line_context.missing and bool(line_context.lines),
-        missing=line_context.missing, notes=notes,
+        environment_multiplier=multiplier, complete=core_complete,
+        missing=line_context.missing, notes=notes, components=summarise_components(line_context, multiplier),
     )

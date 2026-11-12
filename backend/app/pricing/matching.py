@@ -3,9 +3,19 @@
 import re
 from collections.abc import Iterator
 
-from app.models.pricing import PriceComponentSpec, PricePoint, PricingConfig, RowMatcher
+from app.models.pricing import SHARED_SERVICE_SUFFIX, PriceComponentSpec, PricePoint, PricingConfig, RowMatcher
 
 HOURS_PER_YEAR = 8760
+
+
+def all_component_specs(config: PricingConfig) -> Iterator[tuple[str, str, PriceComponentSpec]]:
+    """(service_id, component_id, spec) for every service component and every CSP-wide shared component."""
+    for service_id, pricing in config.services.items():
+        for index, spec in enumerate(pricing.components):
+            yield service_id, f"{spec.kind}.{index}", spec
+    for csp, shared in config.shared_components.items():
+        for name, spec in shared.items():
+            yield f"{csp}{SHARED_SERVICE_SUFFIX}", f"{spec.kind}.{name}", spec
 
 
 def normalise_dim(value: str) -> str:
@@ -43,22 +53,20 @@ def component_specs(
     config: PricingConfig, source: str, odata: str | None = None
 ) -> Iterator[tuple[str, str, PriceComponentSpec]]:
     """(service_id, component_id, spec) for every component whose matcher reads `source` (+ odata)."""
-    for service_id, pricing in config.services.items():
-        for index, spec in enumerate(pricing.components):
-            if spec.matcher.source == source and spec.matcher.odata == odata:
-                yield service_id, f"{spec.kind}.{index}", spec
+    for service_id, component_id, spec in all_component_specs(config):
+        if spec.matcher.source == source and spec.matcher.odata == odata:
+            yield service_id, component_id, spec
 
 
 def sources_for(config: PricingConfig, csp: str) -> list[tuple[str, str | None]]:
     """Distinct (source, odata) pairs for one CSP: AWS offer codes / Azure service names."""
     sources: list[tuple[str, str | None]] = []
-    for service_id, pricing in config.services.items():
+    for service_id, _component_id, spec in all_component_specs(config):
         if not service_id.startswith(f"{csp}."):
             continue
-        for spec in pricing.components:
-            source = (spec.matcher.source, spec.matcher.odata)
-            if source not in sources:
-                sources.append(source)
+        source = (spec.matcher.source, spec.matcher.odata)
+        if source not in sources:
+            sources.append(source)
     return sources
 
 
@@ -86,11 +94,10 @@ def unmatched_components(config: PricingConfig, csp: str, regions: list[str], pr
         if price.term == "on_demand":
             found.add((price.service_id, price.component_id, price.region))
     missing = []
-    for service_id, pricing in config.services.items():
+    for service_id, component_id, _spec in all_component_specs(config):
         if not service_id.startswith(f"{csp}."):
             continue
-        for index, spec in enumerate(pricing.components):
-            for region in regions:
-                if (service_id, f"{spec.kind}.{index}", region) not in found:
-                    missing.append(f"{service_id}/{spec.kind}.{index}/{region}")
+        for region in regions:
+            if (service_id, component_id, region) not in found:
+                missing.append(f"{service_id}/{component_id}/{region}")
     return missing

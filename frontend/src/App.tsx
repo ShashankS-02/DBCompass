@@ -6,8 +6,7 @@ import History from "./pages/History";
 import JustificationForm from "./pages/JustificationForm";
 import MigrationPlanPage from "./pages/MigrationPlan";
 import Home from "./pages/Home";
-import NewAssessment from "./pages/NewAssessment";
-import RepoInput from "./pages/RepoInput";
+import Intake from "./pages/Intake";
 import RequestDetail from "./pages/RequestDetail";
 import Requests from "./pages/Requests";
 import Results from "./pages/Results";
@@ -15,7 +14,6 @@ import Results from "./pages/Results";
 const NAV_ITEMS = [
   { to: "/", label: "Home" },
   { to: "/assessments/new", label: "New assessment" },
-  { to: "/repo", label: "Analyze repo" },
   { to: "/migrations/new", label: "Migration plan" },
   { to: "/requests", label: "Requests" },
   { to: "/history", label: "History" },
@@ -157,8 +155,7 @@ export default function App() {
         <div key={location.pathname} className="animate-fade-up">
           <Routes location={location}>
             <Route path="/" element={<Home />} />
-            <Route path="/assessments/new" element={<NewAssessment />} />
-            <Route path="/repo" element={<RepoInput />} />
+            <Route path="/assessments/new" element={<Intake />} />
             <Route path="/migrations/new" element={<MigrationPlanPage />} />
             <Route path="/migrations/:id" element={<MigrationPlanPage />} />
             <Route path="/requests" element={<Requests />} />

@@ -1,28 +1,160 @@
 import { useEffect, useMemo, useState } from "react";
 import { PageLoader } from "../components/Loader";
 import { Link, useParams } from "react-router-dom";
-import { CSP_LABELS, ROLE_LABELS, fetchAssessment, type AssessmentResult, type Recommendation } from "../api/assessments";
-import { describeValue, fetchQuestions, type Question } from "../api/questions";
+import { CSP_LABELS, ROLE_LABELS, fetchAssessment, type AssessmentResult, type Baseline, type Recommendation } from "../api/assessments";
+import { fetchIntake, type IntakeConfig } from "../api/intake";
+import { describeValue, fetchQuestions, type PrioritySlider, type Question } from "../api/questions";
+import type { RankMove, WhatIfResult } from "../api/whatif";
 import { useAuth } from "../auth/AuthProvider";
+import { READINESS_STYLES, type Readiness } from "../api/intake";
 import { engineLabel } from "../api/labels";
 import { COMMERCIAL_ENGINES } from "../api/requests";
-import CostTiers, { type Currency } from "../components/CostTiers";
+import CostTiers, { formatMoney, type Currency } from "../components/CostTiers";
 import ScoreRadar from "../components/ScoreRadar";
 import WhyNotPanel from "../components/WhyNotPanel";
+import ExplanationPanel from "../components/ExplanationPanel";
+import ExportMenu from "../components/ExportMenu";
+import WhatIfPanel from "../components/WhatIfPanel";
 
 interface CardProps {
   recommendation: Recommendation;
   currency: Currency;
   inrPerUsd: number | null;
+  move?: RankMove;
 }
 
-function RecommendationCard({ recommendation, currency, inrPerUsd }: CardProps) {
+function optionTitle(recommendation: Recommendation): string {
+  return recommendation.components.map((component) => component.service_name).join(" + ");
+}
+
+function MoveBadge({ move }: { move?: RankMove }) {
+  if (!move || move.after_rank === null) return null;
+  if (move.before_rank === null) {
+    return <span className="rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-bold text-gold-800">New</span>;
+  }
+  if (move.before_rank === move.after_rank) return null;
+  const up = move.after_rank < move.before_rank;
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${up ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
+      {up ? "▲" : "▼"} was #{move.before_rank}
+    </span>
+  );
+}
+
+function ReadinessPanel({ readiness }: { readiness: Readiness }) {
+  return (
+    <section className={`card border p-4 ${READINESS_STYLES[readiness.verdict]}`}>
+      <p className="eyebrow">Team readiness</p>
+      <h2 className="mt-1 font-display text-lg font-bold">{readiness.label}</h2>
+      <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm">
+        {readiness.reasons.map((reason) => (
+          <li key={reason}>{reason}</li>
+        ))}
+      </ul>
+      {readiness.actions.length > 0 && (
+        <p className="mt-2 text-sm">
+          <span className="font-semibold">Next: </span>
+          {readiness.actions.join(" ")}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function VersusBaseline({ recommendation, currency, inrPerUsd }: { recommendation: Recommendation; currency: Currency; inrPerUsd: number | null }) {
+  const versus = recommendation.versus_baseline;
+  if (!versus) return null;
+  if (versus.same_service) {
+    return <p className="mt-2 rounded-lg border border-sand-200 bg-sand-50 px-3 py-2 text-xs text-slate-600">This is the like-for-like option: staying on {versus.engine_label}.</p>;
+  }
+  if (versus.delta_usd === null) {
+    return <p className="mt-2 rounded-lg border border-sand-200 bg-sand-50 px-3 py-2 text-xs text-slate-600">Versus staying on {versus.engine_label}: {versus.message}</p>;
+  }
+  const cheaper = versus.delta_usd < 0;
+  const same = Math.abs(versus.delta_usd) < 1;
+  const tone = same ? "border-sand-200 bg-sand-50 text-slate-700" : cheaper ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-rose-200 bg-rose-50 text-rose-900";
+  return (
+    <div className={`mt-2 rounded-lg border px-3 py-2 text-xs ${tone}`}>
+      <p className="font-semibold">
+        {same ? "About the same" : `${cheaper ? "−" : "+"}${formatMoney(Math.abs(versus.delta_usd), currency, inrPerUsd)} a month`} versus staying on {versus.engine_label}
+      </p>
+      <p className="mt-0.5 opacity-80">
+        Compute and licences only, Balanced tier: {formatMoney(versus.recommendation_core_usd ?? 0, currency, inrPerUsd)} here against{" "}
+        {formatMoney(versus.baseline_core_usd ?? 0, currency, inrPerUsd)} on {versus.baseline_service_name}. Storage, backup and network are left out because they would be about the same.
+      </p>
+    </div>
+  );
+}
+
+function BaselinePanel({ baselines, currency, inrPerUsd }: { baselines: Record<string, Baseline>; currency: Currency; inrPerUsd: number | null }) {
+  const entries = Object.values(baselines);
+  if (!entries.length) return null;
+  return (
+    <section className="card p-4">
+      <p className="eyebrow">Price difference against staying on {entries[0].engine_label}</p>
+      <p className="mt-1 text-sm text-slate-600">
+        On-prem costs are rarely known, so the comparison is cloud to cloud: the cheapest managed {entries[0].engine_label} service on each cloud, sized
+        like your database, at the Balanced tier. Each option above shows its difference on compute and licence lines; storage, backup and network are
+        the same for both and are left out.
+      </p>
+      <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+        {entries.map((baseline) => (
+          <li key={baseline.csp} className="rounded-xl border border-sand-200 bg-sand-50/60 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{CSP_LABELS[baseline.csp]}</p>
+            <p className="font-semibold text-slate-900">{baseline.service_name}</p>
+            <p className="tabular-nums text-slate-800">
+              {baseline.core_monthly_usd !== null ? `${formatMoney(baseline.core_monthly_usd, currency, inrPerUsd)} / month compute + licence` : "Not priced"}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">{baseline.note}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function AddOnsPanel({ result, intake }: { result: AssessmentResult; intake: IntakeConfig | null }) {
+  if (!intake) return null;
+  const keptOut = result.trace.filtered_out.filter((reason) => reason.rule_id === "SPECIAL-CASE");
+  const byKind = new Map<string, string[]>();
+  keptOut.forEach((reason) => {
+    const message = reason.message;
+    const kind = Object.entries(intake.org_support.special_cases).find(([, spec]) => message.toLowerCase().includes(spec.label.toLowerCase()))?.[0];
+    if (!kind) return;
+    const list = byKind.get(kind) ?? [];
+    const name = message.split(" is kept for")[0];
+    if (!list.includes(name)) list.push(name);
+    byKind.set(kind, list);
+  });
+  if (!byKind.size) return null;
+  return (
+    <section className="card p-4">
+      <p className="eyebrow">If you need more than a database</p>
+      <p className="mt-1 text-sm text-slate-600">
+        These special-purpose services are kept for one job each. They are never the main database, but the engine adds them to a combination when the
+        answers call for caching, search or analytics.
+      </p>
+      <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+        {[...byKind.entries()].map(([kind, serviceIds]) => (
+          <li key={kind} className="rounded-xl border border-sand-200 bg-white p-3">
+            <p className="font-semibold text-slate-900">{intake.org_support.special_cases[kind as keyof typeof intake.org_support.special_cases]?.label ?? kind}</p>
+            <p className="text-xs text-slate-500">{intake.org_support.special_cases[kind as keyof typeof intake.org_support.special_cases]?.description}</p>
+            <p className="mt-1 text-xs text-slate-700">{serviceIds.join(" · ")}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function RecommendationCard({ recommendation, currency, inrPerUsd, move }: CardProps) {
   return (
     <article className={`card card-hover flex flex-col p-5 ${recommendation.rank === 1 ? "border-t-4 border-t-coral-500" : ""}`}>
       <header className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
             #{recommendation.rank} · {CSP_LABELS[recommendation.csp]}
+            <MoveBadge move={move} />
           </p>
           <h2 className="mt-1 font-semibold text-slate-900">
             {recommendation.components.map((component) => component.service_name).join(" + ")}
@@ -56,6 +188,7 @@ function RecommendationCard({ recommendation, currency, inrPerUsd }: CardProps) 
           <dt className="mb-1 text-xs font-medium text-slate-500">Monthly cost (list price)</dt>
           <dd>
             <CostTiers tiers={recommendation.cost_tiers} currency={currency} inrPerUsd={inrPerUsd} />
+            <VersusBaseline recommendation={recommendation} currency={currency} inrPerUsd={inrPerUsd} />
           </dd>
         </div>
       </dl>
@@ -127,6 +260,9 @@ export default function Results() {
   const [questions, setQuestions] = useState<Map<string, Question>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<Currency>("usd");
+  const [sliders, setSliders] = useState<PrioritySlider[]>([]);
+  const [scenario, setScenario] = useState<WhatIfResult | null>(null);
+  const [intake, setIntake] = useState<IntakeConfig | null>(null);
 
   useEffect(() => {
     fetchAssessment(id, getAccessToken)
@@ -137,20 +273,33 @@ export default function Results() {
         const index = new Map<string, Question>();
         schema.sections.forEach((section) => section.questions.forEach((question) => index.set(question.id, question)));
         setQuestions(index);
+        setSliders(schema.priority_sliders);
       })
       .catch(() => setQuestions(new Map()));
+    fetchIntake(getAccessToken).then(setIntake).catch(() => setIntake(null));
   }, [id, getAccessToken]);
+
+  const view: AssessmentResult | null = useMemo(
+    () => (result && scenario ? { ...result, ...scenario.outcome, input: scenario.input } : result),
+    [result, scenario],
+  );
+
+  const moves = useMemo(() => {
+    const byTitle = new Map<string, RankMove>();
+    scenario?.changes.rank_moves.forEach((move) => byTitle.set(`${move.option}|${move.csp}`, move));
+    return byTitle;
+  }, [scenario]);
 
   const recommendedIds = useMemo(() => {
     const ids = new Set<string>();
-    result?.recommendations.forEach((recommendation) => recommendation.components.forEach((component) => ids.add(component.service_id)));
+    view?.recommendations.forEach((recommendation) => recommendation.components.forEach((component) => ids.add(component.service_id)));
     return ids;
-  }, [result]);
+  }, [view]);
 
   if (error) {
     return <p className="text-rose-600">Could not load this assessment: {error}</p>;
   }
-  if (!result) {
+  if (!result || !view) {
     return <PageLoader label="Loading recommendations" steps={["Fetching the assessment", "Laying out cost tiers", "Drawing score charts"]} />;
   }
 
@@ -158,7 +307,9 @@ export default function Results() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Recommendations</h1>
+          <h1 className="text-3xl font-bold text-slate-900">
+            {(result.input.answers["app.name"] as string | undefined) ? `${result.input.answers["app.name"] as string}: recommendations` : "Recommendations"}
+          </h1>
           <p className="mt-1 text-sm text-slate-600">
             {new Date(result.created_at).toLocaleString()} · engine {result.engine_version} · {result.trace.rules_fired.length} rules
             fired · {new Set(result.trace.filtered_out.map((reason) => reason.service_id)).size} services filtered out
@@ -180,9 +331,10 @@ export default function Results() {
               ))}
             </div>
           )}
-          <Link to="/assessments/new" className="btn-ghost px-3 py-1.5 hover:border-slate-500">
+          <Link to="/assessments/new" className="btn-ghost px-3 py-1.5">
             New assessment
           </Link>
+          <ExportMenu assessmentId={result.id} />
         </div>
       </div>
 
@@ -200,18 +352,39 @@ export default function Results() {
 
       <NextSteps result={result} />
 
-      {result.recommendations.length === 0 ? (
+      {(view.readiness || typeof result.input.answers["app.notes"] === "string") && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {view.readiness && <ReadinessPanel readiness={view.readiness} />}
+          {typeof result.input.answers["app.notes"] === "string" && (
+            <section className="card p-4">
+              <p className="eyebrow">Notes from the team</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{result.input.answers["app.notes"] as string}</p>
+            </section>
+          )}
+        </div>
+      )}
+
+      {sliders.length > 0 && <WhatIfPanel result={result} sliders={sliders} questions={questions} scenario={scenario} onScenario={setScenario} />}
+
+      {scenario && (
+        <p className="flex items-center gap-2 text-sm font-semibold text-coral-700">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-coral-500" /> Showing the what-if scenario. The saved result is unchanged.
+        </p>
+      )}
+
+      {view.recommendations.length === 0 ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          {result.trace.combination_notes.map((note) => (
+          {view.trace.combination_notes.map((note) => (
             <p key={note}>{note}</p>
           ))}
         </div>
       ) : (
-        <div className="stagger grid gap-5 lg:grid-cols-3">
-          {result.recommendations.map((recommendation) => (
+        <div key={scenario ? JSON.stringify(scenario.input) : "saved"} className="stagger grid gap-5 lg:grid-cols-3">
+          {view.recommendations.map((recommendation) => (
             <RecommendationCard
-              key={recommendation.rank}
+              key={`${optionTitle(recommendation)}|${recommendation.csp}`}
               recommendation={recommendation}
+              move={moves.get(`${optionTitle(recommendation)}|${recommendation.csp}`)}
               currency={currency}
               inrPerUsd={result.pricing?.inr_per_usd ?? null}
             />
@@ -219,14 +392,20 @@ export default function Results() {
         </div>
       )}
 
+      {Object.keys(result.baselines ?? {}).length > 0 && <BaselinePanel baselines={result.baselines} currency={currency} inrPerUsd={result.pricing?.inr_per_usd ?? null} />}
+
+      <AddOnsPanel result={view} intake={intake} />
+
+      <ExplanationPanel assessmentId={result.id} scenarioActive={scenario !== null} />
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <WhyNotPanel filteredOut={result.trace.filtered_out} scores={result.trace.scores} recommendedIds={recommendedIds} />
+        <WhyNotPanel filteredOut={view.trace.filtered_out} scores={view.trace.scores} recommendedIds={recommendedIds} />
 
         <section className="card p-4">
-          <h2 className="font-medium text-slate-900">Assumptions ({result.trace.assumed_fields.length})</h2>
+          <h2 className="font-medium text-slate-900">Assumptions ({view.trace.assumed_fields.length})</h2>
           <p className="mt-1 text-sm text-slate-600">Fields you left empty, filled from defaults.</p>
           <ul className="mt-3 space-y-1 text-sm text-slate-700">
-            {result.trace.assumed_fields.map((field) => (
+            {view.trace.assumed_fields.map((field) => (
               <li key={field.field_id}>
                 {questions.get(field.field_id)?.label ?? field.field_id}:{" "}
                 <span className="font-medium">{describeValue(questions.get(field.field_id), field.value)}</span>

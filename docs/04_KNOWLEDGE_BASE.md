@@ -59,6 +59,10 @@ sketch. Differences:
 - New: `secondary_families` (e.g. Aurora PostgreSQL also serves `vector` via pgvector),
   `regions` (ids from `regions.yaml`, only the India / EU / US / APAC geographies),
   `lifecycle` (`active | not_for_new_projects | retiring`) with `status_note`.
+- `special_case` (M9, optional): `caching | vector_search | analytics`. Marks a service kept only for
+  one job. It is filtered out as the main database (filter id `SPECIAL-CASE`) unless the answers meet
+  `org_support.yaml` `special_cases.<kind>.primary_when`; it can always be an add-on component. The
+  checker rejects any service without `special_case` whose engine is not a supported target.
 - Verification: `review_status` (`draft` until a DBA signs the entry off), `last_verified`
   (date of the last check) and `verification: {verified_fields, sources, notes}` listing exactly
   which fields were checked against which official pages. Fields not listed are drafts.
@@ -178,3 +182,20 @@ Reasons a team can give for a licensed engine, each with a weight, an optional e
 optional `verify` / `contradict` conditions over the requirements; thresholds for "justified" and
 "needs review"; reasons that can never justify on their own; and the saving above which an architect
 review is needed unless a strong reason (vendor certification, performance test) is backed.
+
+### Catalog cut (M9)
+Removed because the database team does not support their engines: DynamoDB, Neptune, Timestream
+(both), Aurora DSQL, RDS for MariaDB, Cosmos DB for NoSQL / Table / Gremlin, Azure Data Explorer,
+Synapse Analytics, Bigtable, Firestore and Spanner. MariaDB was dropped from the self-managed VM
+entries. Every remaining entry lists `iso_27001` under `compliance` (all three clouds hold ISO/IEC
+27001 certification for these services).
+
+### org_support.yaml (M8)
+The engines the database team supports: `engines.<id>: {status: strategic|supported|sunset, label, note?}`,
+`pin_supported_at` (where the best supported option is shown when #1 is unsupported) and the
+`messages` the UI prints. Presentation only — scores never change. See docs/09_GUIDED_INTAKE.md.
+
+### engine_features.yaml (M8)
+Per-engine checklist for the intake: `engines.<id>.features[] = {feature, label, how_to_check}` where
+`feature` is a `data.special_features` option and `how_to_check` is a catalog query that returns
+metadata only. `sticky_features` feeds rule R-FEAT-STICKY-001. The checker verifies every feature id.

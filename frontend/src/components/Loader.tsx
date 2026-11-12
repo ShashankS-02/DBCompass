@@ -66,7 +66,7 @@ export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-/** Busy overlay for long actions (repo analysis, running the engine). */
+/** Busy overlay for long actions (running the engine, building a plan). */
 export function BusyOverlay({ label, steps }: { label: string; steps: string[] }) {
   return (
     <div className="fixed inset-0 z-50 grid animate-fade-in place-items-center bg-teal-950/40 backdrop-blur-sm">

@@ -79,10 +79,14 @@ def is_usable(item: dict) -> bool:
 
 def extract_prices(
     items: list[dict], config: PricingConfig, service_name: str, region: str,
-    allowed_instances: dict[str, set[str]], odata: str | None = None,
+    allowed_instances: dict[str, set[str]], odata: str | None = None, region_override: str | None = None,
 ) -> list[PricePoint]:
-    """Match items against every component that reads this Azure service (+ odata)."""
-    specs = list(component_specs(config, service_name, odata))
+    """Match items against every component that reads this Azure service (+ odata).
+
+    Components whose matcher names a `region` (e.g. Global) are matched only when that override is
+    passed; the resulting prices are recorded under `region` (the snapshot region).
+    """
+    specs = [spec for spec in component_specs(config, service_name, odata) if spec[2].matcher.region == region_override]
     prices: list[PricePoint] = []
     for item in items:
         if not is_usable(item):
@@ -114,3 +118,20 @@ def fetch_azure_prices(
     items = list(fetch_items(service_name, region, client, odata))
     logger.info("Azure %s%s / %s: %d items", service_name, f" [{odata}]" if odata else "", region, len(items))
     return extract_prices(items, config, service_name, region, allowed_instances, odata)
+
+
+def fetch_azure_region_override_prices(
+    config: PricingConfig, service_name: str, odata: str | None, regions: list[str], client: httpx.Client,
+) -> list[PricePoint]:
+    """Prices for components that read a fixed armRegionName (e.g. Global), copied to every snapshot region."""
+    overrides: list[str] = []
+    for _service_id, _component_id, spec in component_specs(config, service_name, odata):
+        if spec.matcher.region is not None and spec.matcher.region not in overrides:
+            overrides.append(spec.matcher.region)
+    prices: list[PricePoint] = []
+    for override in overrides:
+        items = list(fetch_items(service_name, override, client, odata))
+        logger.info("Azure %s / %s (region override): %d items", service_name, override, len(items))
+        for region in regions:
+            prices.extend(extract_prices(items, config, service_name, region, {}, odata, region_override=override))
+    return prices

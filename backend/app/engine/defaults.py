@@ -74,6 +74,39 @@ def source_engine_family(values: dict[str, Any]) -> str | None:
     return None
 
 
+def vendor_certified_engine(values: dict[str, Any]) -> str | None:
+    """Engine the vendor certifies the application for, if the team named one."""
+    engine_version = values.get("app.vendor_certified_db")
+    if engine_version and engine_version.get("engine") not in (None, "none", "other", "unknown"):
+        return engine_version["engine"]
+    return None
+
+
+PERSONAL_DATA_FIELD_ID = "sec.personal_data"
+PERSONAL_DATA_VALUES = ("customers", "employees", "both")
+PERSONAL_DATA_DEFAULTS = {"sec.cmk": True, "sec.audit": True, "sec.masking_rls": True}
+
+
+def personal_data_defaults(values: dict[str, Any]) -> list[AssumedField]:
+    """When the application holds personal data, protective controls default to on unless answered."""
+    assumed_fields: list[AssumedField] = []
+    if values.get(PERSONAL_DATA_FIELD_ID) not in PERSONAL_DATA_VALUES:
+        return assumed_fields
+    for field_id, default_value in PERSONAL_DATA_DEFAULTS.items():
+        if field_id not in values:
+            assumed_fields.append(AssumedField(field_id=field_id, value=default_value, reason="Personal data is held"))
+    return assumed_fields
+
+
+def preview_defaults(catalog: QuestionCatalog, answers: dict[str, Any]) -> list[AssumedField]:
+    """Every field that will be filled before the engine runs: personal-data controls, then tier defaults."""
+    assumed_fields = personal_data_defaults(answers)
+    filled = dict(answers)
+    for assumed in assumed_fields:
+        filled[assumed.field_id] = assumed.value
+    return assumed_fields + preview_tier_defaults(catalog, filled)
+
+
 def derive_fields(values: dict[str, Any], sizing: SizingConstants) -> None:
     """Add derived fields used by rules (documented at the top of rules.yaml)."""
     current_gb = values.get("vol.current_gb")
@@ -82,6 +115,7 @@ def derive_fields(values: dict[str, Any], sizing: SizingConstants) -> None:
         values["vol.projected_3y_gb"] = current_gb + growth_gb * sizing.projection_months
     values["ha.sla_percent"] = sla_percent(values.get("ha.sla"))
     values["mig.source_engine_family"] = source_engine_family(values)
+    values["app.vendor_certified_engine"] = vendor_certified_engine(values)
 
 
 def resolve_requirements(
@@ -89,7 +123,7 @@ def resolve_requirements(
 ) -> ResolvedRequirements:
     """Answers + defaults + derived fields. `requirements` must already be normalised."""
     values: dict[str, Any] = dict(requirements.answers)
-    assumed_fields = preview_tier_defaults(catalog, values)
+    assumed_fields = preview_defaults(catalog, values)
     for assumed in assumed_fields:
         values[assumed.field_id] = assumed.value
     type_defaults = app_type_defaults(sizing, values)

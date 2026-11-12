@@ -8,8 +8,8 @@ from app.models.knowledge import Condition, Effects, Rule, ServicePredicate
 
 
 @pytest.fixture(scope="module")
-def dynamodb():
-    return {service.id: service for service in get_services()}["aws.dynamodb"]
+def keyspaces():
+    return {service.id: service for service in get_services()}["aws.keyspaces"]
 
 
 @pytest.mark.parametrize(
@@ -42,7 +42,7 @@ def test_condition_on_missing_field_never_matches() -> None:
 
 def test_is_set_tests_presence() -> None:
     condition = Condition(field="pref.excluded", op="is_set")
-    assert condition_matches(condition, {"pref.excluded": ["aws.dynamodb"]})
+    assert condition_matches(condition, {"pref.excluded": ["aws.keyspaces"]})
     assert not condition_matches(condition, {"pref.excluded": []})
 
 
@@ -51,23 +51,23 @@ def test_empty_when_always_fires() -> None:
     assert rule_fires(rule, {})
 
 
-def test_predicate_value_from_reads_requirement(dynamodb) -> None:
+def test_predicate_value_from_reads_requirement(keyspaces) -> None:
     predicate = ServicePredicate(field="csp", op="ne", value_from="pref.csp")
-    assert predicate_matches(predicate, dynamodb, {"pref.csp": "azure"})
-    assert not predicate_matches(predicate, dynamodb, {"pref.csp": "aws"})
-    assert not predicate_matches(predicate, dynamodb, {})
+    assert predicate_matches(predicate, keyspaces, {"pref.csp": "azure"})
+    assert not predicate_matches(predicate, keyspaces, {"pref.csp": "aws"})
+    assert not predicate_matches(predicate, keyspaces, {})
 
 
-def test_null_service_value_never_matches(dynamodb) -> None:
+def test_null_service_value_never_matches(keyspaces) -> None:
     storage_too_small = ServicePredicate(field="max_storage_gb", op="lt", value=10)
-    assert not predicate_matches(storage_too_small, dynamodb, {})
-    assert predicate_matches(ServicePredicate(field="max_storage_gb", op="is_null"), dynamodb, {})
+    assert not predicate_matches(storage_too_small, keyspaces, {})
+    assert predicate_matches(ServicePredicate(field="max_storage_gb", op="is_null"), keyspaces, {})
 
 
-def test_derived_best_sla(dynamodb) -> None:
+def test_derived_best_sla(keyspaces) -> None:
     predicate = ServicePredicate(field="best_sla_percent", op="lt", value_from="ha.sla_percent")
-    assert not predicate_matches(predicate, dynamodb, {"ha.sla_percent": 99.99})
-    assert predicate_matches(predicate, dynamodb, {"ha.sla_percent": 99.9999})
+    assert not predicate_matches(predicate, keyspaces, {"ha.sla_percent": 99.99})
+    assert predicate_matches(predicate, keyspaces, {"ha.sla_percent": 99.9999})
 
 
 def test_excludes_is_true_for_empty_or_missing_value() -> None:

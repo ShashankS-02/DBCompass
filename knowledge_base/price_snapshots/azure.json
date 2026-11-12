@@ -1,6 +1,6 @@
 {
  "csp": "azure",
- "fetched_at": "2026-11-08T09:07:18Z",
+ "fetched_at": "2026-11-12T00:24:18Z",
  "prices": [
   {
    "basis": "gb_month",
@@ -113,110 +113,6 @@
    "dims": {},
    "kind": "storage",
    "region": "centralindia",
-   "service_id": "azure.cosmos_db_gremlin",
-   "sku": "DZH318Z0BPJH/003J",
-   "term": "on_demand",
-   "unit": "1 GB/Month",
-   "usd": 0.285
-  },
-  {
-   "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
-   "dims": {},
-   "kind": "storage",
-   "region": "eastus",
-   "service_id": "azure.cosmos_db_gremlin",
-   "sku": "DZH318Z0BPJH/0072",
-   "term": "on_demand",
-   "unit": "1 GB/Month",
-   "usd": 0.25
-  },
-  {
-   "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
-   "dims": {},
-   "kind": "storage",
-   "region": "southeastasia",
-   "service_id": "azure.cosmos_db_gremlin",
-   "sku": "DZH318Z0BPJH/0044",
-   "term": "on_demand",
-   "unit": "1 GB/Month",
-   "usd": 0.25
-  },
-  {
-   "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
-   "dims": {},
-   "kind": "storage",
-   "region": "westeurope",
-   "service_id": "azure.cosmos_db_gremlin",
-   "sku": "DZH318Z0BPJH/0028",
-   "term": "on_demand",
-   "unit": "1 GB/Month",
-   "usd": 0.25
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "centralindia",
-   "service_id": "azure.cosmos_db_gremlin",
-   "sku": "DZH318Z0BPJH/003J",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.0091
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "eastus",
-   "service_id": "azure.cosmos_db_gremlin",
-   "sku": "DZH318Z0BPJH/0072",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "southeastasia",
-   "service_id": "azure.cosmos_db_gremlin",
-   "sku": "DZH318Z0BPJH/0044",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "westeurope",
-   "service_id": "azure.cosmos_db_gremlin",
-   "sku": "DZH318Z0BPJH/0028",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
-  },
-  {
-   "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
-   "dims": {},
-   "kind": "storage",
-   "region": "centralindia",
    "service_id": "azure.cosmos_db_mongodb_ru",
    "sku": "DZH318Z0BPJH/003J",
    "term": "on_demand",
@@ -316,211 +212,55 @@
   },
   {
    "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
+   "component_id": "backup.4",
+   "description": "Azure Database for MySQL Flexible Server Backup Storage / Backup Storage LRS / Backup Storage LRS Data Stored",
    "dims": {},
-   "kind": "storage",
+   "kind": "backup",
    "region": "centralindia",
-   "service_id": "azure.cosmos_db_nosql",
-   "sku": "DZH318Z0BPJH/003J",
+   "service_id": "azure.mysql_flexible",
+   "sku": "DZH318Z0DCQ5/000J",
    "term": "on_demand",
    "unit": "1 GB/Month",
-   "usd": 0.285
+   "usd": 0.095
   },
   {
    "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
+   "component_id": "backup.4",
+   "description": "Azure Database for MySQL Flexible Server Backup Storage / Backup Storage LRS / Backup Storage LRS Data Stored",
    "dims": {},
-   "kind": "storage",
+   "kind": "backup",
    "region": "eastus",
-   "service_id": "azure.cosmos_db_nosql",
-   "sku": "DZH318Z0BPJH/0072",
+   "service_id": "azure.mysql_flexible",
+   "sku": "DZH318Z0DCQ5/0011",
    "term": "on_demand",
    "unit": "1 GB/Month",
-   "usd": 0.25
+   "usd": 0.095
   },
   {
    "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
+   "component_id": "backup.4",
+   "description": "Azure Database for MySQL Flexible Server Backup Storage / Backup Storage LRS / Backup Storage LRS Data Stored",
    "dims": {},
-   "kind": "storage",
+   "kind": "backup",
    "region": "southeastasia",
-   "service_id": "azure.cosmos_db_nosql",
-   "sku": "DZH318Z0BPJH/0044",
+   "service_id": "azure.mysql_flexible",
+   "sku": "DZH318Z0DCQ5/0005",
    "term": "on_demand",
    "unit": "1 GB/Month",
-   "usd": 0.25
+   "usd": 0.095
   },
   {
    "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
+   "component_id": "backup.4",
+   "description": "Azure Database for MySQL Flexible Server Backup Storage / Backup Storage LRS / Backup Storage LRS Data Stored",
    "dims": {},
-   "kind": "storage",
+   "kind": "backup",
    "region": "westeurope",
-   "service_id": "azure.cosmos_db_nosql",
-   "sku": "DZH318Z0BPJH/0028",
+   "service_id": "azure.mysql_flexible",
+   "sku": "DZH318Z0DCQ5/000L",
    "term": "on_demand",
    "unit": "1 GB/Month",
-   "usd": 0.25
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "centralindia",
-   "service_id": "azure.cosmos_db_nosql",
-   "sku": "DZH318Z0BPJH/003J",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.0091
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "eastus",
-   "service_id": "azure.cosmos_db_nosql",
-   "sku": "DZH318Z0BPJH/0072",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "southeastasia",
-   "service_id": "azure.cosmos_db_nosql",
-   "sku": "DZH318Z0BPJH/0044",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "westeurope",
-   "service_id": "azure.cosmos_db_nosql",
-   "sku": "DZH318Z0BPJH/0028",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
-  },
-  {
-   "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
-   "dims": {},
-   "kind": "storage",
-   "region": "centralindia",
-   "service_id": "azure.cosmos_db_table",
-   "sku": "DZH318Z0BPJH/003J",
-   "term": "on_demand",
-   "unit": "1 GB/Month",
-   "usd": 0.285
-  },
-  {
-   "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
-   "dims": {},
-   "kind": "storage",
-   "region": "eastus",
-   "service_id": "azure.cosmos_db_table",
-   "sku": "DZH318Z0BPJH/0072",
-   "term": "on_demand",
-   "unit": "1 GB/Month",
-   "usd": 0.25
-  },
-  {
-   "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
-   "dims": {},
-   "kind": "storage",
-   "region": "southeastasia",
-   "service_id": "azure.cosmos_db_table",
-   "sku": "DZH318Z0BPJH/0044",
-   "term": "on_demand",
-   "unit": "1 GB/Month",
-   "usd": 0.25
-  },
-  {
-   "basis": "gb_month",
-   "component_id": "storage.1",
-   "description": "Azure Cosmos DB / RUs / Data Stored",
-   "dims": {},
-   "kind": "storage",
-   "region": "westeurope",
-   "service_id": "azure.cosmos_db_table",
-   "sku": "DZH318Z0BPJH/0028",
-   "term": "on_demand",
-   "unit": "1 GB/Month",
-   "usd": 0.25
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "centralindia",
-   "service_id": "azure.cosmos_db_table",
-   "sku": "DZH318Z0BPJH/003J",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.0091
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "eastus",
-   "service_id": "azure.cosmos_db_table",
-   "sku": "DZH318Z0BPJH/0072",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "southeastasia",
-   "service_id": "azure.cosmos_db_table",
-   "sku": "DZH318Z0BPJH/0044",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
-  },
-  {
-   "basis": "ru100_hour",
-   "component_id": "throughput.0",
-   "description": "Azure Cosmos DB / RUs / 100 RU/s",
-   "dims": {},
-   "kind": "throughput",
-   "region": "westeurope",
-   "service_id": "azure.cosmos_db_table",
-   "sku": "DZH318Z0BPJH/0028",
-   "term": "on_demand",
-   "unit": "1/Hour",
-   "usd": 0.008
+   "usd": 0.103
   },
   {
    "basis": "vcpu_hour",
@@ -1407,6 +1147,58 @@
    "usd": 0.1369
   },
   {
+   "basis": "gb_month",
+   "component_id": "backup.5",
+   "description": "Azure Database for PostgreSQL Flexible Server Backup Storage / Backup Storage LRS / Backup Storage LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "centralindia",
+   "service_id": "azure.postgresql_flexible",
+   "sku": "DZH318Z0DCRW/001B",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.095
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.5",
+   "description": "Azure Database for PostgreSQL Flexible Server Backup Storage / Backup Storage LRS / Backup Storage LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "eastus",
+   "service_id": "azure.postgresql_flexible",
+   "sku": "DZH318Z0DCRW/000Q",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.095
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.5",
+   "description": "Azure Database for PostgreSQL Flexible Server Backup Storage / Backup Storage LRS / Backup Storage LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "southeastasia",
+   "service_id": "azure.postgresql_flexible",
+   "sku": "DZH318Z0DCRW/0009",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.095
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.5",
+   "description": "Azure Database for PostgreSQL Flexible Server Backup Storage / Backup Storage LRS / Backup Storage LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "westeurope",
+   "service_id": "azure.postgresql_flexible",
+   "sku": "DZH318Z0DCRW/001F",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.103
+  },
+  {
    "basis": "vcpu_hour",
    "component_id": "compute.0",
    "description": "Azure Database for PostgreSQL Flexible Server General Purpose Ddsv5 Series Compute / vCore / vCore",
@@ -1417,7 +1209,7 @@
    "sku": "DZH318Z0KDZJ/00SH",
    "term": "1yr",
    "unit": "1 Hour",
-   "usd": 0.075342
+   "usd": 0.075342465753
   },
   {
    "basis": "vcpu_hour",
@@ -1430,7 +1222,7 @@
    "sku": "DZH318Z0KDZJ/00SJ",
    "term": "3yr",
    "unit": "1 Hour",
-   "usd": 0.05019
+   "usd": 0.050190258752
   },
   {
    "basis": "vcpu_hour",
@@ -1456,7 +1248,7 @@
    "sku": "DZH318Z0KDZJ/00RJ",
    "term": "1yr",
    "unit": "1 Hour",
-   "usd": 0.053425
+   "usd": 0.053424657534
   },
   {
    "basis": "vcpu_hour",
@@ -1469,7 +1261,7 @@
    "sku": "DZH318Z0KDZJ/00RH",
    "term": "3yr",
    "unit": "1 Hour",
-   "usd": 0.035616
+   "usd": 0.035616438356
   },
   {
    "basis": "vcpu_hour",
@@ -1495,7 +1287,7 @@
    "sku": "DZH318Z0KDZJ/00W0",
    "term": "1yr",
    "unit": "1 Hour",
-   "usd": 0.073174
+   "usd": 0.073173515982
   },
   {
    "basis": "vcpu_hour",
@@ -1508,7 +1300,7 @@
    "sku": "DZH318Z0KDZJ/00W1",
    "term": "3yr",
    "unit": "1 Hour",
-   "usd": 0.048782
+   "usd": 0.048782343988
   },
   {
    "basis": "vcpu_hour",
@@ -1534,7 +1326,7 @@
    "sku": "DZH318Z0KDZJ/00TD",
    "term": "1yr",
    "unit": "1 Hour",
-   "usd": 0.063584
+   "usd": 0.063584474886
   },
   {
    "basis": "vcpu_hour",
@@ -1547,7 +1339,7 @@
    "sku": "DZH318Z0KDZJ/00TB",
    "term": "3yr",
    "unit": "1 Hour",
-   "usd": 0.042352
+   "usd": 0.042351598174
   },
   {
    "basis": "vcpu_hour",
@@ -1573,7 +1365,7 @@
    "sku": "DZH318Z0KDX1/010K",
    "term": "1yr",
    "unit": "1 Hour",
-   "usd": 0.085502
+   "usd": 0.085502283105
   },
   {
    "basis": "vcpu_hour",
@@ -1586,7 +1378,7 @@
    "sku": "DZH318Z0KDX1/010J",
    "term": "3yr",
    "unit": "1 Hour",
-   "usd": 0.057002
+   "usd": 0.05700152207
   },
   {
    "basis": "vcpu_hour",
@@ -1651,7 +1443,7 @@
    "sku": "DZH318Z0KDX1/0129",
    "term": "1yr",
    "unit": "1 Hour",
-   "usd": 0.089954
+   "usd": 0.0899543379
   },
   {
    "basis": "vcpu_hour",
@@ -1664,7 +1456,7 @@
    "sku": "DZH318Z0KDX1/0128",
    "term": "3yr",
    "unit": "1 Hour",
-   "usd": 0.060008
+   "usd": 0.06000761035
   },
   {
    "basis": "vcpu_hour",
@@ -1690,7 +1482,7 @@
    "sku": "DZH318Z0KDX1/010N",
    "term": "1yr",
    "unit": "1 Hour",
-   "usd": 0.090753
+   "usd": 0.090753424658
   },
   {
    "basis": "vcpu_hour",
@@ -1703,7 +1495,7 @@
    "sku": "DZH318Z0KDX1/010P",
    "term": "3yr",
    "unit": "1 Hour",
-   "usd": 0.060502
+   "usd": 0.060502283105
   },
   {
    "basis": "vcpu_hour",
@@ -2121,6 +1913,266 @@
    "term": "on_demand",
    "unit": "1 GiB/Month",
    "usd": 0.1369
+  },
+  {
+   "basis": "gb_ingested",
+   "component_id": "audit_logs.audit_logs",
+   "description": "Log Analytics / Analytics Logs / Analytics Logs Data Ingestion",
+   "dims": {},
+   "kind": "audit_logs",
+   "region": "centralindia",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0BQD2/0035",
+   "term": "on_demand",
+   "unit": "1 GB",
+   "usd": 3.22
+  },
+  {
+   "basis": "gb_ingested",
+   "component_id": "audit_logs.audit_logs",
+   "description": "Log Analytics / Analytics Logs / Analytics Logs Data Ingestion",
+   "dims": {},
+   "kind": "audit_logs",
+   "region": "eastus",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0BQD2/000W",
+   "term": "on_demand",
+   "unit": "1 GB",
+   "usd": 2.3
+  },
+  {
+   "basis": "gb_ingested",
+   "component_id": "audit_logs.audit_logs",
+   "description": "Log Analytics / Analytics Logs / Analytics Logs Data Ingestion",
+   "dims": {},
+   "kind": "audit_logs",
+   "region": "southeastasia",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0BQD2/002P",
+   "term": "on_demand",
+   "unit": "1 GB",
+   "usd": 2.99
+  },
+  {
+   "basis": "gb_ingested",
+   "component_id": "audit_logs.audit_logs",
+   "description": "Log Analytics / Analytics Logs / Analytics Logs Data Ingestion",
+   "dims": {},
+   "kind": "audit_logs",
+   "region": "westeurope",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0BQD2/003J",
+   "term": "on_demand",
+   "unit": "1 GB",
+   "usd": 2.99
+  },
+  {
+   "basis": "gb_transfer",
+   "component_id": "egress.egress",
+   "description": "Bandwidth - Routing Preference: Internet / Standard / Standard Data Transfer Out",
+   "dims": {},
+   "kind": "egress",
+   "region": "centralindia",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0C8ZQ/000W",
+   "term": "on_demand",
+   "unit": "1 GB",
+   "usd": 0.11
+  },
+  {
+   "basis": "gb_transfer",
+   "component_id": "egress.egress",
+   "description": "Bandwidth - Routing Preference: Internet / Standard / Standard Data Transfer Out",
+   "dims": {},
+   "kind": "egress",
+   "region": "eastus",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0C8ZQ/000K",
+   "term": "on_demand",
+   "unit": "1 GB",
+   "usd": 0.08
+  },
+  {
+   "basis": "gb_transfer",
+   "component_id": "egress.egress",
+   "description": "Bandwidth - Routing Preference: Internet / Standard / Standard Data Transfer Out",
+   "dims": {},
+   "kind": "egress",
+   "region": "southeastasia",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0C8ZQ/0002",
+   "term": "on_demand",
+   "unit": "1 GB",
+   "usd": 0.11
+  },
+  {
+   "basis": "gb_transfer",
+   "component_id": "egress.egress",
+   "description": "Bandwidth - Routing Preference: Internet / Standard / Standard Data Transfer Out",
+   "dims": {},
+   "kind": "egress",
+   "region": "westeurope",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0C8ZQ/0012",
+   "term": "on_demand",
+   "unit": "1 GB",
+   "usd": 0.08
+  },
+  {
+   "basis": "key_month",
+   "component_id": "kms_key.kms_key",
+   "description": "Key Vault / Premium / Premium HSM-protected RSA 2048-bit key",
+   "dims": {},
+   "kind": "kms_key",
+   "region": "centralindia",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0BQG0/0007",
+   "term": "on_demand",
+   "unit": "1",
+   "usd": 1.0
+  },
+  {
+   "basis": "key_month",
+   "component_id": "kms_key.kms_key",
+   "description": "Key Vault / Premium / Premium HSM-protected RSA 2048-bit key",
+   "dims": {},
+   "kind": "kms_key",
+   "region": "eastus",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0BQG0/001M",
+   "term": "on_demand",
+   "unit": "1",
+   "usd": 1.0
+  },
+  {
+   "basis": "key_month",
+   "component_id": "kms_key.kms_key",
+   "description": "Key Vault / Premium / Premium HSM-protected RSA 2048-bit key",
+   "dims": {},
+   "kind": "kms_key",
+   "region": "southeastasia",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0BQG0/001G",
+   "term": "on_demand",
+   "unit": "1",
+   "usd": 1.0
+  },
+  {
+   "basis": "key_month",
+   "component_id": "kms_key.kms_key",
+   "description": "Key Vault / Premium / Premium HSM-protected RSA 2048-bit key",
+   "dims": {},
+   "kind": "kms_key",
+   "region": "westeurope",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0BQG0/001Z",
+   "term": "on_demand",
+   "unit": "1",
+   "usd": 1.0
+  },
+  {
+   "basis": "endpoint_hour",
+   "component_id": "private_endpoint.private_endpoint",
+   "description": "Virtual Network Private Link / Standard / Standard Private Endpoint",
+   "dims": {},
+   "kind": "private_endpoint",
+   "region": "centralindia",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0C0XP/0001",
+   "term": "on_demand",
+   "unit": "1 Hour",
+   "usd": 0.01
+  },
+  {
+   "basis": "endpoint_hour",
+   "component_id": "private_endpoint.private_endpoint",
+   "description": "Virtual Network Private Link / Standard / Standard Private Endpoint",
+   "dims": {},
+   "kind": "private_endpoint",
+   "region": "eastus",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0C0XP/0001",
+   "term": "on_demand",
+   "unit": "1 Hour",
+   "usd": 0.01
+  },
+  {
+   "basis": "endpoint_hour",
+   "component_id": "private_endpoint.private_endpoint",
+   "description": "Virtual Network Private Link / Standard / Standard Private Endpoint",
+   "dims": {},
+   "kind": "private_endpoint",
+   "region": "southeastasia",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0C0XP/0001",
+   "term": "on_demand",
+   "unit": "1 Hour",
+   "usd": 0.01
+  },
+  {
+   "basis": "endpoint_hour",
+   "component_id": "private_endpoint.private_endpoint",
+   "description": "Virtual Network Private Link / Standard / Standard Private Endpoint",
+   "dims": {},
+   "kind": "private_endpoint",
+   "region": "westeurope",
+   "service_id": "azure.shared",
+   "sku": "DZH318Z0C0XP/0001",
+   "term": "on_demand",
+   "unit": "1 Hour",
+   "usd": 0.01
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.4",
+   "description": "SQL Database Single/Elastic Pool PITR Backup Storage / Backup LRS / LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "centralindia",
+   "service_id": "azure.sql_database",
+   "sku": "DZH318Z0BXWX/001M",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.114
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.4",
+   "description": "SQL Database Single/Elastic Pool PITR Backup Storage / Backup LRS / LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "eastus",
+   "service_id": "azure.sql_database",
+   "sku": "DZH318Z0BXWX/000N",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.1
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.4",
+   "description": "SQL Database Single/Elastic Pool PITR Backup Storage / Backup LRS / LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "southeastasia",
+   "service_id": "azure.sql_database",
+   "sku": "DZH318Z0BXWX/002M",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.12
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.4",
+   "description": "SQL Database Single/Elastic Pool PITR Backup Storage / Backup LRS / LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "westeurope",
+   "service_id": "azure.sql_database",
+   "sku": "DZH318Z0BXWX/0021",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.119
   },
   {
    "basis": "instance_hour",
@@ -4873,6 +4925,58 @@
    "term": "on_demand",
    "unit": "1 Hour",
    "usd": 8.03704
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.4",
+   "description": "SQL Managed Instance PITR Backup Storage / Backup LRS / LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "centralindia",
+   "service_id": "azure.sql_managed_instance",
+   "sku": "DZH318Z0BXWR/000M",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.114
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.4",
+   "description": "SQL Managed Instance PITR Backup Storage / Backup LRS / LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "eastus",
+   "service_id": "azure.sql_managed_instance",
+   "sku": "DZH318Z0BXWR/0006",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.1
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.4",
+   "description": "SQL Managed Instance PITR Backup Storage / Backup LRS / LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "southeastasia",
+   "service_id": "azure.sql_managed_instance",
+   "sku": "DZH318Z0BXWR/000W",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.12
+  },
+  {
+   "basis": "gb_month",
+   "component_id": "backup.4",
+   "description": "SQL Managed Instance PITR Backup Storage / Backup LRS / LRS Data Stored",
+   "dims": {},
+   "kind": "backup",
+   "region": "westeurope",
+   "service_id": "azure.sql_managed_instance",
+   "sku": "DZH318Z0BXWR/000R",
+   "term": "on_demand",
+   "unit": "1 GB/Month",
+   "usd": 0.119
   },
   {
    "basis": "instance_hour",

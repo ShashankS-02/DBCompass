@@ -26,10 +26,9 @@ Login (Entra ID) → New Assessment → choose Quick or Expert mode → answer q
 (with tooltips explaining why each matters) → set priority sliders (Performance / Cost /
 Reliability / Simplicity / Portability) → Results page.
 
-### Flow B — Repo based assessment
-Login → New Assessment → paste GitHub URL (+ optional token for private repos) →
-analyzer runs → pre-filled form with each inferred field showing evidence (file:line) and
-confidence → user confirms or edits → Results page.
+### Flow B — Repo based assessment (removed in M9)
+Removed: sending internal application code to an AI is a security violation. The guided intake
+(docs/09) and its metadata-only feature checklists replace it.
 
 ### Flow C — Migration planning
 From any assessment, or standalone: describe source (on-prem / CSP, engine, version, size,
@@ -52,7 +51,6 @@ Migration Plan page.
 - Knowledge base covering the main managed DB services on AWS, GCP, Azure (see doc 04)
 - Deterministic engine: filter → score → combine → size → price
 - Live pricing from Azure Retail Prices API; cached price snapshots for AWS and GCP
-- Repo analyzer for Python, Java, Node (dependencies, ORM models, SQL/migration files, docker-compose, Terraform)
 - Migration planner with strategy selection, tool matrix, phase runbook, transfer time estimate
 - LLM explanations grounded in trace
 - Export to Markdown/PDF
@@ -73,5 +71,4 @@ Migration Plan page.
 
 ## Success metrics
 - Assessment completed in under 5 minutes (Quick mode)
-- Repo analyzer pre-fills at least 60% of Quick mode fields on the demo repos
 - DBA team agrees with top recommendation on at least 8 of 10 historical test cases

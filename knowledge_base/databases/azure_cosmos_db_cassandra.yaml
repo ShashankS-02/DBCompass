@@ -39,6 +39,7 @@ supports:
   audit: true
   masking_rls: false
 compliance:
+- iso_27001
 - sox
 - pci_dss
 - hipaa

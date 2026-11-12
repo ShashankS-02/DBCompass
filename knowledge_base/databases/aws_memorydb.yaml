@@ -11,6 +11,7 @@ engines:
 - valkey
 - redis
 deployment: managed
+special_case: caching
 lifecycle: active
 status_note: null
 consistency:
@@ -40,6 +41,7 @@ supports:
   audit: true
   masking_rls: false
 compliance:
+- iso_27001
 - sox
 - pci_dss
 - hipaa

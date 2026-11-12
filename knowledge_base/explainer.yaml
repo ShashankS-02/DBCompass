@@ -1,0 +1,50 @@
+# Explainer and "ask about this result" (M7, docs/05 section 6).
+#
+# The LLM never decides anything: it only rewrites the engine's result as prose. It sees a fact
+# sheet built from the stored result (priorities, top options, rules fired, filtered-out services,
+# assumptions) and nothing else. Its answer is checked before it is shown: every number must
+# appear in the fact sheet and every database service or engine it names must be one the fact
+# sheet names. A draft that fails is retried once, then replaced by the rule-based text.
+version: 1
+
+# Change this whenever a prompt or the fact sheet format changes; saved explanations made with an
+# older version are regenerated on the next request.
+prompt_version: "2026-11-11.1"
+
+retries_after_failed_check: 1
+
+limits:
+  top_options: 3              # options described in the fact sheet
+  filtered_services: 60       # filtered-out services listed (one line each; the catalog has 54)
+  other_candidates: 15        # services that passed the filters but ranked below the top options
+  assumed_fields: 12
+  max_paragraphs: 5
+  max_question_chars: 500
+  max_answer_chars: 1500
+
+grounding:
+  # A number in the text matches a fact when it is within this fraction of it, or within
+  # `absolute_tolerance` (so "$18.4k" matches 18,412 and "about 86" matches 86.2).
+  relative_tolerance: 0.02
+  absolute_tolerance: 0.6
+  # Numbers the prose may use without a matching fact: ranks ("top 3", "#2") and the score scale.
+  always_allowed_numbers: [1, 2, 3, 100]
+
+explain_system_prompt: |
+  You explain a database recommendation to an application team.
+  Use ONLY the facts provided. Do not add services, engines, prices, limits, SLAs or numbers that are
+  not in the facts. Do not recommend anything the facts do not recommend.
+  Write 3 to 5 short paragraphs of plain English for engineers and managers:
+  1. what ranks first and on which cloud, and why, in terms of the user's priorities;
+  2. how the next options compare (score and Balanced monthly cost);
+  3. what was ruled out and the main reasons;
+  4. which answers were assumed and why that matters.
+  Copy numbers exactly as they appear in the facts (you may round to fewer digits).
+  Answer with JSON: {"paragraphs": ["...", "..."]}
+
+qa_system_prompt: |
+  You answer questions about one database recommendation result.
+  Use ONLY the facts provided. If the facts do not contain the answer, set "answerable" to false and
+  say briefly what the result does not cover. Never add services, engines, prices, limits, SLAs or
+  numbers that are not in the facts. Keep the answer under 150 words.
+  Answer with JSON: {"answerable": true or false, "answer": "..."}

@@ -10,6 +10,7 @@ from typing import Any
 
 from app.engine.assess import RequirementsInvalid, run_assessment
 from app.engine.defaults import resolve_requirements
+from app.engine.readiness import verdict_for
 from app.engine.sizer import chosen_engine
 from app.engine.validation import build_validation_report
 from app.knowledge.loader import KnowledgeBundle
@@ -120,7 +121,7 @@ def plan_context(request: MigrationPlanRequest, base_answers: dict[str, Any], kn
     values, assumed = resolve_values(answers, knowledge)
     source_engine = values.get("mig.source_engine_family")
     if not source_engine:
-        raise PlanInputError("The source engine (mig.source_engine or app.existing_db) is required to plan a migration.")
+        raise PlanInputError("Choose the source database engine (the one you are migrating from) to plan a migration.")
     team_size = request.team_size or migration.settings.default_team_size
     return PlanContext(values, assumed, knowledge, migration, team_size, source_engine)
 
@@ -132,7 +133,7 @@ def plan_assumptions(context: PlanContext, request: MigrationPlanRequest) -> lis
     notes.append(f"Day rate ${settings.day_rate_usd:,.0f} per person-day (migration_tools.yaml; replace with the org's rate).")
     notes.append(f"Team of {context.team_size} working {settings.working_days_per_week} days a week.")
     if request.refactor_person_days is None:
-        notes.append("Code refactor effort is a heuristic from stored-procedure use; run the repo analyzer for a sharper estimate.")
+        notes.append("Code refactor effort is a heuristic from stored-procedure use; give a reviewed estimate for a sharper plan.")
     return notes
 
 
@@ -157,6 +158,17 @@ def priced_options(request: MigrationPlanRequest, base_answers: dict[str, Any], 
     return options
 
 
+def intake_facts(context: PlanContext, chosen: StrategyOption) -> dict[str, Any]:
+    """plan.* facts from the guided intake: readiness, vendor certification and the org's sunset list."""
+    certified = context.values.get("app.vendor_certified_engine")
+    org_support = context.knowledge.org_support
+    return {
+        "plan.readiness": verdict_for(context.values),
+        "plan.vendor_certified_mismatch": bool(certified) and certified != chosen.engine,
+        "plan.source_sunset": org_support is not None and org_support.status_of(context.source_engine) == "sunset",
+    }
+
+
 def plan_migration(
     request: MigrationPlanRequest, base_answers: dict[str, Any], knowledge: KnowledgeBundle, migration: MigrationKnowledge, today: date
 ) -> MigrationPlanOutcome:
@@ -169,6 +181,7 @@ def plan_migration(
     effort, _ = strategy_effort(chosen.strategy, inputs)
     phases, method = phases_for(chosen.strategy, chosen.engine, effort, context)
     facts = plan_facts(context.values, chosen.strategy, method, chosen.fits_deadline)
+    facts.update(intake_facts(context, chosen))
     return MigrationPlanOutcome(
         source=source_summary(context), target_service_id=chosen.target_service_id, target_name=chosen.target_name,
         strategy=chosen.strategy, strategies=options, considered=considered_strategies(context.values, migration),

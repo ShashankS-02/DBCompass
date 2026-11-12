@@ -21,5 +21,5 @@ expect:
     family_in: [relational]
     engine_in: [oracle]
   excluded:
-    aws.dynamodb: SHAPE-FILTER
-    aws.timestream_liveanalytics: R-LIFE-001
+    aws.documentdb: SHAPE-FILTER
+    azure.cosmos_db_postgresql: R-LIFE-001

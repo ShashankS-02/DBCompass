@@ -12,11 +12,14 @@ from app.db.assessments import list_assessments, load_assessment, save_assessmen
 from app.db.session import get_db_session
 from app.engine.assess import RequirementsInvalid, run_assessment
 from app.engine.validation import build_validation_report
+from app.engine.whatif import run_whatif
+from app.explain.facts import vocabulary_from
 from app.knowledge.loader import KnowledgeBundle, get_knowledge, get_question_catalog
 from app.models.common import CurrentUser
 from app.models.questions import QuestionCatalog
 from app.models.requirements import RequirementsInput, ValidationReport
 from app.models.results import AssessmentResult, AssessmentSummary
+from app.models.whatif import WhatIfRequest, WhatIfResult
 
 logger = logging.getLogger(__name__)
 
@@ -83,3 +86,23 @@ def get_assessment(
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
     return result
+
+
+@router.post("/assessments/{assessment_id}/whatif", response_model=WhatIfResult)
+def what_if(
+    assessment_id: str,
+    request: WhatIfRequest,
+    knowledge: KnowledgeBundle = Depends(get_knowledge),
+    session: Session = Depends(get_db_session),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> WhatIfResult:
+    """Re-run a stored assessment with changed answers / priorities and report what changed. Not stored."""
+    base = load_assessment(session, assessment_id, current_user)
+    if base is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    try:
+        return run_whatif(base, request, knowledge, vocabulary_from(knowledge))
+    except RequirementsInvalid as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error.report.model_dump(mode="json")
+        ) from error

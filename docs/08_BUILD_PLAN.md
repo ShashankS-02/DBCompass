@@ -4,7 +4,7 @@
 | Person | Area | Claude Code? |
 |---|---|---|
 | P1 | Backend core: models, engine (filters, scorer, combiner, sizer) | Yes |
-| P2 | Repo analyzer + LLM integration + explainer | Yes |
+| P2 | LLM integration + explainer (repo analyzer removed in M9) | Yes |
 | P3 | Frontend: form renderer, results, migration page | Yes |
 | P4 | Knowledge base YAML + rules + golden test cases (DBA expertise) | No |
 | P5 | Pricing snapshots, migration tool matrix, demo data, pitch deck | No |
@@ -17,7 +17,7 @@
 | 2–4 | M2 Knowledge base | 25+ service YAML entries across the 3 CSPs, rules.yaml with 20+ rules |
 | 4–6 | M3 Engine | Filter → score → combine → size works on golden cases; trace returned |
 | 5–7 | M4 Pricing | Azure live, AWS + GCP snapshots, 3 cost tiers on results |
-| 5–9 | M5 Repo analyzer | 3 sample repos produce pre-filled forms with evidence |
+| 5–9 | M5 Repo analyzer (removed in M9) | Replaced by the guided intake |
 | 7–10 | M6 Migration planner | Strategy, method, tools, transfer time, runbook, risks |
 | 9–11 | M7 Explainer + what-if + export | LLM explanation grounded in trace; sliders re-rank; MD/PDF export |
 | 11–12 | M8 Stretch pick ONE | AWR upload sizing OR DB link wave planner |
@@ -33,7 +33,7 @@ Do not write code until I approve the plan.
 
 ## Demo script (7 minutes)
 1. Problem in one slide: cost of wrong DB choices and manual migration planning (use real anonymised numbers from the DBA team).
-2. Paste the Spring Boot + Oracle sample repo URL → analyzer finds Oracle 19c, heavy PL/SQL, DB links.
+2. Start the guided intake for an existing Oracle 19c application: tick heavy PL/SQL and DB links in the feature checklist.
 3. Confirm form, set priorities (cost high) → top 3 results with radar charts and cost tiers.
 4. Click "Why not Aurora PostgreSQL?" → trace shows refactor effort penalty and person-day estimate.
 5. Drag what-if slider: 10× traffic → ranking shifts; explain why.

@@ -67,6 +67,8 @@ def test_golden_case(case_file: Path) -> None:
     outcome = run_case(case)
     expected = case["expect"]
 
+    if expected.get("no_recommendations"):
+        assert outcome.recommendations == [], describe_top(outcome)
     if "top1" in expected:
         check_top1(outcome, expected["top1"])
     if "excluded" in expected:
@@ -80,7 +82,10 @@ def test_there_are_ten_golden_cases() -> None:
 @pytest.mark.parametrize("case_file", CASE_FILES, ids=[path.stem for path in CASE_FILES])
 def test_golden_top_pick_is_priced_when_its_services_are(case_file: Path) -> None:
     knowledge = get_knowledge()
-    outcome = run_case(load_case(case_file))
+    case = load_case(case_file)
+    outcome = run_case(case)
+    if case["expect"].get("no_recommendations"):
+        pytest.skip("the case expects no recommendation")
     top = outcome.recommendations[0]
     all_priced = all(choice.service_id in knowledge.pricing.services for choice in top.components)
 

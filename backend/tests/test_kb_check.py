@@ -67,29 +67,29 @@ def test_bad_literal_in_service_predicate_is_reported(kb_copy: Path) -> None:
 
 
 def test_unknown_region_is_reported(kb_copy: Path) -> None:
-    edit_yaml(kb_copy / "databases" / "aws_dynamodb.yaml", lambda entry: entry["regions"].append("mars-north-1"))
+    edit_yaml(kb_copy / "databases" / "aws_rds_mysql.yaml", lambda entry: entry["regions"].append("mars-north-1"))
 
     assert problems_mentioning(kb_copy, "region 'mars-north-1' not in regions.yaml")
 
 
 def test_unofficial_source_is_reported(kb_copy: Path) -> None:
-    edit_yaml(kb_copy / "databases" / "aws_dynamodb.yaml", lambda entry: entry.update(source_url="https://someblog.example/dynamo"))
+    edit_yaml(kb_copy / "databases" / "aws_rds_mysql.yaml", lambda entry: entry.update(source_url="https://someblog.example/mysql"))
 
     assert problems_mentioning(kb_copy, "not an official CSP/Oracle documentation URL")
 
 
 def test_file_name_must_match_id(kb_copy: Path) -> None:
-    (kb_copy / "databases" / "aws_dynamodb.yaml").rename(kb_copy / "databases" / "aws_ddb.yaml")
+    (kb_copy / "databases" / "aws_rds_mysql.yaml").rename(kb_copy / "databases" / "aws_mysql.yaml")
 
-    assert problems_mentioning(kb_copy, "aws_ddb.yaml: file should be named aws_dynamodb.yaml")
+    assert problems_mentioning(kb_copy, "aws_mysql.yaml: file should be named aws_rds_mysql.yaml")
 
 
 def test_schema_error_names_the_file(kb_copy: Path) -> None:
-    edit_yaml(kb_copy / "databases" / "gcp_spanner.yaml", lambda entry: entry.update(family="spreadsheet"))
+    edit_yaml(kb_copy / "databases" / "gcp_alloydb.yaml", lambda entry: entry.update(family="spreadsheet"))
 
     problems = run_all_checks(kb_copy)
 
-    assert any(problem.startswith("gcp_spanner.yaml:") for problem in problems)
+    assert any(problem.startswith("gcp_alloydb.yaml:") for problem in problems)
 
 
 def test_sizing_must_cover_every_app_type(kb_copy: Path) -> None:

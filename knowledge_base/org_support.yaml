@@ -1,0 +1,51 @@
+# Engines the organisation's database team supports (M8, cut down in M9).
+#
+# The service catalog (knowledge_base/databases) only contains targets on these engines, plus a few
+# special-purpose services (`special_case` in the entry) that exist for one need: caching, vector /
+# full-text search, or analytics. The checker enforces both. Nothing here changes scores.
+#
+# status:
+#   strategic  - preferred target; the team invests in it
+#   supported  - fully supported, fine as a target
+#   sunset     - supported as a migration SOURCE only; not offered as a target and teams are asked to move off
+# The split below is DBCompass's proposal (docs/OPEN_QUESTIONS.md #55); the DBA team confirms it.
+version: 2
+last_verified: 2026-11-12
+
+statuses:
+  strategic: "Preferred target"
+  supported: "Supported target"
+  sunset: "Being retired: supported as a source, not as a target"
+
+engines:
+  oracle:     {status: strategic, label: Oracle}
+  postgresql: {status: strategic, label: PostgreSQL}
+  sql_server: {status: strategic, label: SQL Server}
+  mongodb:    {status: strategic, label: MongoDB}
+  mysql:      {status: supported, label: MySQL}
+  cassandra:  {status: supported, label: Cassandra}
+  couchbase:  {status: supported, label: Couchbase}
+  db2:        {status: supported, label: Db2}
+  sybase:     {status: sunset, label: Sybase ASE, note: "Move to SQL Server or PostgreSQL."}
+  informix:   {status: sunset, label: Informix, note: "Move to PostgreSQL or Db2."}
+  vertica:    {status: sunset, label: Vertica, note: "Move to a cloud warehouse (Redshift, BigQuery, Fabric)."}
+
+# Special-purpose services may be the PRIMARY store only when one of the `primary_when` conditions
+# holds (same condition syntax as rules.yaml). Otherwise they are only offered as an add-on component
+# of a combination (cache, search, vector or analytics role) or under "If you need..." on the result.
+special_cases:
+  caching:
+    label: Caching
+    description: "In-memory stores (Redis / Valkey / Memcached) for sub-millisecond reads and session state."
+    primary_when: []
+  vector_search:
+    label: Vector and full-text search
+    description: "Search services for AI similarity search and full-text search next to the system of record."
+    primary_when:
+      - {field: data.shape, op: contains_any, value: [vector, full_text]}
+  analytics:
+    label: Analytics
+    description: "Cloud warehouses for BI, batch reporting and large scans; usually fed from the primary database."
+    primary_when:
+      - {field: app.type, op: eq, value: analytics_bi}
+      - {field: wl.pattern, op: eq, value: olap}

@@ -75,21 +75,8 @@ def test_extra_node_billing_and_vcpu_hours(knowledge, services) -> None:
     assert compute.quantity == 730 * sizing.instance_vcpu * sizing.node_count
 
 
-def test_request_priced_service(knowledge, services) -> None:
-    service = services["aws.dynamodb"]
-    values = {"wl.peak_tps": 1000, "wl.read_write_ratio": "70_30", "vol.current_gb": 50}
-    context = context_with(knowledge, [point(service.id, "reads.0", 1e-7), point(service.id, "writes.1", 1e-6), point(service.id, "storage.2", 0.25)])
-
-    result = estimate(service, sizing_for(knowledge, service, values), values, "balanced", context)
-    quantities = {line.component: line.quantity for line in result.lines}
-
-    average_tps = 1000 * knowledge.pricing.average_to_peak_tps
-    assert quantities["reads"] == pytest.approx(average_tps * 0.7 * knowledge.pricing.seconds_per_month)
-    assert quantities["writes"] == pytest.approx(average_tps * 0.3 * knowledge.pricing.seconds_per_month)
-
-
 def test_cosmos_minimum_throughput_and_regions(knowledge, services) -> None:
-    service = services["azure.cosmos_db_nosql"]
+    service = services["azure.cosmos_db_mongodb_ru"]
     values = {"wl.peak_tps": 10, "ha.multi_region": "active_active", "geo.user_regions": ["india"]}
     context = context_with(knowledge, [point(service.id, "throughput.0", 0.01, region="centralindia"), point(service.id, "storage.1", 0.25, region="centralindia")], csp="azure")
 
@@ -107,10 +94,10 @@ def test_missing_price_marks_estimate_incomplete(knowledge, services) -> None:
 
 
 def test_unpriced_service_reports_reason(knowledge, services) -> None:
-    service = services["gcp.spanner"]
+    service = services["gcp.oracle_database_at_google_cloud"]
     result = estimate(service, sizing_for(knowledge, service, {}), {}, "balanced", context_with(knowledge, []))
     assert not result.complete
-    assert "Multi-region" in result.missing[0]
+    assert "Oracle-quoted" in result.missing[0]
 
 
 def gcp_point(service_id: str, component_id: str, usd: float, **dims: str) -> PricePoint:
@@ -136,19 +123,6 @@ def test_gcp_vcpu_and_ram_lines_use_regional_rate_for_ha(knowledge, services) ->
     assert by_component[("compute", 0.1)].quantity == 730 * sizing.instance_vcpu
     assert by_component[("memory", 0.016)].quantity == 730 * sizing.instance_memory_gb
     assert result.complete
-
-
-def test_node_priced_service_counts_nodes_from_ops_and_storage(knowledge, services) -> None:
-    service = services["gcp.bigtable"]
-    values = {"wl.peak_tps": 25000, "vol.current_gb": 100, "geo.user_regions": ["india"]}
-    snapshot = PriceSnapshot(csp="gcp", fetched_at=datetime(2026, 11, 8, tzinfo=timezone.utc), sources=[], regions=["asia-south1"],
-                             prices=[gcp_point(service.id, "compute.0", 0.75), gcp_point(service.id, "storage.1", 0.2)])
-    context = PricingContext(config=knowledge.pricing, index=PriceIndex([snapshot]), regions=knowledge.regions, scoring=knowledge.scoring)
-
-    result = estimate(service, sizing_for(knowledge, service, values), values, "balanced", context)
-    nodes = [line for line in result.lines if line.component == "compute"][0]
-
-    assert nodes.quantity == 3 * 730  # ceil(25,000 / 10,000 ops per node)
 
 
 def test_term_follows_commitment_answer(knowledge) -> None:

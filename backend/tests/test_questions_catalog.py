@@ -53,7 +53,7 @@ def test_quick_flags_match_doc_02(catalog: QuestionCatalog) -> None:
             yaml_quick_ids.add(field_id)
 
     assert yaml_quick_ids == doc_quick_ids
-    assert len(yaml_quick_ids) == 16
+    assert len(yaml_quick_ids) == 20
 
 
 def test_field_ids_are_unique_and_prefixed_by_section(catalog: QuestionCatalog) -> None:

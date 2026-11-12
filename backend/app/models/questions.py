@@ -28,6 +28,15 @@ class QuestionOption(BaseModel):
     exclusive: bool = False
 
 
+class RequiredWhen(BaseModel):
+    """The question must be answered when another single-select field has this value (M9)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str
+    equals: str
+
+
 class Question(BaseModel):
     """One requirement field, identified by its dotted catalog id (e.g. `wl.peak_tps`)."""
 
@@ -45,6 +54,7 @@ class Question(BaseModel):
     integer: bool = False
     placeholder: str | None = None
     tier_defaults: dict[str, Any] | None = None
+    required_when: "RequiredWhen | None" = None
 
     def option_values(self) -> list[str]:
         """Return the allowed option values in catalog order."""

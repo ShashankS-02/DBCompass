@@ -21,8 +21,24 @@ Basis = Literal[
     "read_request_unit",  # price per read request unit (DynamoDB, Keyspaces on-demand)
     "write_request_unit",  # price per write request unit
     "ru100_hour",  # price per 100 RU/s per hour (Cosmos DB provisioned throughput)
+    "io_request",  # price per I/O request (Aurora Standard, RDS magnetic)
+    "iops_month",  # price per provisioned IOPS-month above the included baseline (RDS gp3)
+    "gb_transfer",  # price per GB leaving the cloud (internet egress)
+    "endpoint_hour",  # price per private endpoint hour
+    "key_month",  # price per customer-managed key per month
+    "gb_ingested",  # price per GB of audit log ingested
 ]
-ComponentKind = Literal["compute", "memory", "zone_redundancy", "storage", "reads", "writes", "throughput"]
+# Core kinds make an estimate complete or not; extra kinds (M9) are reported in the component
+# summary and added to the total when priced, but a missing price for one never marks the
+# estimate incomplete.
+ComponentKind = Literal[
+    "compute", "memory", "zone_redundancy", "storage", "reads", "writes", "throughput",
+    "backup", "io", "proxy", "egress", "private_endpoint", "kms_key", "audit_logs",
+]
+EXTRA_KINDS: tuple[str, ...] = ("backup", "io", "proxy", "egress", "private_endpoint", "kms_key", "audit_logs")
+SHARED_SERVICE_SUFFIX = ".shared"  # pseudo service id "<csp>.shared" for CSP-wide components
+TierPick = Literal["open_ended", "first_paid"]
+Pooling = Literal["none", "built_in"]
 MultiAzRate = Literal["deployment_option", "extra_node", "zone_redundancy_addon", "included"]
 
 
@@ -39,6 +55,8 @@ class RowMatcher(StrictModel):
 
     source: str  # AWS offer code, Azure serviceName or GCP service display name
     odata: str | None = None  # Azure only: extra $filter clause to narrow very large services
+    region: str | None = None  # Azure only: read from this armRegionName (e.g. Global) and apply to every snapshot region
+    tier: TierPick = "open_ended"  # AWS tiered rows: the open-ended tier, or the first paid tier (egress)
     equals: dict[str, str] = {}
     regex: dict[str, str] = {}
     exclude: dict[str, list[str]] = {}
@@ -53,6 +71,8 @@ class PriceComponentSpec(StrictModel):
     basis: Basis
     applies_to_family: list[str] = []  # instance families this compute price is for (empty = all)
     applies_to_storage: list[str] = []  # storage tiers this storage price is for (empty = all)
+    free_fraction_of_storage: float = 0.0  # backup: share of provisioned storage that is free backup space
+    included_iops: int = 0  # io (iops_month): IOPS included in the storage price
     matcher: RowMatcher
 
 
@@ -70,6 +90,7 @@ class ServicePricing(StrictModel):
     multi_az_rate: MultiAzRate
     components: list[PriceComponentSpec]
     node_capacity: NodeCapacity | None = None
+    pooling: Pooling = "none"  # built_in: the service bundles a connection pooler at no extra cost
     note: str | None = None
 
 
@@ -102,6 +123,11 @@ class PricingConfig(StrictModel):
     environment_multipliers: dict[str, float]
     terms_allowed: dict[str, list[Term]]
     tiers: dict[str, TierSpec]
+    backup_daily_change_fraction: float = Field(ge=0, le=1)  # share of the data that changes per day (backup growth)
+    io_per_transaction: float = Field(gt=0)  # storage I/O requests per transaction (Aurora I/O billing)
+    audit_kb_per_transaction: float = Field(ge=0)  # audit log bytes written per transaction
+    private_endpoints_per_environment: int = Field(ge=1)  # endpoints (one per AZ / subnet) per environment
+    shared_components: dict[Csp, dict[str, PriceComponentSpec]] = {}
     services: dict[str, ServicePricing]
     not_priced: dict[str, str]
 

@@ -39,14 +39,9 @@ def test_every_entry_has_verification_metadata(services_by_id: dict[str, Service
         ("aws.rds_postgresql", "single_az", 99.5),
         ("aws.rds_postgresql", "multi_az", 99.95),
         ("aws.aurora_postgresql", "multi_az", 99.99),
-        ("aws.aurora_dsql", "multi_region", 99.999),
-        ("aws.dynamodb", "multi_region", 99.999),
         ("gcp.cloudsql_postgresql", "multi_az", 99.99),
-        ("gcp.spanner", "multi_region", 99.999),
-        ("gcp.bigtable", "single_az", 99.9),
         ("azure.sql_database", "multi_az", 99.995),
         ("azure.postgresql_flexible", "multi_az", 99.99),
-        ("azure.cosmos_db_nosql", "multi_region", 99.999),
         ("azure.managed_redis", "multi_az", 99.99),
     ],
 )
@@ -69,8 +64,7 @@ def test_verified_storage_and_replica_limits(services_by_id: dict[str, ServiceEn
 
 def test_services_not_for_new_projects_are_flagged(services_by_id: dict[str, ServiceEntry]) -> None:
     assert services_by_id["azure.cosmos_db_postgresql"].lifecycle == "not_for_new_projects"
-    assert services_by_id["aws.timestream_liveanalytics"].lifecycle == "not_for_new_projects"
-    assert services_by_id["aws.timestream_influxdb"].lifecycle == "active"
+    assert services_by_id["aws.rds_postgresql"].lifecycle == "active"
 
 
 def test_oracle_on_cloud_is_available_in_india_on_every_csp(services_by_id: dict[str, ServiceEntry]) -> None:
@@ -80,5 +74,5 @@ def test_oracle_on_cloud_is_available_in_india_on_every_csp(services_by_id: dict
 
 
 def test_best_sla_is_the_highest_published_topology(services_by_id: dict[str, ServiceEntry]) -> None:
-    assert services_by_id["aws.dynamodb"].best_sla_percent == 99.999
+    assert services_by_id["azure.sql_database"].best_sla_percent == 99.995
     assert services_by_id["aws.oracle_database_at_aws"].best_sla_percent is None

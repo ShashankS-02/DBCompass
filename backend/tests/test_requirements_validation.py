@@ -6,6 +6,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 VALID_QUICK_ANSWERS = {
+    "app.name": "Order Management",
+    "app.origin": "internal",
     "app.tier": "tier_1",
     "app.type": "web_api",
     "data.shape": ["relational"],
@@ -18,6 +20,8 @@ VALID_QUICK_ANSWERS = {
     "ha.sla": "sla_99_95",
     "geo.user_regions": ["india"],
     "sec.compliance": ["pci_dss"],
+    "sec.personal_data": "customers",
+    "eco.languages": ["java"],
     "ops.skills": ["oracle"],
     "cost.monthly_cap": {"amount": 5000, "currency": "usd"},
     "pref.csp": "no_preference",
@@ -63,7 +67,7 @@ def test_unknown_tier_assumes_default_tier(client: TestClient) -> None:
     assumed = {field["field_id"]: field["value"] for field in report["assumed_fields"]}
     assert assumed["app.tier"] == "tier_2"
     assert assumed["ha.sla"] == "sla_99_9"
-    assert len(report["unanswered_quick_fields"]) == 16
+    assert len(report["unanswered_quick_fields"]) == 20
 
 
 def test_answered_field_is_not_assumed(client: TestClient) -> None:

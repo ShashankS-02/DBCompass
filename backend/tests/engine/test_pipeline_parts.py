@@ -74,7 +74,7 @@ def test_shape_filter_and_component_scope(knowledge, services) -> None:
 
     assert "aws.elasticache" not in primary_ids
     assert "aws.elasticache" in component_ids  # strong-consistency rule is primary-scope only
-    assert any(reason.service_id == "aws.dynamodb" and reason.rule_id == SHAPE_FILTER_ID for reason in removed)
+    assert any(reason.service_id == "aws.documentdb" and reason.rule_id == SHAPE_FILTER_ID for reason in removed)
 
 
 def test_residency_filter_uses_regions(knowledge) -> None:
@@ -136,7 +136,7 @@ def test_cost_score_is_relative_to_cheapest() -> None:
 
 def test_reliability_rewards_active_active_when_needed(knowledge, services) -> None:
     values = resolved_values(knowledge, {"ha.multi_region": "active_active"})
-    assert score_reliability(services["aws.dynamodb"], values, knowledge.scoring) > score_reliability(
+    assert score_reliability(services["azure.cosmos_db_cassandra"], values, knowledge.scoring) > score_reliability(
         services["aws.rds_postgresql"], values, knowledge.scoring
     )
 

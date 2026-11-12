@@ -71,6 +71,7 @@ class PhaseSpec(StrictModel):
     base_days: float = Field(ge=0)
     days_per_dependency: float = 0
     days_per_tb: float = 0
+    when: list[Condition] = []  # phase applies only when every condition matches (plan.* facts and answers)
     owner_role: str
     tasks: list[str]
     go_no_go: list[str]
@@ -127,7 +128,7 @@ class MigrationPlanRequest(StrictModel):
     assessment_id: str | None = None
     answers: dict[str, Any] = {}
     target_service_id: str | None = None
-    refactor_person_days: EffortRange | None = None  # e.g. from the repo analyzer's Oracle report
+    refactor_person_days: EffortRange | None = None  # a team's own estimate from a code review
     team_size: int | None = Field(default=None, ge=1, le=100)
     start_date: date | None = None
 

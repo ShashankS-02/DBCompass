@@ -39,7 +39,7 @@ def judge_reason(claim: ReasonClaim, spec: ReasonSpec, values: dict[str, Any], c
     if all_match(spec.contradict, values):
         status, points, note = "contradicted", 0.0, "DBCompass's findings for this application contradict this reason."
     elif all_match(spec.verify, values):
-        status, points, note = "verified", spec.weight, "Confirmed by the requirements / repo analysis."
+        status, points, note = "verified", spec.weight, "Confirmed by the requirements."
     elif has_evidence:
         status, points, note = "evidenced", spec.weight, "Evidence given; the approver should check it."
     else:

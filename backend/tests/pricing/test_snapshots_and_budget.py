@@ -28,11 +28,7 @@ def test_snapshot_covers_every_priced_component(knowledge: KnowledgeBundle, csp:
         assert price.usd > 0
 
 
-# Google's catalog has no standard Bigtable node / SSD SKUs for these two regions (OPEN_QUESTIONS #33).
-KNOWN_GCP_GAPS = {
-    "gcp.bigtable/compute.0/europe-west1", "gcp.bigtable/compute.0/us-central1",
-    "gcp.bigtable/storage.1/europe-west1", "gcp.bigtable/storage.1/us-central1",
-}
+KNOWN_GCP_GAPS: set[str] = set()
 
 
 def test_gcp_snapshot_covers_priced_components_except_known_gaps(knowledge: KnowledgeBundle) -> None:
@@ -55,12 +51,12 @@ def services_named(knowledge: KnowledgeBundle, ids: list[str]):
 
 
 def test_budget_filter_drops_priced_and_keeps_unpriced(knowledge: KnowledgeBundle) -> None:
-    candidates = services_named(knowledge, ["aws.rds_postgresql", "gcp.spanner"])
+    candidates = services_named(knowledge, ["aws.rds_postgresql", "gcp.oracle_database_at_google_cloud"])
     values = {"cost.monthly_cap": {"amount": 1, "currency": "usd"}, "wl.peak_tps": 500, "vol.current_gb": 100}
 
     kept, removed, notes = apply_budget_filter(candidates, values, knowledge)
 
-    assert [service.id for service in kept] == ["gcp.spanner"]
+    assert [service.id for service in kept] == ["gcp.oracle_database_at_google_cloud"]
     assert removed[0].rule_id == BUDGET_FILTER_ID
     assert any("not checked against the budget" in note for note in notes)
 
@@ -96,7 +92,7 @@ def test_pricing_status_endpoint(client: TestClient) -> None:
     by_csp = {snapshot["csp"]: snapshot for snapshot in body["snapshots"]}
     assert by_csp["aws"]["price_count"] > 0
     assert by_csp["gcp"]["price_count"] > 0
-    assert body["priced_services"] + body["not_priced_services"] == 54
+    assert body["priced_services"] + body["not_priced_services"] == 40
 
 
 def test_refresh_requires_admin_and_azure(client: TestClient) -> None:

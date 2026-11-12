@@ -16,7 +16,7 @@ def test_quick_mode_returns_only_quick_questions(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["mode"] == "quick"
-    assert count_questions(body) == 16
+    assert count_questions(body) == 20
     for section in body["sections"]:
         assert section["questions"], f"empty section {section['id']} in quick mode"
         for question in section["questions"]:
@@ -33,7 +33,7 @@ def test_quick_mode_hides_migration_section(client: TestClient) -> None:
 def test_expert_mode_returns_every_question(client: TestClient) -> None:
     body = client.get("/api/questions", params={"mode": "expert"}).json()
 
-    assert count_questions(body) == 73
+    assert count_questions(body) == 86
     migration_section = [section for section in body["sections"] if section["id"] == "mig"][0]
     assert migration_section["migration_only"] is True
 

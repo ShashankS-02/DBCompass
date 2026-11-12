@@ -90,12 +90,13 @@ def test_aws_on_demand_and_reserved_effective_hourly(config: PricingConfig) -> N
 
 
 def test_aws_tiered_rows_keep_the_paid_tier(config: PricingConfig) -> None:
-    storage = {"Product Family": "Database Storage", "Volume Type": "Amazon DynamoDB - Indexed DataStore", "usageType": "APS3-TimedStorage-ByteHrs", "Unit": "GB-Mo"}
+    storage = {"Product Family": "Database Storage", "Volume Type": "General Purpose-GP3", "Database Engine": "PostgreSQL",
+               "Deployment Option": "Single-AZ", "usageType": "APS3-RDS:GP3-Storage", "Unit": "GB-Mo"}
     rows = [
         {**storage, "SKU": "S", "TermType": "OnDemand", "EndingRange": "25", "PricePerUnit": "0", "PriceDescription": "free"},
         {**storage, "SKU": "S", "TermType": "OnDemand", "EndingRange": "Inf", "PricePerUnit": "0.285", "PriceDescription": "paid"},
     ]
-    specs = [spec for spec in aws_pricelist.component_specs(config, "AmazonDynamoDB") if spec[1].startswith("storage")]
+    specs = [spec for spec in aws_pricelist.component_specs(config, "AmazonRDS") if spec[0] == "aws.rds_postgresql" and spec[1].startswith("storage")]
 
     prices = aws_pricelist.extract_prices(rows, specs, "ap-south-1", {})
 

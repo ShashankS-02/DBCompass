@@ -1,5 +1,9 @@
 name: Cross-region ACID, active-active, Tier 0
 status: draft
+# Since M9 the catalog only holds engines the organisation supports. None of them offers
+# cross-region ACID (Spanner, Aurora DSQL and Cosmos DB for PostgreSQL were removed), so the
+# honest answer is "no managed option": the trace must say why every candidate was ruled out
+# (docs/OPEN_QUESTIONS.md #61).
 input:
   answers:
     app.tier: tier_0
@@ -15,8 +19,7 @@ input:
     ha.multi_region: active_active
     geo.user_regions: [us, eu, apac]
 expect:
-  top1:
-    family_in: [distributed_sql]
+  no_recommendations: true
   excluded:
     aws.aurora_postgresql: R-ACID-001
     azure.sql_database: R-ACID-001

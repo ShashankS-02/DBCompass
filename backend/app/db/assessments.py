@@ -85,6 +85,7 @@ def summarise(row: AssessmentRow) -> AssessmentSummary:
     return AssessmentSummary(
         id=row.id,
         created_at=as_utc(row.created_at),
+        app_name=((row.input_json or {}).get("answers") or {}).get("app.name"),
         app_type=app_type_of(row.input_json, result),
         top_recommendation=top_names,
         top_csp=top_csp,

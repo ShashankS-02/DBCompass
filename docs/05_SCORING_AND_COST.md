@@ -68,6 +68,37 @@ licensing    = included in rate or BYOL adjustment
 total        = sum of the above, per environment, times env multipliers (prod 1.0, DR, UAT, dev from input)
 ```
 
+### What the estimate covers (M9)
+Every tier carries `components`: one entry per bill component with a status.
+
+| Component | How it is priced | Status when not priced |
+|---|---|---|
+| Compute, storage, requests | Service price list (M4) | estimate incomplete |
+| Licence | `licensing.yaml` (M6) | included when inside the service price |
+| I/O and IOPS | Aurora I/O requests (avg TPS × `io_per_transaction`); RDS gp3 IOPS above 3,000 | included for services whose I/O is in the compute/storage price; not priced for VMs |
+| Backup storage | (data × (1 + retention days × `backup_daily_change_fraction`)) − free allowance (100 % of provisioned storage) | not priced |
+| HA standby, DR copy | Inside the compute and storage lines (sizing) | not needed when the layout has none |
+| Egress | `cost.egress_gb_month` × first paid internet tier | not needed at 0 GB |
+| Private endpoints | `private_endpoints_per_environment` × environments × hours, when `sec.network` is private | not needed for public access |
+| Connection proxy | RDS Proxy per vCPU-hour when `cost.connection_proxy`; built-in pooler (Azure PostgreSQL) is included | not priced where no managed proxy exists |
+| Customer-managed key | One key per environment when `sec.cmk` | included (platform keys) |
+| Audit logging | avg TPS × `audit_kb_per_transaction` ingested into CloudWatch / Log Analytics | not needed without `sec.audit`; marked *estimated* |
+| Environments | `environment_multipliers` | production only |
+
+The extra components (backup to audit logging) are added to the total when priced but never make an
+estimate incomplete. CSP-wide prices live in `pricing.yaml` `shared_components` and in the snapshot
+under the pseudo service `<csp>.shared`. GCP shared components wait for catalog credentials
+(OPEN_QUESTIONS #62).
+
+### Price difference against staying on the current engine (M9)
+On-prem costs are rarely known, so the comparison is cloud to cloud. For an existing database,
+`engine/baseline.py` prices every managed service on each recommended cloud that runs the source
+engine, at the Balanced tier with the same answers, and keeps the cheapest on compute + licence
+lines. When no managed one has a list price (Oracle Database@Azure) a self-managed VM with
+licences is used and the note says so. Each recommendation's `versus_baseline.delta_usd` is its own
+Balanced compute + licence total minus the baseline's. Storage, backup and network are left out of the
+difference because they would be about the same for both.
+
 ## Pricing sources
 | CSP | Source | Notes |
 |---|---|---|
@@ -109,6 +140,19 @@ enterprise discounts". The LLM never produces numbers.
 Rank by total score. Ties broken by Balanced cost. The explainer prompt receives:
 user priorities, top 3 with dimension scores, rules fired, filtered-out list, assumptions.
 System prompt: "Explain only using the data provided. Do not add services, prices or limits."
+
+As implemented (M7):
+- The fact sheet (`app/explain/facts.py`) holds priorities, the top 3 options (components, HA layout,
+  dimension scores, tier prices with licence share, why lines), rules fired with their messages, up to 15
+  other candidates that passed the filters (score and rule adjustments), the first reason for every
+  filtered service (up to 60) and up to 12 assumed answers. Prompts and limits live in
+  `knowledge_base/explainer.yaml`.
+- Fact check (`app/explain/grounding.py`): every number in the prose must be within 2 % (or 0.6) of a
+  number in the fact sheet, or be 1, 2, 3 or 100; every service or engine name it uses must appear in
+  the fact sheet. A failing draft is retried once with the problems listed, then replaced by the
+  rule-based explanation. Unpriced options are written as "not priced", never "$0".
+- What-if (`app/engine/whatif.py`) re-runs the same deterministic pipeline on the merged input and
+  diffs the two traces; no LLM is involved.
 
 ## Implementation notes (M3)
 - Order is Filter → Size → Score → Combine → Rank: sizing runs before scoring so the cost dimension

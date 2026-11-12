@@ -39,6 +39,7 @@ supports:
   masking_rls: true
   sql_agent: false  # uses Elastic Jobs instead of SQL Server Agent
 compliance:
+- iso_27001
 - sox
 - pci_dss
 - hipaa

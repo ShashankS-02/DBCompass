@@ -111,7 +111,7 @@ function Hero({ name }: { name: string | null }) {
             Find the right database. <span className="text-gradient">Prove why.</span> Plan the move.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-sand-100/85 sm:text-lg">
-            DBCompass turns your application's requirements, or its GitHub repository, into ranked database
+            DBCompass turns a five-minute guided questionnaire into ranked database
             recommendations with costs, design guidance and a migration plan you can take to approval.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -119,8 +119,8 @@ function Hero({ name }: { name: string | null }) {
               Start an assessment
               <span aria-hidden="true" className="transition group-hover:translate-x-1">→</span>
             </Link>
-            <Link to="/repo" className="btn border border-white/20 bg-white/5 px-5 py-3 text-base text-snow hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10">
-              <Icon name="repo" /> Analyze a repo
+            <Link to="/migrations/new" className="btn border border-white/20 bg-white/5 px-5 py-3 text-base text-snow hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10">
+              <Icon name="migrate" /> Plan a migration
             </Link>
           </div>
         </div>
@@ -160,7 +160,7 @@ const FEATURES = [
   { icon: "rank", title: "Ranked recommendations", text: "Single databases or polyglot combinations, filtered by hard limits and scored on seven dimensions." },
   { icon: "cost", title: "Three cost tiers", text: "Budget, Balanced and Performance estimates from official price lists, licences included." },
   { icon: "design", title: "Design guidance", text: "Indexing, partitioning, caching, read replicas and connection pooling for the chosen engine." },
-  { icon: "repo", title: "Repo analyzer", text: "Point at a GitHub repository and DBCompass reads drivers, ORMs and schema to pre-fill the form." },
+  { icon: "repo", title: "Guided intake", text: "One topic per screen, engine-specific feature checklists with metadata-only queries, and an \"I don't know\" on every step." },
   { icon: "migrate", title: "Migration planner", text: "Rehost, replatform or refactor compared over three years, with runbook, tools, risks and rollback." },
   { icon: "shield", title: "Justification gate", text: "Licensed engines need a reason. Claims are checked against the assessment before an approver decides." },
 ];
@@ -193,7 +193,7 @@ function Features() {
 /* ----------------------------------------------------------------- how it works */
 
 const STEPS = [
-  { title: "Describe or point", text: "Answer about 12 Quick questions, the full Expert catalog, or paste a GitHub URL.", to: "/assessments/new", cta: "Start" },
+  { title: "Describe or point", text: "A five-minute guided intake: existing or new app, what it uses today, who owns it. Or paste a GitHub URL.", to: "/assessments/new", cta: "Start" },
   { title: "Engine decides", text: "Filters remove what can't work, then deterministic scoring ranks the rest. Same input, same answer.", to: null, cta: null },
   { title: "Review the why", text: "See ranked options, cost tiers, the rule trace and why any service was left out.", to: "/history", cta: "History" },
   { title: "Plan and approve", text: "Build the migration plan, raise a request, and get a database approver's decision.", to: "/requests", cta: "Requests" },
@@ -275,7 +275,7 @@ function Databases() {
 const PRINCIPLES = [
   { icon: "trace", title: "Deterministic and traced", text: "The engine, not the LLM, ranks. Every result shows which rules fired and why candidates were removed." },
   { icon: "source", title: "Every number has a source", text: "Prices, SLAs and limits come from the knowledge base and official price lists, never from the model." },
-  { icon: "lock", title: "Safe with your code", text: "Repositories are read, never executed, and secrets are redacted before anything reaches the LLM." },
+  { icon: "lock", title: "No code leaves the org", text: "DBCompass never reads application code. The LLM only sees your questionnaire answers and the engine's own trace." },
 ];
 
 function StatusDot({ state }: { state: LoadState<unknown> }) {

@@ -59,7 +59,10 @@ class InstancePick:
 
 
 def chosen_engine(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig) -> str:
-    """Engine to run: source engine, else a team skill, else the best engine for the data shape, else an open one."""
+    """Engine to run: vendor-certified engine, else the source engine, else a team skill, else the best for the shape, else an open one."""
+    certified_engine = values.get("app.vendor_certified_engine")
+    if certified_engine in service.engines:
+        return certified_engine
     source_engine = values.get("mig.source_engine_family")
     if source_engine in service.engines:
         return source_engine

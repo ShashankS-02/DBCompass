@@ -1,7 +1,7 @@
 # Migration planner knowledge (doc 07): settings, tools, the tool matrix, methods, phases, risks, rollback.
 # Effort figures are heuristics for planning conversations, not quotes; the DBA team tunes them.
 version: 1
-last_verified: 2026-11-09
+last_verified: 2026-11-11
 
 settings:
   migration_deadline: 2028-12-31      # org programme: all on-prem databases in the cloud by this date
@@ -91,6 +91,13 @@ tools:
   google_transfer_appliance: {name: Google Transfer Appliance, url: "https://cloud.google.com/transfer-appliance/docs"}
   aws_direct_connect: {name: AWS Direct Connect, url: "https://docs.aws.amazon.com/directconnect/"}
   azure_expressroute: {name: Azure ExpressRoute, url: "https://learn.microsoft.com/en-us/azure/expressroute/"}
+  aws_sct_sybase: {name: AWS Schema Conversion Tool (SAP ASE / Informix source), url: "https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.html"}
+  azure_dms_sybase: {name: Azure DMS / SSMA for SAP ASE, url: "https://learn.microsoft.com/en-us/sql/ssma/sybase/sql-server-migration-assistant-for-sybase-sybasetosql"}
+  sybase_bcp: {name: SAP ASE bcp / Replication Server, url: "https://help.sap.com/docs/SAP_ASE"}
+  informix_unload: {name: Informix dbexport / HPL / Enterprise Replication, url: "https://www.ibm.com/docs/en/informix-servers"}
+  pgloader: {name: pgloader, url: "https://pgloader.readthedocs.io/"}
+  vertica_export: {name: Vertica EXPORT TO PARQUET / vbr, url: "https://docs.vertica.com/latest/en/"}
+  couchbase_tools: {name: Couchbase cbexport / cbbackupmgr, url: "https://docs.couchbase.com/server/current/tools/cbexport.html"}
   google_interconnect: {name: Google Cloud Interconnect, url: "https://cloud.google.com/network-connectivity/docs/interconnect"}
 
 # Per-CSP supporting tools.
@@ -115,6 +122,13 @@ tool_matrix:
   - {sources: [postgresql], targets: [same], csps: [], assessment: [], schema_conversion: [], data_movement: [pg_dump, pg_logical_replication, "csp:dms"], validation: [row_counts_checksums]}
   - {sources: [mysql, mariadb], targets: [same, mysql, mariadb], csps: [], assessment: [], schema_conversion: [], data_movement: [mysqldump, mysql_replication, "csp:dms"], validation: [row_counts_checksums]}
   - {sources: [mongodb], targets: [same, mongodb], csps: [], assessment: [], schema_conversion: [], data_movement: [mongodump, "csp:dms"], validation: [row_counts_checksums]}
+  - {sources: [couchbase], targets: [mongodb], csps: [], assessment: [], schema_conversion: [], data_movement: [couchbase_tools, mongodump], validation: [row_counts_checksums]}
+  - {sources: [sybase], targets: [sql_server], csps: [azure], assessment: [azure_dms_sybase], schema_conversion: [azure_dms_sybase], data_movement: [azure_dms_sybase, sybase_bcp], validation: [row_counts_checksums]}
+  - {sources: [sybase], targets: [sql_server, postgresql, mysql], csps: [aws], assessment: [aws_sct_sybase], schema_conversion: [aws_sct_sybase], data_movement: [aws_dms, sybase_bcp], validation: [aws_dms]}
+  - {sources: [sybase], targets: [postgresql, sql_server, mysql], csps: [], assessment: [], schema_conversion: [pgloader], data_movement: [sybase_bcp, pgloader, "csp:dms"], validation: [row_counts_checksums]}
+  - {sources: [informix], targets: [postgresql, mysql], csps: [aws], assessment: [aws_sct_sybase], schema_conversion: [aws_sct_sybase], data_movement: [aws_dms, informix_unload], validation: [aws_dms]}
+  - {sources: [informix], targets: [postgresql, db2, mysql], csps: [], assessment: [], schema_conversion: [], data_movement: [informix_unload, "csp:dms"], validation: [row_counts_checksums]}
+  - {sources: [vertica], targets: [proprietary], csps: [], assessment: [], schema_conversion: [], data_movement: [vertica_export], validation: [row_counts_checksums]}
   - {sources: [], targets: [], csps: [], assessment: [], schema_conversion: [], data_movement: ["csp:dms", debezium], validation: [row_counts_checksums]}
 
 # doc 07 step 4. base_days are working days; the planner adds size / effort-driven days on top.
@@ -129,6 +143,16 @@ phases:
       - "Map dependencies: DB links, ETL jobs, schedulers, consuming applications"
       - "Capture performance baselines (AWR / Query Store / pg_stat_statements)"
     go_no_go: ["Every dependency has an owner and a wave", "Baseline captured for peak and normal load"]
+  - id: engage_partner
+    name: Engage a migration partner
+    base_days: 15
+    when: [{field: plan.readiness, op: in, value: [needs_sme, needs_partner]}]
+    owner_role: Programme manager
+    tasks:
+      - "Scope the work (assessment, conversion, cutover support) and the hand-over to the internal team"
+      - "Select a partner or the CSP migration programme; agree the day rate and the knowledge-transfer plan"
+      - "Name the internal owner for decisions and the rollback call"
+    go_no_go: ["Partner or SME on-boarded before the plan phase ends", "Knowledge-transfer sessions scheduled"]
   - id: plan
     name: Plan
     base_days: 5
@@ -221,6 +245,30 @@ risks:
     title: Heavy stored-procedure refactor
     impact: "Converting large PL/SQL or T-SQL code bases slips schedules."
     mitigation: "Pilot the hardest package first and re-estimate before committing the wave."
+  - id: RISK-TEAM-NEEDS-SME
+    when: [{field: plan.readiness, op: eq, value: needs_sme}]
+    severity: medium
+    title: Missing database expertise in the team
+    impact: "Without people who know both the source and the target, assessment and cutover take longer and rollback decisions are made blind."
+    mitigation: "Bring in a database SME for the discovery, rehearsal and cutover phases; pair them with the application team."
+  - id: RISK-TEAM-NEEDS-PARTNER
+    when: [{field: plan.readiness, op: eq, value: needs_partner}]
+    severity: high
+    title: Team has neither the skills nor the capacity
+    impact: "The vendor will not help and the in-house team cannot staff the migration; the wave slips past the deadline."
+    mitigation: "Engage a migration partner or the CSP's migration programme before the plan phase; keep an internal owner for decisions."
+  - id: RISK-VENDOR-UNSUPPORTED-TARGET
+    when: [{field: plan.vendor_certified_mismatch, op: eq, value: true}]
+    severity: high
+    title: Target engine is not the vendor-certified one
+    impact: "The vendor may refuse support for the application on this database."
+    mitigation: "Get written confirmation from the vendor, or choose the certified engine and justify it."
+  - id: RISK-SUNSET-SOURCE
+    when: [{field: plan.source_sunset, op: eq, value: true}]
+    severity: low
+    title: Source engine is being retired in the organisation
+    impact: "Skills and support for the source shrink every year; delays raise the risk."
+    mitigation: "Schedule this database in an early wave while source expertise is still available."
   - id: RISK-DEADLINE
     when: [{field: plan.fits_deadline, op: eq, value: false}]
     severity: high

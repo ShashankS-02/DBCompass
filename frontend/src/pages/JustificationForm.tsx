@@ -16,11 +16,14 @@ import {
   type RequestKind,
 } from "../api/requests";
 import { useAuth } from "../auth/AuthProvider";
+import { clearDraft, readDraft, useDraft } from "../hooks/useDraft";
 import { Spinner } from "../components/Loader";
 import VerdictPanel from "../components/VerdictPanel";
 
 const inputClass = "w-full btn-ghost px-3 py-1.5 focus:border-slate-500 focus:outline-none";
 const PREVIEW_DELAY_MS = 500;
+
+const REQUEST_DRAFT_KEY = "dbcompass.request.draft.v1";
 
 function emptyInput(search: URLSearchParams): JustificationInput {
   return {
@@ -74,17 +77,24 @@ export default function JustificationForm() {
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const { getAccessToken } = useAuth();
-  const [input, setInput] = useState<JustificationInput>(() => emptyInput(search));
+  const [input, setInput] = useState<JustificationInput>(() => (id || [...search.keys()].length ? emptyInput(search) : readDraft<JustificationInput>(REQUEST_DRAFT_KEY) ?? emptyInput(search)));
   const [config, setConfig] = useState<JustificationConfig | null>(null);
   const [engines, setEngines] = useState<QuestionOption[]>([]);
   const [history, setHistory] = useState<AssessmentSummary[]>([]);
   const [evaluation, setEvaluation] = useState<JustificationEvaluation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  useDraft(REQUEST_DRAFT_KEY, input, !id);
 
   useEffect(() => {
     fetchReasons(getAccessToken).then(setConfig).catch((loadError: Error) => setError(loadError.message));
-    fetchHistory(getAccessToken).then(setHistory).catch(() => setHistory([]));
+    fetchHistory(getAccessToken)
+      .then((rows) => {
+        setHistory(rows);
+        const preselected = rows.find((row) => row.id === search.get("assessment"));
+        if (preselected?.app_name) setInput((current) => (current.application_name.trim() ? current : { ...current, application_name: preselected.app_name ?? "" }));
+      })
+      .catch(() => setHistory([]));
     fetchQuestions("expert", getAccessToken)
       .then((schema) => {
         const question = schema.sections.flatMap((section) => section.questions).find((item) => item.id === "app.requested_engine");
@@ -118,6 +128,7 @@ export default function JustificationForm() {
     setError(null);
     try {
       const saved = id ? await updateRequest(id, input, getAccessToken) : await createRequest(input, getAccessToken);
+      clearDraft(REQUEST_DRAFT_KEY);
       navigate(`/requests/${saved.id}`);
     } catch (caught) {
       setError(caught instanceof ApiError && caught.detail ? caught.detail : (caught as Error).message);
@@ -162,12 +173,19 @@ export default function JustificationForm() {
           </div>
           <label className="block text-sm">
             <span className="text-slate-600">Assessment of this application</span>
-            <select className={`${inputClass} mt-1`} value={input.assessment_id} onChange={(event) => set({ assessment_id: event.target.value })}>
+            <select
+              className={`${inputClass} mt-1`}
+              value={input.assessment_id}
+              onChange={(event) => {
+                const row = history.find((item) => item.id === event.target.value);
+                set({ assessment_id: event.target.value, ...(row?.app_name && !input.application_name.trim() ? { application_name: row.app_name } : {}) });
+              }}
+            >
               <option value="">Choose an assessment…</option>
               {input.assessment_id && !history.some((row) => row.id === input.assessment_id) && <option value={input.assessment_id}>{input.assessment_id}</option>}
               {history.map((row) => (
                 <option key={row.id} value={row.id}>
-                  {new Date(row.created_at).toLocaleString()} · {row.top_recommendation ?? "no recommendation"}
+                  {row.app_name ?? "Unnamed application"} · {new Date(row.created_at).toLocaleDateString()} · {row.top_recommendation ?? "no recommendation"}
                 </option>
               ))}
             </select>

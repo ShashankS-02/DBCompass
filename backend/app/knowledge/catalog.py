@@ -188,7 +188,24 @@ def validate_answers(
         if normalised_value is not None:
             normalised_answers[field_id] = normalised_value
 
+    errors.extend(missing_conditional_answers(catalog, normalised_answers))
     return normalised_answers, errors, ignored_field_ids
+
+
+def missing_conditional_answers(catalog: QuestionCatalog, answers: dict[str, Any]) -> list[FieldError]:
+    """Errors for questions whose `required_when` condition holds but that have no answer."""
+    errors: list[FieldError] = []
+    questions = catalog.questions_by_id()
+    for field_id, question in questions.items():
+        requirement = question.required_when
+        if requirement is None or field_id in answers:
+            continue
+        if answers.get(requirement.field) != requirement.equals:
+            continue
+        trigger = questions.get(requirement.field)
+        trigger_label = trigger.label if trigger else requirement.field
+        errors.append(FieldError(field_id=field_id, message=f"required when '{trigger_label}' is '{requirement.equals}'"))
+    return errors
 
 
 def validate_priorities(

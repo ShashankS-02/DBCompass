@@ -1,6 +1,6 @@
 """Assemble the validation report for a submitted RequirementsInput."""
 
-from app.engine.defaults import preview_tier_defaults
+from app.engine.defaults import preview_defaults
 from app.engine.weights import compute_dimension_weights
 from app.knowledge.catalog import validate_answers, validate_priorities
 from app.models.questions import QuestionCatalog
@@ -40,7 +40,7 @@ def build_validation_report(
         errors=errors,
         normalised=normalised_input,
         unanswered_quick_fields=find_unanswered_quick_fields(catalog, normalised_answers),
-        assumed_fields=preview_tier_defaults(catalog, normalised_answers),
+        assumed_fields=preview_defaults(catalog, normalised_answers),
         ignored_fields=ignored_field_ids,
         dimension_weights=dimension_weights,
     )

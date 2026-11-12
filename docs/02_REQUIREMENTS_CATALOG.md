@@ -16,6 +16,12 @@ Quick flags, tier defaults and the priority sliders. `GET /api/questions` serves
 ## A. Application context
 | id | Question | Type / options | Why it matters |
 |---|---|---|---|
+| app.name **Q** | Application name | text | Names the assessment in history, plans and requests (M8) |
+| app.origin **Q** | Who builds and supports the application? | Internal team, A vendor | Vendor-built apps are tied to certified databases and may need vendor help to migrate (M8) |
+| app.vendor_name | Vendor name | text, required when origin is vendor | Named in the plan and the justification packet |
+| app.vendor_certified_db | Database the vendor certifies or built the application for | engine + version | Strong boost for that engine (R-VENDOR-001); evidence for the *vendor_certified* justification reason |
+| app.vendor_migration_support | Will the vendor support the migration? | Yes, No, Not asked yet | Decides whether team readiness is checked |
+| app.notes | Anything else about the database (metadata only) | text | Shown with the result and plan; the engine ignores it |
 | app.tier **Q** | Business criticality | Tier 0 (mission critical) / 1 / 2 / 3 (internal, low impact) | Drives default SLA, RPO, RTO, HA layout |
 | app.type **Q** | Application type | Web/API, Batch, Analytics/BI, Event/IoT, ML/AI, Internal tool | Seeds workload defaults |
 | app.env | Environments needed | Prod, DR, UAT, Dev (multi) | Multiplies cost |
@@ -30,7 +36,7 @@ Quick flags, tier defaults and the priority sliders. `GET /api/questions` serves
 | data.joins | Join complexity | None, Simple (1–2 tables), Complex (3+ tables, reporting) | Relational vs NoSQL |
 | data.schema_volatility | How often schema changes | Rarely, Monthly, Constantly | Schemaless options |
 | data.proc_code | Stored procedures / PL/SQL / T-SQL dependency | None, Light, Heavy | Engine lock-in, refactor cost |
-| data.special_features | Uses engine-specific features | DB links, sequences, hierarchical queries, materialized views, partitioning, RAC, spatial (multi) | Compatibility scoring |
+| data.special_features | Uses engine-specific features | DB links / linked servers, sequences, hierarchical queries, materialized views, partitioning, clustered HA (RAC, Always On, pureScale, HDR), spatial, SQL Agent jobs, in-DB full text, queuing (AQ / Service Broker), scheduled jobs, in-DB code (Java / CLR / UDx), flashback, built-in replication, compression, TDE, XML, external tables, PostgreSQL extensions, sharding, change streams, TTL, time-series collections, secondary indexes (multi) | Compatibility scoring; `knowledge_base/engine_features.yaml` maps each engine's own feature names and a metadata-only query to these values (M8) |
 
 ## C. Workload
 | id | Question | Type / options | Why it matters |
@@ -79,7 +85,8 @@ Quick flags, tier defaults and the priority sliders. `GET /api/questions` serves
 ## H. Security and compliance
 | id | Question | Type / options | Why it matters |
 |---|---|---|---|
-| sec.compliance **Q** | Compliance regimes | SOX, PCI-DSS, HIPAA, GDPR, DPDP, None (multi) | Audit logging, encryption, service eligibility |
+| sec.compliance **Q** | Compliance regimes | SOX, PCI-DSS, HIPAA, GDPR, DPDP, ISO 27001, None (multi) | Audit logging, encryption, service eligibility |
+| sec.personal_data **Q** | Does the application hold personal data? | Of customers, of employees, both, none | Defaults CMK, auditing and masking to on; guidance R-PII-001 |
 | sec.cmk | Customer managed encryption keys | Yes/No | KMS / Key Vault / Cloud KMS integration |
 | sec.network | Network exposure | Private only, Private + VPN, Public with allowlist | Private endpoints / PrivateLink / PSC |
 | sec.identity | Auth integration | DB users, Entra ID, IAM, LDAP | Native IAM auth support |
@@ -89,7 +96,7 @@ Quick flags, tier defaults and the priority sliders. `GET /api/questions` serves
 ## I. Integration and ecosystem
 | id | Question | Type / options | Why it matters |
 |---|---|---|---|
-| eco.languages | Languages / frameworks | Python, Java, .NET, Node, Go (multi) | Driver & ORM support |
+| eco.languages **Q** | Languages / frameworks | Python, Java, .NET, Node.js, Go, C/C++, PHP, Ruby, Scala/Kotlin, COBOL, database code only, Other (multi) | Driver & ORM support; refactor effort |
 | eco.cdc | Needs change data capture / streaming | Yes/No, target (Kafka, analytics) | Combo designs, logical replication |
 | eco.analytics | Downstream analytics/BI | None, BI dashboards, Data lake/warehouse | Add warehouse to combo |
 | eco.vector | Needs vector search for AI | Yes/No | pgvector, vector-capable services |
@@ -109,6 +116,8 @@ Quick flags, tier defaults and the priority sliders. `GET /api/questions` serves
 | cost.monthly_cap **Q** | Monthly budget cap (USD or INR) | number / unknown | Hard filter on tiers |
 | cost.commitment | Willing to commit | On-demand only, 1-year, 3-year | Reserved / Savings Plans / CUDs pricing |
 | cost.egress_sensitivity | Heavy data egress expected | Yes/No | Cross-cloud and hybrid penalties |
+| cost.egress_gb_month | Data leaving the cloud each month | GB, tier default 500/200/50/10 | Egress line in the cost estimate |
+| cost.connection_proxy | Connection pooling proxy in front of the database | Yes/No, tier default on for tier 0/1 | Proxy line in the cost estimate |
 | cost.priority | Cost vs performance priority | Slider 0–100 | Score weights |
 
 ## L. Hardware (used for IaaS / self-managed and sizing hints)
@@ -127,6 +136,14 @@ Quick flags, tier defaults and the priority sliders. `GET /api/questions` serves
 | pref.lock_in | Vendor lock-in tolerance | Low, Medium, High | Penalise proprietary services when low |
 | pref.open_source | Prefer open-source engines | Yes/No | Score boost |
 | pref.excluded | Services to exclude | list | Hard filter |
+| pref.licence_status | Licences for the database you have in mind | Owned, To buy, Not sure | Cost of a licensed engine; *to buy* contradicts the *existing_licences* justification reason (M8) |
+
+## M2. Team readiness (only when the vendor will not help with the migration)
+| id | Question | Type / options | Why it matters |
+|---|---|---|---|
+| team.source_skills | Do we have people who know the current database well? | Yes enough, One or two (busy), No | Readiness verdict (M8) |
+| team.target_skills | Do we have people who know the likely target database? | Yes enough, One or two (busy), No | Readiness verdict |
+| team.capacity | Can the team free up time in the next 12 months? | Yes, Partly, No | Readiness verdict; "No" always means a migration partner |
 
 ## N. Migration (only when migrating)
 | id | Question | Type / options | Why it matters |

@@ -6,7 +6,8 @@ from app.engine.sizer import SizingOptions, size_service
 from app.knowledge.loader import KnowledgeBundle
 from app.models.knowledge import ServiceEntry
 from app.models.pricing import TierSpec
-from app.models.results import CostEstimate, CostLine, FilterReason, PricingSummary, SizingResult
+from app.models.results import CostComponent, CostEstimate, CostLine, FilterReason, PricingSummary, SizingResult
+from app.pricing.components import COMPONENT_LABELS
 from app.pricing.estimator import PricingContext, estimate
 from app.pricing.licensing import licence_cost
 
@@ -67,13 +68,33 @@ def with_licence(result: CostEstimate, service: ServiceEntry, sizing: SizingResu
         return result
     licence = licence_cost(service, sizing, values, knowledge.licensing)
     if not licence.lines and not licence.notes:
-        return result
+        return result.model_copy(update={"components": with_licence_component(result.components, 0.0, False, False)})
     licence_total = sum(line.monthly_usd for line in licence.lines) * result.environment_multiplier
     return result.model_copy(update={
         "lines": result.lines + licence.lines,
         "monthly_usd": round(result.monthly_usd + licence_total, 2),
         "notes": result.notes + licence.notes,
+        "components": with_licence_component(result.components, licence_total, licence.owned, bool(licence.lines)),
     })
+
+
+def with_licence_component(components: list[CostComponent], licence_total: float, owned: bool, priced: bool) -> list[CostComponent]:
+    """Insert the licence entry after compute in the component summary."""
+    if priced:
+        note = "Licences you already own, counted at zero." if owned and licence_total == 0 else "List price of the database licence (BYOL / self-managed)."
+        entry = CostComponent(id="licence", label=COMPONENT_LABELS["licence"], status="priced", monthly_usd=round(licence_total, 2), note=note)
+    else:
+        entry = CostComponent(id="licence", label=COMPONENT_LABELS["licence"], status="included", monthly_usd=0.0, note="The licence is inside the service price, or the engine is open source.")
+    updated: list[CostComponent] = []
+    inserted = False
+    for component in components:
+        updated.append(component)
+        if component.id == "compute" and not inserted:
+            updated.append(entry)
+            inserted = True
+    if not inserted:
+        updated.insert(0, entry)
+    return updated
 
 
 def priced_cost(estimate_result: CostEstimate) -> float | None:
@@ -145,9 +166,13 @@ def combine_estimates(tier_name: str, label: str, parts: list[tuple[str, CostEst
             notes.append(f"{service_name}: {note}")
     multiplier = parts[0][1].environment_multiplier if parts else 1.0
     complete = all(part.complete for _, part in parts)
+    components: list[CostComponent] = []
+    for service_name, part in parts:
+        for component in part.components:
+            components.append(component.model_copy(update={"service": service_name if len(parts) > 1 else None}))
     return CostEstimate(
         tier=tier_name, label=label, monthly_usd=round(total, 2), lines=lines,
-        environment_multiplier=multiplier, complete=complete, missing=missing, notes=notes,
+        environment_multiplier=multiplier, complete=complete, missing=missing, notes=notes, components=components,
     )
 
 
@@ -173,5 +198,5 @@ def pricing_summary(knowledge: KnowledgeBundle, notes: list[str]) -> PricingSumm
             as_of[csp] = fetched_at
     return PricingSummary(
         prices_as_of=as_of, inr_per_usd=knowledge.inr_per_usd, inr_rate_date=knowledge.inr_rate_date,
-        notes=["List prices; excludes enterprise discounts, taxes and data egress."] + notes,
+        notes=["List prices; excludes enterprise discounts and taxes. Open a tier to see which bill components are priced."] + notes,
     )

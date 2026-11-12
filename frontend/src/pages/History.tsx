@@ -39,8 +39,9 @@ export default function History() {
             <li key={row.id}>
               <Link to={`/assessments/${row.id}`} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-3 transition-all duration-200 hover:bg-sand-50 hover:pl-5">
                 <span className="text-sm tabular-nums text-slate-500">{new Date(row.created_at).toLocaleString()}</span>
+                <span className="text-sm font-semibold text-slate-900">{row.app_name ?? "Unnamed application"}</span>
                 <span className="text-sm text-slate-500">{row.app_type ?? "unspecified app type"}</span>
-                <span className="text-sm font-medium text-slate-900">{row.top_recommendation ?? "No recommendation"}</span>
+                <span className="text-sm text-slate-700">{row.top_recommendation ?? "No recommendation"}</span>
                 {row.top_csp && <span className="text-xs text-slate-500">{CSP_LABELS[row.top_csp]}</span>}
               </Link>
             </li>

@@ -63,9 +63,7 @@ cost:
   service_factors:        # fnmatch patterns on service id; first match wins
     "*.oracle_database_at_*": 5.0
     "gcp.bare_metal_solution_oracle": 4.0
-    "gcp.spanner": 3.0
     "aws.redshift": 2.0
-    "azure.synapse_analytics": 2.0
     "gcp.bigquery": 1.5
     "azure.fabric_warehouse": 1.5
     "aws.aurora_*": 1.2

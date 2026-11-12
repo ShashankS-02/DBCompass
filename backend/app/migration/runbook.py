@@ -10,6 +10,8 @@ Durations (working days) = phase base_days plus:
 import math
 from typing import Any
 
+from app.engine.readiness import verdict_for
+from app.engine.rules import condition_matches
 from app.models.migration import MethodChoice, MigrationKnowledge, Phase, PhaseSpec
 
 HOURS_PER_DAY = 24
@@ -39,10 +41,23 @@ def phase_tasks(spec: PhaseSpec, homogeneous: bool) -> list[str]:
     return list(spec.tasks)
 
 
+def phase_applies(spec: PhaseSpec, values: dict[str, Any]) -> bool:
+    """A phase with `when` conditions is included only when they all match the answers and plan.readiness."""
+    if not spec.when:
+        return True
+    facts = dict(values)
+    facts["plan.readiness"] = verdict_for(values)
+    return all(condition_matches(condition, facts) for condition in spec.when)
+
+
 def build_phases(values: dict[str, Any], method: MethodChoice, refactor_days: float, knowledge: MigrationKnowledge) -> list[Phase]:
-    """Every phase from migration_tools.yaml with its duration for this migration."""
+    """Every applicable phase from migration_tools.yaml with its duration for this migration."""
     phases: list[Phase] = []
-    for order, spec in enumerate(knowledge.phases, start=1):
+    order = 0
+    for spec in knowledge.phases:
+        if not phase_applies(spec, values):
+            continue
+        order += 1
         days = spec.base_days + extra_days(spec, values, method, refactor_days)
         phases.append(Phase(
             order=order, id=spec.id, name=spec.name, owner_role=spec.owner_role, duration_days=round(days, 1),

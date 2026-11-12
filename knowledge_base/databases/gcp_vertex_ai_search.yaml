@@ -9,6 +9,7 @@ secondary_families:
 engines:
 - proprietary
 deployment: serverless
+special_case: vector_search
 lifecycle: active
 status_note: Being renamed to Agent Search. A search/RAG product rather than a database; included for the search role only.
 consistency:
@@ -38,6 +39,7 @@ supports:
   audit: false
   masking_rls: false
 compliance:
+- iso_27001
 - gdpr
 proprietary_lock_in: high
 ops_complexity: low

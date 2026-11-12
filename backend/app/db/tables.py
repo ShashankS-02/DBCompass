@@ -36,20 +36,6 @@ class AssessmentRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
-class RepoScanRow(Base):
-    """A repo analysis, cached by repository URL, commit SHA and analyzer version."""
-
-    __tablename__ = "repo_scans"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    repo_url: Mapped[str] = mapped_column(String(500), index=True)
-    commit_sha: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    analyzer_version: Mapped[str] = mapped_column(String(20))
-    result_json: Mapped[dict] = mapped_column(JSON)
-    created_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-
-
 class MigrationPlanRow(Base):
     """A stored migration plan (doc 07), optionally linked to the assessment it was planned from."""
 
@@ -89,3 +75,15 @@ class RequestEventRow(Base):
     action: Mapped[str] = mapped_column(String(20))
     note: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class ExplanationRow(Base):
+    """A fact-checked LLM explanation of one assessment, saved per prompt version (M7)."""
+
+    __tablename__ = "explanations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    assessment_id: Mapped[str] = mapped_column(ForeignKey("assessments.id"), index=True)
+    prompt_version: Mapped[str] = mapped_column(String(40))
+    explanation_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

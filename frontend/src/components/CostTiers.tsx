@@ -1,5 +1,51 @@
 import { useState } from "react";
-import type { CostEstimate } from "../api/assessments";
+import type { ComponentStatus, CostEstimate } from "../api/assessments";
+
+const STATUS_STYLES: Record<ComponentStatus, { label: string; className: string }> = {
+  priced: { label: "Priced", className: "bg-emerald-100 text-emerald-800" },
+  estimated: { label: "Estimated", className: "bg-gold-100 text-gold-800" },
+  included: { label: "Included", className: "bg-teal-100 text-teal-800" },
+  not_priced: { label: "Not priced", className: "bg-amber-100 text-amber-800" },
+  not_applicable: { label: "Not needed", className: "bg-sand-100 text-slate-600" },
+};
+
+/** What the bill is made of and which parts this estimate covers (M9). */
+export function ComponentSummary({ estimate, currency, inrPerUsd }: { estimate: CostEstimate; currency: Currency; inrPerUsd: number | null }) {
+  if (!estimate.components.length) return null;
+  return (
+    <table className="w-full table-fixed text-xs">
+      <thead>
+        <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500">
+          <th className="w-1/2 py-1 font-medium">Component</th>
+          <th className="py-1 font-medium">Status</th>
+          <th className="py-1 text-right font-medium">Monthly</th>
+        </tr>
+      </thead>
+      <tbody>
+        {estimate.components.map((component, index) => {
+          const style = STATUS_STYLES[component.status];
+          return (
+            <tr key={`${component.service ?? ""}-${component.id}-${index}`} className="border-t border-slate-100 align-top">
+              <td className="py-1 pr-2">
+                <div className="font-medium text-slate-800">
+                  {component.label}
+                  {component.service && <span className="font-normal text-slate-500"> · {component.service}</span>}
+                </div>
+                <div className="text-slate-500">{component.note}</div>
+              </td>
+              <td className="py-1">
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${style.className}`}>{style.label}</span>
+              </td>
+              <td className="py-1 text-right tabular-nums text-slate-800">
+                {component.monthly_usd !== null ? formatMoney(component.monthly_usd, currency, inrPerUsd) : "—"}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
 
 export type Currency = "usd" | "inr";
 
@@ -25,6 +71,9 @@ function termsUsed(estimate: CostEstimate): string {
 function Breakdown({ estimate, currency, inrPerUsd }: { estimate: CostEstimate; currency: Currency; inrPerUsd: number | null }) {
   return (
     <div className="mt-2 space-y-2 text-xs text-slate-700">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">What this estimate covers</p>
+      <ComponentSummary estimate={estimate} currency={currency} inrPerUsd={inrPerUsd} />
+      <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Line items</p>
       <table className="w-full table-fixed">
         <tbody>
           {estimate.lines.map((line, index) => (

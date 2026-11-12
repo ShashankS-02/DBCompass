@@ -1,0 +1,176 @@
+# Per-engine feature checklist for the guided intake (M8).
+#
+# Each engine lists the engine-specific features an application might depend on. `feature` is the
+# catalog value stored in data.special_features (questions.yaml); `label` is the engine's own name
+# for it. `how_to_check` is a catalog / dictionary query that returns METADATA ONLY (object names,
+# counts, settings): it never reads table rows, so it is safe to run and to paste the result into a
+# ticket. Teams run these themselves; DBCompass never connects to a database.
+#
+# python -m app.knowledge.check verifies that every `feature` is an option of data.special_features.
+version: 1
+last_verified: 2026-11-11
+
+# Features that make staying on the same engine materially easier (rules.yaml R-FEAT-STICKY-001).
+sticky_features: [advanced_queuing, clr_or_java, flashback, scheduler_jobs, replication, rac, db_links, sql_agent_jobs]
+
+engines:
+  oracle:
+    discovery_note: "DBA_FEATURE_USAGE_STATISTICS lists every licensed option the database has ever used; start there."
+    features:
+      - {feature: rac, label: "RAC (Real Application Clusters)", how_to_check: "SELECT name, value FROM v$parameter WHERE name = 'cluster_database';"}
+      - {feature: partitioning, label: "Partitioning", how_to_check: "SELECT COUNT(*) FROM dba_part_tables WHERE owner NOT IN ('SYS','SYSTEM');"}
+      - {feature: db_links, label: "Database links", how_to_check: "SELECT owner, db_link, host FROM dba_db_links;"}
+      - {feature: materialized_views, label: "Materialized views", how_to_check: "SELECT owner, mview_name, refresh_method FROM dba_mviews;"}
+      - {feature: advanced_queuing, label: "Advanced Queuing (AQ)", how_to_check: "SELECT owner, name, queue_type FROM dba_queues WHERE owner NOT IN ('SYS','SYSTEM');"}
+      - {feature: scheduler_jobs, label: "DBMS_SCHEDULER / DBMS_JOB jobs", how_to_check: "SELECT owner, job_name, enabled FROM dba_scheduler_jobs WHERE owner NOT IN ('SYS','SYSTEM');"}
+      - {feature: clr_or_java, label: "Java stored procedures", how_to_check: "SELECT owner, COUNT(*) FROM dba_objects WHERE object_type LIKE 'JAVA%' GROUP BY owner;"}
+      - {feature: flashback, label: "Flashback (Data Archive, Flashback Query)", how_to_check: "SELECT name, detected_usages FROM dba_feature_usage_statistics WHERE name LIKE 'Flashback%';"}
+      - {feature: replication, label: "GoldenGate / Streams / Data Guard replication", how_to_check: "SELECT name, detected_usages FROM dba_feature_usage_statistics WHERE name IN ('GoldenGate','Data Guard','Active Data Guard');"}
+      - {feature: spatial, label: "Spatial / Locator", how_to_check: "SELECT COUNT(*) FROM dba_sdo_geom_metadata;"}
+      - {feature: in_db_full_text, label: "Oracle Text", how_to_check: "SELECT owner, index_name FROM dba_indexes WHERE ityp_owner = 'CTXSYS';"}
+      - {feature: hierarchical_queries, label: "CONNECT BY hierarchical queries", how_to_check: "SELECT COUNT(*) FROM dba_source WHERE UPPER(text) LIKE '%CONNECT BY%' AND owner NOT IN ('SYS','SYSTEM');"}
+      - {feature: sequences, label: "Sequences", how_to_check: "SELECT sequence_owner, COUNT(*) FROM dba_sequences GROUP BY sequence_owner;"}
+      - {feature: compression, label: "Advanced Compression / HCC", how_to_check: "SELECT name, detected_usages FROM dba_feature_usage_statistics WHERE name LIKE '%Compression%';"}
+      - {feature: tde, label: "Transparent Data Encryption", how_to_check: "SELECT * FROM v$encryption_wallet;"}
+      - {feature: xml_data, label: "XMLType columns", how_to_check: "SELECT owner, table_name FROM dba_tab_columns WHERE data_type = 'XMLTYPE';"}
+      - {feature: external_tables, label: "External tables / Data Pump directories", how_to_check: "SELECT owner, table_name FROM dba_external_tables;"}
+
+  sql_server:
+    discovery_note: "Run these against each user database; msdb holds Agent jobs and SSIS packages."
+    features:
+      - {feature: sql_agent_jobs, label: "SQL Server Agent jobs", how_to_check: "SELECT name, enabled FROM msdb.dbo.sysjobs;"}
+      - {feature: db_links, label: "Linked servers", how_to_check: "SELECT name, product, data_source FROM sys.servers WHERE is_linked = 1;"}
+      - {feature: partitioning, label: "Table partitioning", how_to_check: "SELECT name FROM sys.partition_schemes;"}
+      - {feature: rac, label: "Always On availability groups / failover cluster", how_to_check: "SELECT name FROM sys.availability_groups; SELECT SERVERPROPERTY('IsClustered');"}
+      - {feature: clr_or_java, label: "CLR assemblies", how_to_check: "SELECT name, permission_set_desc FROM sys.assemblies WHERE is_user_defined = 1;"}
+      - {feature: advanced_queuing, label: "Service Broker", how_to_check: "SELECT name, is_broker_enabled FROM sys.databases WHERE is_broker_enabled = 1;"}
+      - {feature: in_db_full_text, label: "Full-text search", how_to_check: "SELECT OBJECT_NAME(object_id) FROM sys.fulltext_indexes;"}
+      - {feature: replication, label: "Replication (transactional / merge) or log shipping", how_to_check: "SELECT name FROM sys.databases WHERE is_published = 1 OR is_subscribed = 1 OR is_merge_published = 1;"}
+      - {feature: flashback, label: "Temporal tables / CDC", how_to_check: "SELECT name FROM sys.tables WHERE temporal_type = 2; SELECT name FROM sys.databases WHERE is_cdc_enabled = 1;"}
+      - {feature: tde, label: "Transparent Data Encryption", how_to_check: "SELECT DB_NAME(database_id), encryption_state FROM sys.dm_database_encryption_keys;"}
+      - {feature: xml_data, label: "XML columns / XML indexes", how_to_check: "SELECT OBJECT_NAME(object_id), name FROM sys.xml_indexes;"}
+      - {feature: spatial, label: "Spatial types (geometry / geography)", how_to_check: "SELECT OBJECT_NAME(object_id), name FROM sys.columns WHERE system_type_id IN (240) ;"}
+      - {feature: compression, label: "Row / page compression or columnstore", how_to_check: "SELECT DISTINCT data_compression_desc FROM sys.partitions WHERE data_compression > 0;"}
+      - {feature: external_tables, label: "PolyBase external tables / SSIS packages", how_to_check: "SELECT name FROM sys.external_tables; SELECT name FROM SSISDB.catalog.projects;"}
+      - {feature: sequences, label: "Sequences / IDENTITY", how_to_check: "SELECT name FROM sys.sequences;"}
+      - {feature: materialized_views, label: "Indexed views", how_to_check: "SELECT OBJECT_NAME(object_id) FROM sys.indexes WHERE index_id = 1 AND OBJECTPROPERTY(object_id, 'IsView') = 1;"}
+
+  postgresql:
+    discovery_note: "Extensions are the main portability question; managed services allow only a fixed list."
+    features:
+      - {feature: extensions, label: "Extensions (pg_cron, PostGIS, pg_partman, …)", how_to_check: "SELECT extname, extversion FROM pg_extension;"}
+      - {feature: partitioning, label: "Declarative partitioning", how_to_check: "SELECT COUNT(*) FROM pg_partitioned_table;"}
+      - {feature: db_links, label: "Foreign data wrappers / dblink", how_to_check: "SELECT srvname, fdwname FROM pg_foreign_server s JOIN pg_foreign_data_wrapper f ON s.srvfdw = f.oid;"}
+      - {feature: replication, label: "Logical / streaming replication", how_to_check: "SELECT pubname FROM pg_publication; SELECT subname FROM pg_subscription; SELECT * FROM pg_replication_slots;"}
+      - {feature: materialized_views, label: "Materialized views", how_to_check: "SELECT schemaname, matviewname FROM pg_matviews;"}
+      - {feature: scheduler_jobs, label: "pg_cron jobs", how_to_check: "SELECT jobname, schedule FROM cron.job;"}
+      - {feature: clr_or_java, label: "Untrusted languages (plpython, plperlu, C functions)", how_to_check: "SELECT lanname FROM pg_language WHERE lanpltrusted = false;"}
+      - {feature: spatial, label: "PostGIS", how_to_check: "SELECT extversion FROM pg_extension WHERE extname = 'postgis';"}
+      - {feature: in_db_full_text, label: "Full-text search (tsvector / GIN)", how_to_check: "SELECT COUNT(*) FROM pg_attribute a JOIN pg_type t ON a.atttypid = t.oid WHERE t.typname = 'tsvector';"}
+      - {feature: sequences, label: "Sequences", how_to_check: "SELECT COUNT(*) FROM pg_sequences;"}
+      - {feature: external_tables, label: "Large objects (pg_largeobject)", how_to_check: "SELECT COUNT(DISTINCT loid) FROM pg_largeobject;"}
+
+  mysql:
+    discovery_note: "Also covers MariaDB; check storage engines other than InnoDB."
+    features:
+      - {feature: partitioning, label: "Partitioned tables", how_to_check: "SELECT DISTINCT table_schema, table_name FROM information_schema.partitions WHERE partition_name IS NOT NULL;"}
+      - {feature: scheduler_jobs, label: "Event Scheduler events", how_to_check: "SELECT event_schema, event_name, status FROM information_schema.events;"}
+      - {feature: replication, label: "Replication (binlog) / Group Replication", how_to_check: "SHOW REPLICA STATUS; SELECT * FROM performance_schema.replication_group_members;"}
+      - {feature: in_db_full_text, label: "FULLTEXT indexes", how_to_check: "SELECT DISTINCT table_schema, table_name FROM information_schema.statistics WHERE index_type = 'FULLTEXT';"}
+      - {feature: spatial, label: "Spatial types / indexes", how_to_check: "SELECT DISTINCT table_schema, table_name FROM information_schema.statistics WHERE index_type = 'SPATIAL';"}
+      - {feature: clr_or_java, label: "User-defined functions (UDF plugins)", how_to_check: "SELECT name, dl FROM mysql.func;"}
+      - {feature: external_tables, label: "Non-InnoDB storage engines (MyISAM, FEDERATED, …)", how_to_check: "SELECT engine, COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('mysql','sys','information_schema','performance_schema') GROUP BY engine;"}
+      - {feature: tde, label: "Keyring / tablespace encryption", how_to_check: "SELECT tablespace_name FROM information_schema.innodb_tablespaces WHERE encryption = 'Y';"}
+
+  mariadb:
+    discovery_note: "Same checks as MySQL; Galera and ColumnStore are MariaDB-specific."
+    features:
+      - {feature: partitioning, label: "Partitioned tables", how_to_check: "SELECT DISTINCT table_schema, table_name FROM information_schema.partitions WHERE partition_name IS NOT NULL;"}
+      - {feature: scheduler_jobs, label: "Event Scheduler events", how_to_check: "SELECT event_schema, event_name, status FROM information_schema.events;"}
+      - {feature: replication, label: "Galera cluster / replication", how_to_check: "SHOW STATUS LIKE 'wsrep_cluster_size'; SHOW REPLICA STATUS;"}
+      - {feature: external_tables, label: "ColumnStore / Spider / CONNECT engines", how_to_check: "SELECT engine, COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('mysql','sys','information_schema','performance_schema') GROUP BY engine;"}
+      - {feature: in_db_full_text, label: "FULLTEXT indexes", how_to_check: "SELECT DISTINCT table_schema, table_name FROM information_schema.statistics WHERE index_type = 'FULLTEXT';"}
+
+  db2:
+    discovery_note: "Db2 LUW catalog views (SYSCAT); pureScale and federation are the big portability items."
+    features:
+      - {feature: rac, label: "pureScale / HADR", how_to_check: "db2 get db cfg for <db> | grep -i hadr; db2pd -d <db> -cfinfo"}
+      - {feature: partitioning, label: "Range partitioning / DPF", how_to_check: "SELECT tabschema, tabname FROM syscat.datapartitions GROUP BY tabschema, tabname;"}
+      - {feature: db_links, label: "Federation (nicknames / servers)", how_to_check: "SELECT servername, servertype FROM syscat.servers;"}
+      - {feature: materialized_views, label: "Materialized query tables (MQT)", how_to_check: "SELECT tabschema, tabname FROM syscat.tables WHERE type = 'S';"}
+      - {feature: scheduler_jobs, label: "Administrative Task Scheduler", how_to_check: "SELECT name, enabled FROM systools.admin_task_list;"}
+      - {feature: clr_or_java, label: "Java / C external routines", how_to_check: "SELECT routineschema, routinename, language FROM syscat.routines WHERE language IN ('JAVA','C');"}
+      - {feature: replication, label: "Q Replication / SQL Replication / CDC", how_to_check: "SELECT COUNT(*) FROM asn.ibmsnap_register;"}
+      - {feature: xml_data, label: "pureXML columns", how_to_check: "SELECT tabschema, tabname, colname FROM syscat.columns WHERE typename = 'XML';"}
+      - {feature: compression, label: "Adaptive compression / BLU column-organised tables", how_to_check: "SELECT tabschema, tabname FROM syscat.tables WHERE compression <> 'N' OR tableorg = 'C';"}
+      - {feature: sequences, label: "Sequences / identity columns", how_to_check: "SELECT seqschema, seqname FROM syscat.sequences WHERE seqschema NOT LIKE 'SYS%';"}
+
+  mongodb:
+    discovery_note: "Run from mongosh; sharding, change streams and Atlas-only features decide the target."
+    features:
+      - {feature: sharding, label: "Sharded cluster", how_to_check: "sh.status()"}
+      - {feature: replication, label: "Replica set topology", how_to_check: "rs.conf().members.map(m => ({host: m.host, priority: m.priority}))"}
+      - {feature: change_streams, label: "Change streams consumers", how_to_check: "db.currentOp({'command.pipeline.0.$changeStream': {$exists: true}})"}
+      - {feature: in_db_full_text, label: "Text indexes / Atlas Search", how_to_check: "db.getCollectionNames().flatMap(c => db[c].getIndexes().filter(i => Object.values(i.key).includes('text')).map(i => c + ':' + i.name))"}
+      - {feature: spatial, label: "2dsphere geospatial indexes", how_to_check: "db.getCollectionNames().flatMap(c => db[c].getIndexes().filter(i => Object.values(i.key).includes('2dsphere')).map(i => c + ':' + i.name))"}
+      - {feature: ttl_expiry, label: "TTL indexes", how_to_check: "db.getCollectionNames().flatMap(c => db[c].getIndexes().filter(i => 'expireAfterSeconds' in i).map(i => c + ':' + i.name))"}
+      - {feature: time_series, label: "Time-series collections", how_to_check: "db.getCollectionInfos({type: 'timeseries'}).map(c => c.name)"}
+      - {feature: tde, label: "Encryption at rest / client-side field level encryption", how_to_check: "db.serverStatus().encryptionAtRest"}
+      - {feature: scheduler_jobs, label: "Atlas triggers / scheduled functions", how_to_check: "Atlas UI → App Services → Triggers (no shell equivalent)"}
+
+  cassandra:
+    discovery_note: "Use cqlsh; materialised views and SASI indexes are the portability risks on managed services."
+    features:
+      - {feature: replication, label: "Multi-datacentre replication", how_to_check: "SELECT keyspace_name, replication FROM system_schema.keyspaces;"}
+      - {feature: materialized_views, label: "Materialized views", how_to_check: "SELECT keyspace_name, view_name FROM system_schema.views;"}
+      - {feature: secondary_indexes, label: "Secondary / SASI indexes", how_to_check: "SELECT keyspace_name, table_name, index_name, kind FROM system_schema.indexes;"}
+      - {feature: clr_or_java, label: "User-defined functions / aggregates", how_to_check: "SELECT keyspace_name, function_name FROM system_schema.functions;"}
+      - {feature: ttl_expiry, label: "Default TTL on tables", how_to_check: "SELECT keyspace_name, table_name, default_time_to_live FROM system_schema.tables WHERE default_time_to_live > 0 ALLOW FILTERING;"}
+      - {feature: compression, label: "Table compression settings", how_to_check: "SELECT keyspace_name, table_name, compression FROM system_schema.tables;"}
+      - {feature: change_streams, label: "CDC enabled tables", how_to_check: "SELECT keyspace_name, table_name FROM system_schema.tables WHERE cdc = true ALLOW FILTERING;"}
+
+  couchbase:
+    discovery_note: "Use the REST API or Query Workbench; XDCR, Eventing and FTS have no direct equivalents on CSP services."
+    features:
+      - {feature: replication, label: "XDCR replication", how_to_check: "curl -u <user> http://<node>:8091/pools/default/remoteClusters"}
+      - {feature: in_db_full_text, label: "Full Text Search indexes", how_to_check: "curl -u <user> http://<node>:8094/api/index"}
+      - {feature: secondary_indexes, label: "GSI indexes (N1QL)", how_to_check: "SELECT name, keyspace_id, index_key FROM system:indexes;"}
+      - {feature: scheduler_jobs, label: "Eventing functions", how_to_check: "curl -u <user> http://<node>:8096/api/v1/functions"}
+      - {feature: ttl_expiry, label: "Document expiry (TTL)", how_to_check: "SELECT name, maxTTL FROM system:keyspaces;"}
+      - {feature: spatial, label: "Geospatial FTS queries", how_to_check: "Inspect FTS index definitions for geopoint fields (curl :8094/api/index)"}
+      - {feature: xml_data, label: "Analytics service datasets", how_to_check: "curl -u <user> http://<node>:8095/analytics/service -d 'SELECT DatasetName FROM Metadata.`Dataset`'"}
+
+  sybase:
+    discovery_note: "SAP ASE: stored procedures and replication server are the usual blockers."
+    features:
+      - {feature: db_links, label: "Remote servers / proxy tables", how_to_check: "sp_helpserver; SELECT name FROM sysobjects WHERE type = 'U' AND sysstat2 & 1024 = 1024;"}
+      - {feature: replication, label: "Replication Server", how_to_check: "sp_helpdb; sp_config_rep_agent <db>"}
+      - {feature: partitioning, label: "Semantic partitioning", how_to_check: "SELECT name FROM sysobjects WHERE type = 'U' AND partitiontype > 0;"}
+      - {feature: scheduler_jobs, label: "Job Scheduler jobs", how_to_check: "sp_sjobhelp"}
+      - {feature: clr_or_java, label: "Java in the database", how_to_check: "sp_configure 'enable java'"}
+      - {feature: tde, label: "Encrypted columns", how_to_check: "sp_encryption helpcol"}
+      - {feature: in_db_full_text, label: "Enhanced Full-Text Search", how_to_check: "sp_helpindex on text columns; check EFTS server with sp_helpserver"}
+
+  informix:
+    discovery_note: "Enterprise Replication and HDR are the main topology questions; datablades are the feature question."
+    features:
+      - {feature: rac, label: "HDR / RSS / SDS secondaries", how_to_check: "onstat -g dri; onstat -g rss"}
+      - {feature: replication, label: "Enterprise Replication (ER)", how_to_check: "cdr list server"}
+      - {feature: partitioning, label: "Fragmented tables", how_to_check: "SELECT DISTINCT tabid FROM sysfragments WHERE fragtype = 'T';"}
+      - {feature: clr_or_java, label: "DataBlades / C or Java UDRs", how_to_check: "SELECT bldname FROM sysbldobjects; SELECT procname, langid FROM sysprocedures WHERE langid > 0;"}
+      - {feature: time_series, label: "TimeSeries DataBlade", how_to_check: "SELECT bldname FROM sysbldobjects WHERE bldname LIKE 'TimeSeries%';"}
+      - {feature: spatial, label: "Spatial DataBlade", how_to_check: "SELECT bldname FROM sysbldobjects WHERE bldname LIKE 'spatial%';"}
+      - {feature: db_links, label: "Distributed queries (database@server)", how_to_check: "SELECT * FROM sysdistcookies; check application SQL for @server references"}
+      - {feature: scheduler_jobs, label: "Scheduler tasks (ph_task)", how_to_check: "SELECT tk_name, tk_enable FROM sysadmin:ph_task;"}
+      - {feature: compression, label: "Compressed tables", how_to_check: "SELECT tabname FROM systables t JOIN sysfragments f ON t.tabid = f.tabid WHERE f.flags & 0x200000 > 0;"}
+
+  vertica:
+    discovery_note: "Projections and flex tables have no equivalent on cloud warehouses; list them before choosing a target."
+    features:
+      - {feature: materialized_views, label: "Projections (non-superprojection)", how_to_check: "SELECT anchor_table_name, projection_name FROM v_catalog.projections WHERE is_super_projection = false;"}
+      - {feature: partitioning, label: "Partitioned tables", how_to_check: "SELECT table_schema, table_name, partition_expression FROM v_catalog.tables WHERE partition_expression <> '';"}
+      - {feature: xml_data, label: "Flex tables (semi-structured)", how_to_check: "SELECT table_schema, table_name FROM v_catalog.tables WHERE is_flextable;"}
+      - {feature: clr_or_java, label: "User-defined extensions (UDx)", how_to_check: "SELECT schema_name, function_name, procedure_type FROM v_catalog.user_functions WHERE procedure_type <> 'User Defined Function';"}
+      - {feature: external_tables, label: "External tables (S3 / HDFS / Parquet)", how_to_check: "SELECT table_schema, table_name FROM v_catalog.tables WHERE table_definition <> '';"}
+      - {feature: scheduler_jobs, label: "Scheduled jobs (Kafka scheduler, vbr)", how_to_check: "SELECT * FROM v_catalog.scheduled_jobs;"}
+      - {feature: in_db_full_text, label: "Text indexes", how_to_check: "SELECT * FROM v_catalog.text_indexes;"}

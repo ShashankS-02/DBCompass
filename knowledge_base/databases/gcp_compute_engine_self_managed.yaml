@@ -14,7 +14,6 @@ engines:
 - sql_server
 - postgresql
 - mysql
-- mariadb
 - db2
 - mongodb
 - cassandra
@@ -49,6 +48,7 @@ supports:
   masking_rls: true
   sql_agent: true
 compliance:
+- iso_27001
 - sox
 - pci_dss
 - hipaa

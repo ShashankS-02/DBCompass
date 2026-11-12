@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from app.models.intake import Readiness
+
 from app.models.knowledge import ComponentRole, Csp
 from app.models.requirements import AssumedField, RequirementsInput
 
@@ -98,6 +100,20 @@ class CostLine(BaseModel):
     term: str
 
 
+ComponentStatus = Literal["priced", "included", "estimated", "not_priced", "not_applicable"]
+
+
+class CostComponent(BaseModel):
+    """One thing a cloud database bill contains, and how this estimate treats it (M9)."""
+
+    id: str  # compute, licence, storage, io, backup, ha_standby, dr_copy, egress, private_endpoint, proxy, kms_key, audit_logs, environments
+    label: str
+    status: ComponentStatus
+    monthly_usd: float | None = None  # None unless priced or estimated
+    note: str
+    service: str | None = None  # service name inside a combination
+
+
 class CostEstimate(BaseModel):
     """Monthly list-price estimate for one tier (Budget / Balanced / Performance)."""
 
@@ -109,6 +125,34 @@ class CostEstimate(BaseModel):
     complete: bool = True
     missing: list[str] = []
     notes: list[str] = []
+    components: list[CostComponent] = []  # what the bill is made of and what this estimate covers (M9)
+
+
+class Baseline(BaseModel):
+    """Like-for-like option (M9): the cheapest managed service running the current engine on one cloud."""
+
+    csp: Csp
+    service_id: str
+    service_name: str
+    engine: str
+    engine_label: str
+    core_monthly_usd: float | None  # Balanced compute + licence lines; None when unpriced
+    total_monthly_usd: float | None
+    priced: bool
+    note: str
+
+
+class BaselineDelta(BaseModel):
+    """How one recommendation compares with its cloud's like-for-like baseline on compute and licences."""
+
+    baseline_service_id: str
+    baseline_service_name: str
+    engine_label: str
+    baseline_core_usd: float | None
+    recommendation_core_usd: float | None
+    delta_usd: float | None  # recommendation minus baseline; negative means cheaper
+    same_service: bool
+    message: str
 
 
 class Recommendation(BaseModel):
@@ -125,6 +169,7 @@ class Recommendation(BaseModel):
     design_guidance: list[str]
     why: list[str]
     explanation: str = ""
+    versus_baseline: BaselineDelta | None = None  # compute + licence difference against staying on the current engine (M9)
 
 
 class PricingSummary(BaseModel):
@@ -154,6 +199,8 @@ class AssessmentOutcome(BaseModel):
     recommendations: list[Recommendation]
     trace: Trace
     pricing: PricingSummary | None = None
+    readiness: Readiness | None = None  # team readiness for an existing database (M8)
+    baselines: dict[str, Baseline] = {}  # like-for-like option per cloud, for an existing database (M9)
 
 
 class AssessmentResult(AssessmentOutcome):
@@ -170,6 +217,7 @@ class AssessmentSummary(BaseModel):
 
     id: str
     created_at: datetime
+    app_name: str | None = None
     app_type: str | None
     top_recommendation: str | None
     top_csp: Csp | None

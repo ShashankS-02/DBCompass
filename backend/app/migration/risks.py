@@ -18,7 +18,7 @@ def charset_risk(charset: str | None) -> bool:
 
 
 def has_db_links(values: dict[str, Any]) -> bool:
-    """DB links named in mig.dependencies, or found by the repo analyzer (data.special_features)."""
+    """DB links named in mig.dependencies, or declared in data.special_features."""
     if "db_links" in (values.get("data.special_features") or []):
         return True
     for dependency in values.get("mig.dependencies") or []:
