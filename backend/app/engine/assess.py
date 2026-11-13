@@ -6,15 +6,17 @@ Deterministic: no randomness, no clock, no LLM. Ties are broken by relative cost
 from dataclasses import dataclass
 from typing import Any
 
-from app.engine.baseline import build_baselines, versus_baseline
+from app.engine.about import service_about
+from app.engine.baseline import build_baselines, engine_label, service_display_name, versus_baseline
 from app.engine.combiner import Combination, build_combination, component_needs
 from app.engine.costing import apply_budget_filter, balanced_costs, pricing_summary, recommendation_tiers
-from app.engine.defaults import resolve_requirements
+from app.engine.defaults import intended_engine, resolve_requirements
 from app.engine.readiness import assess_readiness
 from app.engine.filters import filter_services, rules_for_scope
 from app.engine.rules import fired_rules
 from app.engine.scorer import score_all
-from app.engine.sizer import size_service
+from app.engine.setup_guide import build_setup_guide
+from app.engine.sizer import engine_fits_shapes, size_service
 from app.engine.validation import build_validation_report
 from app.knowledge.loader import KnowledgeBundle
 from app.models.knowledge import Rule, ServiceEntry
@@ -43,15 +45,15 @@ class RequirementsInvalid(ValueError):
         self.report = report
 
 
-def choice_for(service: ServiceEntry, role: str, sizing: SizingResult, reason: str, values: dict[str, Any]) -> ServiceChoice:
-    """ServiceChoice for one component."""
+def choice_for(service: ServiceEntry, role: str, sizing: SizingResult, reason: str, values: dict[str, Any], knowledge: KnowledgeBundle) -> ServiceChoice:
+    """ServiceChoice for one component; self-managed hosts are titled with the engine they run."""
     engine_version = None
     source = values.get("mig.source_engine") or values.get("app.existing_db") or {}
     if role == "primary_oltp" and source.get("engine") == sizing.engine:
         engine_version = source.get("version")
     return ServiceChoice(
         service_id=service.id,
-        service_name=service.name,
+        service_name=service_display_name(service, sizing.engine, knowledge),
         role=role,
         engine=sizing.engine,
         engine_version=engine_version,
@@ -60,6 +62,7 @@ def choice_for(service: ServiceEntry, role: str, sizing: SizingResult, reason: s
         replicas=sizing.replicas,
         sizing=sizing,
         reason=reason,
+        about=service_about(service, sizing, knowledge),
     )
 
 
@@ -94,13 +97,13 @@ def to_recommendation(
     """Turn a scored combination into the API model."""
     primary = combination.primary
     primary_sizing = sizings.primary[primary.id]
-    components = [choice_for(primary, "primary_oltp", primary_sizing, "Primary database", resolved.values)]
+    components = [choice_for(primary, "primary_oltp", primary_sizing, "Primary database", resolved.values, knowledge)]
     priced_parts = [(primary, "primary_oltp")]
     total_units = primary_sizing.relative_cost_units
     for need, component in combination.components:
         priced_parts.append((component, need.requirement.role))
         component_sizing = sizings.component[component.id]
-        components.append(choice_for(component, need.requirement.role, component_sizing, need.message, resolved.values))
+        components.append(choice_for(component, need.requirement.role, component_sizing, need.message, resolved.values, knowledge))
         total_units += component_sizing.relative_cost_units
     return Recommendation(
         rank=rank,
@@ -180,7 +183,8 @@ def find_candidates(
     values = resolved.values
     weights = resolved.dimension_weights
     primaries, filtered_out = filter_services(
-        knowledge.services, rules, values, knowledge.regions, knowledge.rules, check_shape=True, org_support=knowledge.org_support
+        knowledge.services, rules, values, knowledge.regions, knowledge.rules, check_shape=True,
+        org_support=knowledge.org_support, scoring=knowledge.scoring,
     )
     primaries, over_budget, pricing_notes = apply_budget_filter(primaries, values, knowledge)
     components, _ = filter_services(
@@ -239,6 +243,30 @@ def presented_recommendations(
     return recommendations
 
 
+def shape_notices(values: dict[str, Any], knowledge: KnowledgeBundle) -> list[str]:
+    """Warn when the engine the team has in mind cannot be the primary for the chosen data shape."""
+    engine = intended_engine(values)
+    shapes = values.get("data.shape") or []
+    if engine is None or engine_fits_shapes(engine, shapes, knowledge.scoring):
+        return []
+    shape_question = knowledge.catalog.questions_by_id().get("data.shape")
+
+    def labels(shape_values: list[str]) -> str:
+        names = []
+        for shape in shape_values:
+            names.append(shape_question.option_label(shape) if shape_question else shape)
+        return " or ".join(names)
+
+    who = "The vendor certifies" if values.get("app.vendor_certified_engine") == engine else "You named"
+    label = engine_label(engine, knowledge)
+    fitting = labels(knowledge.scoring.engine_shapes.get(engine, []))
+    return [
+        f"{who} {label}, which suits the {fitting} data shape, but the data shape chosen is {labels(shapes)}. "
+        f"Services running {label} were therefore left out. If the application will keep its data in {label}, "
+        f"set the data shape to {fitting} and run the assessment again."
+    ]
+
+
 def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) -> AssessmentOutcome:
     """Validate, then run the full pipeline. Raises RequirementsInvalid on bad input."""
     report = build_validation_report(knowledge.catalog, requirements)
@@ -256,8 +284,12 @@ def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) 
             guidance.append(rule.effects.add_guidance)
     recommendations = presented_recommendations(combinations, sizings, resolved, guidance, knowledge)
     baselines = build_baselines(resolved, recommendations, knowledge)
+    is_new_application = not resolved.values.get("mig.source_engine_family")
     for index, recommendation in enumerate(recommendations):
-        recommendations[index] = recommendation.model_copy(update={"versus_baseline": versus_baseline(recommendation, baselines)})
+        update: dict[str, Any] = {"versus_baseline": versus_baseline(recommendation, baselines)}
+        if is_new_application:
+            update["setup_guide"] = build_setup_guide(recommendation, resolved.values, knowledge)
+        recommendations[index] = recommendation.model_copy(update=update)
 
     trace = Trace(
         rules_fired=[rule.id for rule in rules],
@@ -274,4 +306,5 @@ def run_assessment(requirements: RequirementsInput, knowledge: KnowledgeBundle) 
         pricing=pricing_summary(knowledge, candidates.pricing_notes),
         readiness=assess_readiness(resolved.values),
         baselines=baselines,
+        notices=shape_notices(resolved.values, knowledge),
     )

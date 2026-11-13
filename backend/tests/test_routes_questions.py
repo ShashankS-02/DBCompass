@@ -42,7 +42,7 @@ def test_response_includes_sliders_and_tier_defaults(client: TestClient) -> None
     body = client.get("/api/questions").json()
 
     slider_ids = [slider["id"] for slider in body["priority_sliders"]]
-    assert slider_ids == ["performance", "cost", "reliability", "simplicity", "portability"]
+    assert slider_ids == ["performance", "cost", "reliability"]
     assert body["default_tier"] == "tier_2"
     sla_question = body["sections"][5]["questions"][0]
     assert sla_question["id"] == "ha.sla"

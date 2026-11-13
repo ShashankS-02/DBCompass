@@ -1,4 +1,4 @@
-# CLAUDE.md — DBCompass
+# Contributing to DBCompass
 
 ## What this project is
 DBCompass is an internal portal that helps application teams choose the right database

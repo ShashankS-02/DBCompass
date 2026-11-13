@@ -3,6 +3,7 @@
 id: aws.ec2_self_managed
 csp: aws
 name: Self-managed database on Amazon EC2 + EBS
+host_label: Amazon EC2 + EBS
 family: relational
 secondary_families:
 - document

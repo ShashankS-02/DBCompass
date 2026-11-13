@@ -9,30 +9,30 @@ would be about the same for both and are left out of the difference.
 from typing import Any
 
 from app.engine.costing import service_estimate
+from app.engine.naming import engine_label, service_display_name
 from app.knowledge.loader import KnowledgeBundle
 from app.models.knowledge import ServiceEntry
-from app.models.results import Baseline, BaselineDelta, CostEstimate, Recommendation, ResolvedRequirements
+from app.models.results import Baseline, BaselineDelta, CostEstimate, CostLine, Recommendation, ResolvedRequirements
 
 CORE_LINE_SUFFIXES: tuple[str, ...] = ("compute", "memory", "zone_redundancy", "licence")
 BALANCED = "balanced"
 
 
+def core_lines(estimate: CostEstimate) -> list[CostLine]:
+    """The compute and licence lines of an estimate: what the price difference compares."""
+    lines: list[CostLine] = []
+    for line in estimate.lines:
+        if line.component.endswith(CORE_LINE_SUFFIXES):
+            lines.append(line)
+    return lines
+
+
 def core_usd(estimate: CostEstimate) -> float:
     """Compute plus licence lines of an estimate, after the environments multiplier."""
     total = 0.0
-    for line in estimate.lines:
-        if line.component.endswith(CORE_LINE_SUFFIXES):
-            total += line.monthly_usd
+    for line in core_lines(estimate):
+        total += line.monthly_usd
     return round(total * estimate.environment_multiplier, 2)
-
-
-def engine_label(engine: str, knowledge: KnowledgeBundle) -> str:
-    """The org's label for an engine, falling back to the id."""
-    if knowledge.org_support is not None:
-        entry = knowledge.org_support.engines.get(engine)
-        if entry is not None:
-            return entry.label
-    return engine
 
 
 def same_engine_services(engine: str, csp: str, knowledge: KnowledgeBundle, self_managed: bool) -> list[ServiceEntry]:
@@ -44,7 +44,7 @@ def same_engine_services(engine: str, csp: str, knowledge: KnowledgeBundle, self
         if (service.deployment == "iaas") != self_managed:
             continue
         if engine in service.engines:
-            found.append(service)
+            found.append(service.model_copy(update={"engines": [engine]}))  # staying means running this engine
     return found
 
 
@@ -80,15 +80,16 @@ def baseline_for_csp(engine: str, csp: str, values: dict[str, Any], knowledge: K
     if best is not None:
         core, service, estimate = best
         return Baseline(
-            csp=csp, service_id=service.id, service_name=service.name, engine=engine, engine_label=label,
+            csp=csp, service_id=service.id, service_name=service_display_name(service, engine, knowledge), engine=engine, engine_label=label,
             core_monthly_usd=core, total_monthly_usd=estimate.monthly_usd, priced=True,
-            note=f"Staying on {label}: {service.name} at the Balanced tier, same size and HA layout.{fallback_note}",
+            core_lines=core_lines(estimate), environment_multiplier=estimate.environment_multiplier,
+            note=f"Staying on {label}: {service_display_name(service, engine, knowledge)} at the Balanced tier, same size and HA layout.{fallback_note}",
         )
     service, estimate = first_unpriced  # type: ignore[misc]
     return Baseline(
-        csp=csp, service_id=service.id, service_name=service.name, engine=engine, engine_label=label,
+        csp=csp, service_id=service.id, service_name=service_display_name(service, engine, knowledge), engine=engine, engine_label=label,
         core_monthly_usd=None, total_monthly_usd=None, priced=False,
-        note=f"Staying on {label} would mean {service.name}, which has no list price ({'; '.join(estimate.missing) or 'not priced'}).",
+        note=f"Staying on {label} would mean {service_display_name(service, engine, knowledge)}, which has no list price ({'; '.join(estimate.missing) or 'not priced'}).",
     )
 
 
@@ -140,4 +141,5 @@ def versus_baseline(recommendation: Recommendation, baselines: dict[str, Baselin
         baseline_service_id=baseline.service_id, baseline_service_name=baseline.service_name, engine_label=baseline.engine_label,
         baseline_core_usd=baseline.core_monthly_usd, recommendation_core_usd=recommendation_core, delta_usd=delta,
         same_service=same_service, message=message,
+        recommendation_core_lines=core_lines(balanced), recommendation_environment_multiplier=balanced.environment_multiplier,
     )

@@ -3,6 +3,7 @@
 id: azure.vm_self_managed
 csp: azure
 name: Self-managed database on Azure VMs + Managed Disks
+host_label: Azure VMs + Managed Disks
 family: relational
 secondary_families:
 - document

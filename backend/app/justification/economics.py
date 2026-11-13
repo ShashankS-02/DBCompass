@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.engine.costing import service_estimate
+from app.engine.baseline import service_display_name
 from app.engine.sizer import chosen_engine
 from app.knowledge.loader import KnowledgeBundle
 from app.models.justification import CostedOption, JustificationInput
@@ -34,7 +35,7 @@ def costed(service: ServiceEntry, engine: str, values: dict[str, Any], months: i
     estimate = service_estimate(service, values, "balanced", "primary_oltp", knowledge)
     licence = sum(line.monthly_usd for line in estimate.lines if line.component == "licence")
     return CostedOption(
-        service_id=service.id, service_name=service.name, csp=service.csp, engine=engine,
+        service_id=service.id, service_name=service_display_name(service, engine, knowledge), csp=service.csp, engine=engine,
         monthly_usd=estimate.monthly_usd, licence_monthly_usd=round(licence, 2),
         period_cost_usd=round(estimate.monthly_usd * months, 2), cost_complete=estimate.complete,
     )
@@ -47,7 +48,7 @@ def requested_option(scores: list[ServiceScore], engine: str, values: dict[str, 
     for score in scores:
         service = services[score.service_id]
         if engine in service.engines:
-            return costed(service, engine, forced, months, knowledge)
+            return costed(service.model_copy(update={"engines": [engine]}), engine, forced, months, knowledge)
     return None
 
 

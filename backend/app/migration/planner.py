@@ -130,7 +130,6 @@ def plan_assumptions(context: PlanContext, request: MigrationPlanRequest) -> lis
     """Defaulted answers plus the planner's own assumptions."""
     settings = context.migration.settings
     notes = list(context.assumed)
-    notes.append(f"Day rate ${settings.day_rate_usd:,.0f} per person-day (migration_tools.yaml; replace with the org's rate).")
     notes.append(f"Team of {context.team_size} working {settings.working_days_per_week} days a week.")
     if request.refactor_person_days is None:
         notes.append("Code refactor effort is a heuristic from stored-procedure use; give a reviewed estimate for a sharper plan.")

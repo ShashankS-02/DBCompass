@@ -267,11 +267,11 @@ def add_request_lines(line_context: LineContext) -> None:
     read_share, write_share = read_write_shares(values, line_context.context.scoring)
     peak_tps = values.get("wl.peak_tps", 0)
     average_tps = values.get("wl.avg_tps") or peak_tps * config.average_to_peak_tps
-    for component_id, spec in specs_of_kind(line_context.pricing, "reads"):
+    for component_id, _spec in specs_of_kind(line_context.pricing, "reads"):
         add_line(line_context, component_id, {}, average_tps * read_share * config.seconds_per_month, "read units", "on_demand")
-    for component_id, spec in specs_of_kind(line_context.pricing, "writes"):
+    for component_id, _spec in specs_of_kind(line_context.pricing, "writes"):
         add_line(line_context, component_id, {}, average_tps * write_share * config.seconds_per_month, "write units", "on_demand")
-    for component_id, spec in specs_of_kind(line_context.pricing, "throughput"):
+    for component_id, _spec in specs_of_kind(line_context.pricing, "throughput"):
         request_units = peak_tps * (read_share * config.cosmos_ru_per_read + write_share * config.cosmos_ru_per_write)
         hundreds = max(4, math.ceil(request_units / 100))  # 400 RU/s minimum
         quantity = hundreds * config.hours_per_month * region_copies(values)

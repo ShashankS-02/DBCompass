@@ -23,10 +23,12 @@ A candidate is removed if any of these fail. Each removal is logged in the trace
 | ops | ops_complexity, managed_pref match, team skills match, DBA support |
 | ecosystem | driver/ORM support for languages, CDC/vector/analytics needs, existing licenses |
 | compliance | features: CMK, audit, private endpoint, IAM auth, masking/RLS |
-| portability | engine openness, proprietary_lock_in vs pref.lock_in |
+~~portability~~ removed in M10: teams stay on one cloud and options are limited to the org support list.
 
-Weights come from priority sliders, normalised to sum 1. Defaults:
-performance 0.20, cost 0.20, reliability 0.20, ops 0.15, ecosystem 0.10, compliance 0.10, portability 0.05.
+Weights come from three priority sliders (Performance, Cost, Reliability), which share 0.70 in
+proportion to their positions; ops, ecosystem and compliance are fixed at 0.10 each (M10). Defaults:
+performance 0.2333, cost 0.2333, reliability 0.2333, ops 0.10, ecosystem 0.10, compliance 0.10.
+Saved inputs that still carry the retired Simplicity or Portability sliders are accepted and ignored.
 Rule boosts and penalties are applied after weighting and clipped to 0–100.
 
 ## 3. Combine (polyglot)
@@ -152,7 +154,7 @@ As implemented (M7):
   the fact sheet. A failing draft is retried once with the problems listed, then replaced by the
   rule-based explanation. Unpriced options are written as "not priced", never "$0".
 - What-if (`app/engine/whatif.py`) re-runs the same deterministic pipeline on the merged input and
-  diffs the two traces; no LLM is involved.
+  diffs the two traces; no LLM is involved. The Results page no longer shows it (M10); the API stays.
 
 ## Implementation notes (M3)
 - Order is Filter → Size → Score → Combine → Rank: sizing runs before scoring so the cost dimension
@@ -175,3 +177,17 @@ Create 10 golden cases with the DBA team, for example:
 Assert top-1 family and that eliminated services carry the expected rule id.
 Implemented as `backend/tests/engine/golden/*.yaml` (10 cases: 4 from this doc, 6 drafts marked
 `status: draft` for DBA review). Add a case by adding a YAML file; see the README there.
+
+
+## Multi-engine services and the data shape
+
+A self-managed VM can run several engines. `scoring.yaml` `engine_shapes` lists the data shapes each
+engine can be the primary for. Such a service passes the shape filter only through an engine that
+fits, its engine list is narrowed to the fitting engines before rules and scores run (so the vendor
+bonus follows the engine that will actually run), and the engine is chosen among them. The
+like-for-like baseline and the justification price pin the named engine instead.
+
+When the vendor-certified or requested engine does not suit the chosen shape, the result carries a
+notice telling the team to fix the data shape. "We already own enough licences"
+(`pref.licence_status = owned`) adds the matching `eco.licenses` option for that engine, so the
+licence purchase is dropped and support continues.

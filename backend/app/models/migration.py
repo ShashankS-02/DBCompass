@@ -162,8 +162,7 @@ class StrategyOption(BaseModel):
     licence_monthly_usd: float
     cost_complete: bool
     effort_person_days: EffortRange
-    one_off_cost_usd: float
-    total_cost_usd: float  # monthly × months_compared + one-off effort
+    total_cost_usd: float  # monthly × months_compared (running cost only; effort is shown as time, not money)
     duration_weeks: float
     finish_date: date
     fits_deadline: bool

@@ -7,6 +7,12 @@ interface PrioritySlidersProps {
   onChange: (priorities: Record<string, number>) => void;
 }
 
+const FIXED_LABELS: Record<string, string> = {
+  ops: "operations effort",
+  ecosystem: "ecosystem fit",
+  compliance: "compliance",
+};
+
 function formatPercent(weight: number): string {
   return `${Math.round(weight * 100)}%`;
 }
@@ -43,11 +49,11 @@ export default function PrioritySliders({ sliders, fixedWeights, priorities, onC
         );
       })}
       <p className="text-xs text-slate-500">
-        Fixed weights:{" "}
+        Always counted:{" "}
         {Object.entries(fixedWeights)
-          .map(([dimension, weight]) => `${dimension} ${formatPercent(weight)}`)
+          .map(([dimension, weight]) => `${FIXED_LABELS[dimension] ?? dimension} ${formatPercent(weight)}`)
           .join(", ")}
-        .
+        . Options are compared within your organisation's supported databases on the cloud you run on.
       </p>
     </div>
   );

@@ -151,16 +151,18 @@ def test_priorities_fill_defaults_and_produce_weights(client: TestClient) -> Non
     report = validate(client, priorities={"cost": 100})
 
     priorities = report["normalised"]["priorities"]
-    assert priorities == {
-        "performance": 80,
-        "cost": 100,
-        "reliability": 80,
-        "simplicity": 60,
-        "portability": 20,
-    }
+    assert priorities == {"performance": 80, "cost": 100, "reliability": 80}
     weights = report["dimension_weights"]
     assert weights["cost"] > weights["performance"]
     assert sum(weights.values()) == pytest.approx(1.0, abs=1e-3)
+
+
+def test_retired_sliders_from_saved_assessments_are_ignored(client: TestClient) -> None:
+    report = validate(client, priorities={"cost": 90, "simplicity": 60, "portability": 20})
+
+    assert report["valid"] is True
+    assert report["normalised"]["priorities"] == {"performance": 80, "cost": 90, "reliability": 80}
+    assert "portability" not in report["dimension_weights"]
 
 
 def test_bad_priorities_are_reported(client: TestClient) -> None:

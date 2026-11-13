@@ -75,9 +75,10 @@ until hypercare ends; define rollback trigger metrics.
 ## As implemented (M6)
 - `POST /api/migrations/plan` re-runs the engine on the assessment's answers (plus overrides), then
   prices the best-ranked target for each of Rehost (same engine, IaaS), Replatform (same engine,
-  managed) and Refactor (different engine): Balanced monthly cost including licences × 36 months +
-  effort mid-point × day rate. Effort = strategy base + code refactor (repo analyzer's Oracle report
-  when given, else by `data.proc_code`).
+  managed) and Refactor (different engine): Balanced monthly cost including licences × 36 months
+  (the 3-year running cost). Since M11 no one-off effort cost is added: the person-day estimate
+  (strategy base + code refactor, from the team's estimate or `data.proc_code`) only lengthens the
+  runbook, so effort shows up as time in the finish date, not as money.
 - Duration = the runbook's total for that strategy (phase base days + dependencies + code refactor
   ÷ team + transfer days + CDC soak + validation per TB), so the table and the runbook agree.
 - Recommended = cheapest 3-year total among options that finish by the deadline (2028-12-31,

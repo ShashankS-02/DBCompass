@@ -29,15 +29,14 @@ function Badge({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
 function StrategyTable({ plan, onChooseTarget }: { plan: MigrationPlan; onChooseTarget?: (option: StrategyOption) => void }) {
   return (
     <section className="overflow-x-auto card">
-      <h2 className="px-4 pt-4 font-medium text-slate-900">Strategies compared (3-year view, list prices incl. licences)</h2>
+      <h2 className="px-4 pt-4 font-medium text-slate-900">Strategies compared (3-year running cost at list prices, licences included; migration effort shows in the finish date)</h2>
       <table className="mt-2 w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-slate-500">
             <th className="px-4 py-2">Strategy</th>
             <th className="px-3 py-2">Target</th>
             <th className="px-3 py-2 text-right">Monthly</th>
-            <th className="px-3 py-2 text-right">One-off effort</th>
-            <th className="px-3 py-2 text-right">3-year total</th>
+            <th className="px-3 py-2 text-right">3-year running cost</th>
             <th className="px-3 py-2">Finish</th>
             <th className="px-3 py-2">Risk</th>
             <th className="px-3 py-2" />
@@ -57,10 +56,6 @@ function StrategyTable({ plan, onChooseTarget }: { plan: MigrationPlan; onChoose
               <td className="px-3 py-2 text-right tabular-nums">
                 {usd(option.monthly_usd)}{!option.cost_complete && "*"}
                 {option.licence_monthly_usd > 0 && <div className="text-xs text-rose-700">incl. {usd(option.licence_monthly_usd)} licence</div>}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {usd(option.one_off_cost_usd)}
-                <div className="text-xs text-slate-500">{option.effort_person_days[0]}–{option.effort_person_days[1]} person-days</div>
               </td>
               <td className="px-3 py-2 text-right font-medium tabular-nums">{usd(option.total_cost_usd)}</td>
               <td className="px-3 py-2">

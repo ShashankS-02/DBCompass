@@ -10,8 +10,8 @@ from app.models.intake import Readiness
 from app.models.knowledge import ComponentRole, Csp
 from app.models.requirements import AssumedField, RequirementsInput
 
-Dimension = Literal["performance", "cost", "reliability", "ops", "ecosystem", "compliance", "portability"]
-DIMENSIONS: tuple[str, ...] = ("performance", "cost", "reliability", "ops", "ecosystem", "compliance", "portability")
+Dimension = Literal["performance", "cost", "reliability", "ops", "ecosystem", "compliance"]
+DIMENSIONS: tuple[str, ...] = ("performance", "cost", "reliability", "ops", "ecosystem", "compliance")
 
 
 class ResolvedRequirements(BaseModel):
@@ -71,6 +71,18 @@ class SizingResult(BaseModel):
     notes: list[str]
 
 
+class ServiceAbout(BaseModel):
+    """Plain-language description of how the service is run (M10, "About this service")."""
+
+    deployment: str
+    title: str
+    summary: str
+    provider_handles: list[str]
+    team_handles: list[str]
+    facts: list[str] = []
+    source_url: str | None = None
+
+
 class ServiceChoice(BaseModel):
     """One component of a recommendation (the primary, or an add-on like a cache)."""
 
@@ -84,6 +96,7 @@ class ServiceChoice(BaseModel):
     replicas: int
     sizing: SizingResult
     reason: str
+    about: ServiceAbout | None = None
 
 
 class CostLine(BaseModel):
@@ -140,6 +153,8 @@ class Baseline(BaseModel):
     total_monthly_usd: float | None
     priced: bool
     note: str
+    core_lines: list[CostLine] = []  # the compute and licence lines behind core_monthly_usd (M11)
+    environment_multiplier: float = 1.0  # core = sum(core_lines) x this (prod plus the other environments)
 
 
 class BaselineDelta(BaseModel):
@@ -153,6 +168,16 @@ class BaselineDelta(BaseModel):
     delta_usd: float | None  # recommendation minus baseline; negative means cheaper
     same_service: bool
     message: str
+    recommendation_core_lines: list[CostLine] = []  # the option's compute and licence lines (M11)
+    recommendation_environment_multiplier: float = 1.0
+
+
+class SetupPhase(BaseModel):
+    """One phase of the setup guide with its filled-in steps (M10, new applications only)."""
+
+    id: str
+    title: str
+    steps: list[str]
 
 
 class Recommendation(BaseModel):
@@ -170,6 +195,7 @@ class Recommendation(BaseModel):
     why: list[str]
     explanation: str = ""
     versus_baseline: BaselineDelta | None = None  # compute + licence difference against staying on the current engine (M9)
+    setup_guide: list[SetupPhase] = []  # basic steps to stand up this option, for a new application (M10)
 
 
 class PricingSummary(BaseModel):
@@ -201,6 +227,7 @@ class AssessmentOutcome(BaseModel):
     pricing: PricingSummary | None = None
     readiness: Readiness | None = None  # team readiness for an existing database (M8)
     baselines: dict[str, Baseline] = {}  # like-for-like option per cloud, for an existing database (M9)
+    notices: list[str] = []  # input conflicts the reader should fix, e.g. an engine that does not suit the data shape
 
 
 class AssessmentResult(AssessmentOutcome):

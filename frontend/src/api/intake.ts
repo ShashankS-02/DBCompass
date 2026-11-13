@@ -23,11 +23,23 @@ export interface EngineFeature {
   how_to_check: string;
 }
 
+export interface DiscoveryQuery {
+  label: string;
+  query: string;
+  note: string | null;
+}
+
+export interface EngineFeatureList {
+  discovery_note: string | null;
+  discovery?: DiscoveryQuery[];
+  features: EngineFeature[];
+}
+
 export interface EngineFeaturesConfig {
   version: number;
   last_verified: string;
   sticky_features: string[];
-  engines: Record<string, { discovery_note: string | null; features: EngineFeature[] }>;
+  engines: Record<string, EngineFeatureList>;
 }
 
 export interface IntakeConfig {

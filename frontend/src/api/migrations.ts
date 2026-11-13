@@ -25,7 +25,6 @@ export interface StrategyOption {
   licence_monthly_usd: number;
   cost_complete: boolean;
   effort_person_days: [number, number];
-  one_off_cost_usd: number;
   total_cost_usd: number;
   duration_weeks: number;
   finish_date: string;

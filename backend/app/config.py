@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: str = "http://localhost:5173"
     knowledge_base_dir: Path = REPO_ROOT / "knowledge_base"
+    docs_dir: Path = REPO_ROOT / "docs"  # Help guides are read from here (M11)
 
     entra_tenant_id: str = ""
     entra_api_client_id: str = ""

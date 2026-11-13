@@ -1,9 +1,7 @@
 import {
   siApachecassandra,
+  siCouchbase,
   siGooglebigquery,
-  siGooglecloudspanner,
-  siInfluxdb,
-  siMariadb,
   siMongodb,
   siMysql,
   siOpensearch,
@@ -26,16 +24,14 @@ export const DATABASE_LOGOS: LogoEntry[] = [
   { name: "SQL Server", monogram: "SQL", colour: "#A91D22" },
   { name: "MongoDB", icon: siMongodb },
   { name: "Redis", icon: siRedis },
-  { name: "Amazon DynamoDB", monogram: "DDB", colour: "#3B48CC" },
+  { name: "Amazon Aurora", monogram: "AUR", colour: "#3B48CC" },
   { name: "Azure Cosmos DB", monogram: "COS", colour: "#0078D4" },
-  { name: "Cloud Spanner", icon: siGooglecloudspanner },
   { name: "AlloyDB", monogram: "ADB", colour: "#4285F4" },
-  { name: "MariaDB", icon: siMariadb },
   { name: "Apache Cassandra", icon: siApachecassandra },
+  { name: "Couchbase", icon: siCouchbase },
   { name: "Db2", monogram: "Db2", colour: "#0F62FE" },
   { name: "BigQuery", icon: siGooglebigquery },
   { name: "OpenSearch", icon: siOpensearch },
-  { name: "InfluxDB", icon: siInfluxdb },
 ];
 
 function LogoGlyph({ entry }: { entry: LogoEntry }) {

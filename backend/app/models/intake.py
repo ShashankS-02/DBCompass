@@ -61,8 +61,17 @@ class EngineFeature(StrictModel):
     how_to_check: str
 
 
+class DiscoveryQuery(StrictModel):
+    """A metadata-only query for general facts about a database (size, version, load), shown in Help (M11)."""
+
+    label: str
+    query: str
+    note: str | None = None
+
+
 class EngineFeatureList(StrictModel):
     discovery_note: str | None = None
+    discovery: list[DiscoveryQuery] = []
     features: list[EngineFeature]
 
 

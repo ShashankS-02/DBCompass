@@ -42,7 +42,7 @@ export default function Requests() {
             role="tab"
             aria-selected={scope === option}
             onClick={() => setScope(option)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${scope === option ? "bg-teal-600 text-white shadow-soft" : "text-slate-600 hover:bg-sand-50 hover:text-slate-900"}`}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${scope === option ? "bg-coral-500 text-white shadow-soft" : "text-slate-600 hover:bg-sand-50 hover:text-slate-900"}`}
           >
             {SCOPE_LABELS[option]}
           </button>

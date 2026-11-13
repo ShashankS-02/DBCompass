@@ -18,7 +18,7 @@ export function PageLoader({ label = "Loading", steps = DEFAULT_STEPS, showSkele
       <div className="relative grid h-24 w-24 place-items-center">
         <span className="absolute inset-0 rounded-full bg-coral-200/60 animate-pulse-ring" />
         <span className="absolute inset-0 rounded-full bg-coral-200/40 animate-pulse-ring [animation-delay:0.6s]" />
-        <span className="relative grid h-20 w-20 place-items-center rounded-full bg-teal-700 shadow-lift">
+        <span className="relative grid h-20 w-20 place-items-center rounded-full bg-ink-900 shadow-lift">
           <CompassMark className="h-14 w-14" spinning />
         </span>
       </div>
@@ -69,7 +69,7 @@ export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
 /** Busy overlay for long actions (running the engine, building a plan). */
 export function BusyOverlay({ label, steps }: { label: string; steps: string[] }) {
   return (
-    <div className="fixed inset-0 z-50 grid animate-fade-in place-items-center bg-teal-950/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 grid animate-fade-in place-items-center bg-ink-950/40 backdrop-blur-sm">
       <div className="w-[min(92vw,30rem)] animate-fade-up rounded-3xl border border-sand-200 bg-sand-50 px-6 shadow-lift">
         <PageLoader label={label} steps={steps} showSkeleton={false} />
       </div>

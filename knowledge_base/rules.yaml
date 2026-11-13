@@ -15,6 +15,7 @@
 #   ha.sla_percent           = numeric form of ha.sla (sla_99_95 -> 99.95)
 #   mig.source_engine_family = engine of mig.source_engine, else app.existing_db
 #   app.vendor_certified_engine = engine of app.vendor_certified_db (vendor-built applications)
+#   eco.licenses             = also gains the owned-licence option when pref.licence_status is owned
 # Derived service fields: best_sla_percent (highest value in sla_by_topology).
 
 version: 1

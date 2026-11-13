@@ -1,0 +1,198 @@
+# Setup guide for a NEW application (M10): basic steps to stand up the recommended database and
+# connect the application, including add-ons (cache, vector, search, analytics).
+#
+# Each step is a template. {placeholders} are filled from the recommendation and the lookups below;
+# a step whose placeholder has no value is left out. Optional filters on a step:
+#   deployments: [managed, serverless, iaas]   deployment of the primary service
+#   engines:     [postgresql, ...]              engine the primary runs
+#   needs:       cache | search | analytics | vector | time_series | replicas | vector_in_primary
+#   when:        conditions on answers, same grammar as rules.yaml (all must match)
+version: 1
+last_verified: 2026-11-13
+source_url: https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html
+
+csp_terms:
+  aws:
+    cloud: AWS
+    workspace: an AWS account in the org landing zone
+    private_access: private subnets of the application VPC, with security groups that admit only the application tier
+    secrets: AWS Secrets Manager
+    kms: AWS KMS
+    monitoring: Amazon CloudWatch
+    logs: CloudWatch Logs
+    identity_auth: IAM database authentication
+  azure:
+    cloud: Azure
+    workspace: an Azure subscription in the org landing zone
+    private_access: a Private Endpoint (or VNet integration) in the application's virtual network, with public access disabled
+    secrets: Azure Key Vault
+    kms: Azure Key Vault keys
+    monitoring: Azure Monitor
+    logs: a Log Analytics workspace
+    identity_auth: Microsoft Entra ID authentication
+  gcp:
+    cloud: Google Cloud
+    workspace: a Google Cloud project in the org landing zone
+    private_access: private IP or Private Service Connect in the application's VPC, with no public IP
+    secrets: Google Secret Manager
+    kms: Cloud KMS
+    monitoring: Cloud Monitoring
+    logs: Cloud Logging
+    identity_auth: IAM database authentication
+
+engine_terms:
+  postgresql:
+    pooler: PgBouncer in transaction mode
+    ha_tool: Patroni with streaming replication
+    backup_tool: pgBackRest
+    migrations_tool: Flyway or Liquibase (Alembic for Python, EF Core migrations for .NET)
+    vector_step: "Enable pgvector (CREATE EXTENSION vector), store embeddings in a vector column and add an HNSW index for similarity search."
+  mysql:
+    pooler: ProxySQL, or the driver's built-in pool
+    ha_tool: InnoDB Cluster (Group Replication)
+    backup_tool: Percona XtraBackup or MySQL Enterprise Backup
+    migrations_tool: Flyway or Liquibase
+    vector_step: "This engine is not set up as a vector store in the DBCompass catalog. Confirm vector support with the DBA team, or add a dedicated vector search service."
+  oracle:
+    pooler: Oracle Universal Connection Pool (UCP) in the application, or Database Resident Connection Pooling (DRCP)
+    ha_tool: Data Guard with Fast-Start Failover
+    backup_tool: RMAN to object storage
+    migrations_tool: Liquibase or Flyway
+    vector_step: "On Oracle Database 23ai, use the VECTOR data type with a vector index (AI Vector Search) instead of a separate vector store."
+  sql_server:
+    pooler: the driver's built-in connection pooling
+    ha_tool: Always On availability groups
+    backup_tool: native SQL Server backups to object storage
+    migrations_tool: Flyway, Liquibase or EF Core migrations
+    vector_step: "This engine is not set up as a vector store in the DBCompass catalog. Confirm vector support with the DBA team, or add a dedicated vector search service."
+  db2:
+    pooler: the driver's connection pool
+    ha_tool: Db2 HADR
+    backup_tool: native Db2 backups to object storage
+    migrations_tool: Liquibase or Flyway
+    vector_step: "This engine is not set up as a vector store in the DBCompass catalog. Confirm vector support with the DBA team, or add a dedicated vector search service."
+  mongodb:
+    pooler: the driver's built-in pool (set maxPoolSize to match the application's concurrency)
+    ha_tool: a three-member replica set across zones
+    backup_tool: mongodump or filesystem snapshots
+    migrations_tool: schema validation rules and versioned migration scripts
+    vector_step: "Create a vector search index on the embedding field and query it with the service's vector search stage."
+  cassandra:
+    pooler: the driver's connection pool (token-aware load balancing)
+    ha_tool: racks spread across zones with replication factor 3
+    backup_tool: nodetool snapshots copied to object storage
+    migrations_tool: versioned CQL scripts (for example cassandra-migrate)
+    vector_step: "This engine is not set up as a vector store in the DBCompass catalog. Confirm vector support with the DBA team, or add a dedicated vector search service."
+
+service_terms:
+  aws.rds_postgresql: {pooler: Amazon RDS Proxy}
+  aws.rds_mysql: {pooler: Amazon RDS Proxy}
+  aws.rds_sqlserver: {pooler: Amazon RDS Proxy}
+  aws.aurora_postgresql: {pooler: Amazon RDS Proxy}
+  aws.aurora_mysql: {pooler: Amazon RDS Proxy}
+  azure.postgresql_flexible: {pooler: the built-in PgBouncer (turn it on in the server parameters)}
+
+# engine -> eco.languages value -> driver to use
+drivers:
+  postgresql: {java: pgJDBC, scala_kotlin: pgJDBC, python: psycopg 3, dotnet: Npgsql, node: node-postgres (pg), go: pgx, php: PDO_PGSQL, ruby: pg gem, c_cpp: libpq}
+  mysql: {java: MySQL Connector/J, scala_kotlin: MySQL Connector/J, python: mysql-connector-python or PyMySQL, dotnet: MySqlConnector, node: mysql2, go: go-sql-driver/mysql, php: PDO_MYSQL or mysqli, ruby: mysql2 gem, c_cpp: MySQL Connector/C++}
+  oracle: {java: Oracle JDBC (ojdbc11) with UCP, scala_kotlin: Oracle JDBC (ojdbc11) with UCP, python: python-oracledb, dotnet: ODP.NET Managed Driver, node: node-oracledb, go: godror, php: OCI8, ruby: ruby-oci8, c_cpp: OCI or ODPI-C}
+  sql_server: {java: Microsoft JDBC Driver for SQL Server, scala_kotlin: Microsoft JDBC Driver for SQL Server, python: pyodbc with ODBC Driver 18, dotnet: Microsoft.Data.SqlClient, node: tedious (mssql), go: go-mssqldb, php: sqlsrv or pdo_sqlsrv, ruby: tiny_tds, c_cpp: ODBC Driver 18}
+  db2: {java: IBM Data Server Driver for JDBC (db2jcc4), scala_kotlin: IBM Data Server Driver for JDBC (db2jcc4), python: ibm_db, dotnet: IBM.Data.Db2, node: ibm_db, go: go_ibm_db, php: ibm_db2, c_cpp: IBM Data Server Driver (CLI)}
+  mongodb: {java: MongoDB Java Driver, scala_kotlin: MongoDB Kotlin or Java Driver, python: PyMongo, dotnet: MongoDB .NET/C# Driver, node: MongoDB Node.js Driver, go: MongoDB Go Driver, php: MongoDB PHP Library, ruby: MongoDB Ruby Driver, c_cpp: mongocxx}
+  cassandra: {java: Apache Cassandra Java Driver, scala_kotlin: Apache Cassandra Java Driver, python: cassandra-driver, dotnet: DataStax C# Driver, node: cassandra-driver, go: gocql, php: DataStax PHP Driver, ruby: cassandra-driver gem, c_cpp: DataStax C/C++ Driver}
+  redis: {java: Lettuce or Jedis, scala_kotlin: Lettuce, python: redis-py, dotnet: StackExchange.Redis, node: node-redis or ioredis, go: go-redis, php: phpredis, ruby: redis-rb, c_cpp: hiredis}
+  valkey: {java: Lettuce or Jedis, scala_kotlin: Lettuce, python: redis-py or valkey-py, dotnet: StackExchange.Redis, node: iovalkey or ioredis, go: valkey-go or go-redis, php: phpredis, ruby: redis-rb, c_cpp: libvalkey}
+
+phases:
+  - id: foundation
+    title: Prepare the cloud foundation
+    steps:
+      - text: "Request {workspace} for the application, with production kept apart from non-production."
+      - text: "Place the database in {private_access}."
+        when: [{field: sec.network, op: in, value: [private_only, private_vpn]}]
+      - text: "Public access is allowed by your answers: restrict it to an IP allow-list and require TLS."
+        when: [{field: sec.network, op: eq, value: public_allowlist}]
+      - text: "Create a customer-managed key in {kms} first. Encryption is chosen when the database is created and usually cannot be switched later."
+        when: [{field: sec.cmk, op: eq, value: true}]
+      - text: "Create a secret for the database credentials in {secrets} and give only the application's identity read access."
+
+  - id: create
+    title: Create the database
+    steps:
+      - text: "Create {service} running {engine_label}: instance {instance}, storage {storage}."
+        deployments: [managed]
+      - text: "Create {service} running {engine_label}; set minimum and maximum capacity limits and a budget alert, since capacity scales with load."
+        deployments: [serverless]
+      - text: "Set the high-availability layout: {ha}."
+        deployments: [managed, serverless]
+      - text: "Turn on automated backups and point-in-time restore with a retention period that meets your recovery point target."
+        deployments: [managed, serverless]
+      - text: "Launch virtual machines of type {instance} from the org's hardened image, with {storage} disks, spread across availability zones."
+        deployments: [iaas]
+      - text: "Install {engine_label}, apply the latest patch set, and register the licences under the vendor's cloud licensing rules."
+        deployments: [iaas]
+      - text: "Build high availability yourselves with {ha_tool}, to reach: {ha}."
+        deployments: [iaas]
+      - text: "Schedule backups with {backup_tool}, copy them to another region, and test a restore before go-live."
+        deployments: [iaas]
+      - text: "Add {replicas} read replica(s) and send read-only queries to the reader endpoint."
+        needs: replicas
+
+  - id: secure
+    title: Secure access
+    steps:
+      - text: "Create separate roles: an owner role for schema changes, a least-privilege role for the application, and read-only roles for support."
+      - text: "Use {identity_auth} for people instead of shared database passwords."
+        when: [{field: sec.identity, op: contains_any, value: [entra_id, iam]}]
+      - text: "Turn on database auditing and send the audit logs to {logs}."
+        when: [{field: sec.audit, op: eq, value: true}]
+      - text: "Mask or restrict personal data columns (masking or row-level security) so support and reporting users see only what they need."
+        when: [{field: sec.masking_rls, op: eq, value: true}]
+      - text: "Record which tables hold personal data; it decides retention, masking and who may get access."
+        when: [{field: sec.personal_data, op: in, value: [customers, employees, both]}]
+
+  - id: connect
+    title: Connect the application
+    steps:
+      - text: "Use these drivers: {drivers}."
+      - text: "Pool connections through {pooler}, so a burst of application instances cannot exhaust database connections."
+      - text: "Read the connection details from {secrets} at start-up; never put them in code or configuration files."
+      - text: "Set connect and query timeouts, require TLS, and retry with backoff on failover errors."
+
+  - id: schema
+    title: Build the schema and load data
+    steps:
+      - text: "Keep the schema in source control and apply it with {migrations_tool}."
+      - text: "Index the queries the application runs most, then review the slow query log after the first load test."
+        engines: [postgresql, mysql, oracle, sql_server, db2]
+      - text: "Model documents around the application's access patterns and index the fields it filters and sorts on."
+        engines: [mongodb]
+      - text: "Design one table per query with a partition key that spreads writes evenly; avoid large partitions."
+        engines: [cassandra]
+
+  - id: addons
+    title: Add the extra services
+    steps:
+      - text: "Cache: create {cache_service} in the same region and network. Use cache-aside with a TTL on every key, and invalidate on writes for data that must be fresh."
+        needs: cache
+      - text: "Cache client: use {cache_drivers}."
+        needs: cache
+      - text: "Vector search: {vector_step}"
+        needs: vector_in_primary
+      - text: "Vector search: create {vector_service} and keep embeddings in step with the primary through change data capture or the application's write path."
+        needs: vector
+      - text: "Search: create {search_service} and feed it from the primary through change data capture or an indexing job."
+        needs: search
+      - text: "Analytics: replicate to {analytics_service} through change data capture or scheduled exports, so reports never run on the primary."
+        needs: analytics
+      - text: "Time series: create {time_series_service} for metrics-style data and set a retention policy."
+        needs: time_series
+
+  - id: golive
+    title: Monitor and go live
+    steps:
+      - text: "Set alerts in {monitoring} on CPU, memory, free storage, connections, replication lag and failed logins."
+      - text: "Load-test at the expected peak of {peak_tps} transactions per second and check latency before go-live."
+      - text: "Run a failover test and a restore drill, and record how long each took against your recovery targets."
+      - text: "Review the bill after the first month; move to committed-use or reserved pricing once usage is stable."

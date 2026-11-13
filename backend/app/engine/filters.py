@@ -3,8 +3,9 @@
 from typing import Any
 
 from app.engine.rules import all_predicates_match, condition_matches
+from app.engine.sizer import shape_fitting_engines
 from app.models.intake import OrgSupportConfig
-from app.models.knowledge import RegionCatalog, Rule, RuleSet, ServiceEntry
+from app.models.knowledge import RegionCatalog, Rule, RuleSet, ScoringConfig, ServiceEntry
 from app.models.results import FilterReason
 
 SHAPE_FILTER_ID = "SHAPE-FILTER"
@@ -44,6 +45,29 @@ def shape_reason(service: ServiceEntry, shapes: list[str], rule_set: RuleSet) ->
     )
 
 
+def engine_shape_reason(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig | None) -> FilterReason | None:
+    """Remove a multi-engine service (self-managed VM) when none of its engines suits the data shape."""
+    if scoring is None or len(service.engines) < 2:
+        return None
+    if shape_fitting_engines(service, values, scoring):
+        return None
+    return FilterReason(
+        service_id=service.id,
+        rule_id=SHAPE_FILTER_ID,
+        message=f"None of the engines {service.name} can run suits data shape {', '.join(values.get('data.shape') or [])}.",
+    )
+
+
+def narrowed_to_shape(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig | None) -> ServiceEntry:
+    """A multi-engine service keeps only the engines that suit the data shape, so rules and scores judge what will run."""
+    if scoring is None or len(service.engines) < 2:
+        return service
+    fitting = shape_fitting_engines(service, values, scoring)
+    if not fitting or fitting == service.engines:
+        return service
+    return service.model_copy(update={"engines": fitting})
+
+
 def region_reason(service: ServiceEntry, rule: Rule, regions: RegionCatalog) -> FilterReason | None:
     """Remove a service with no region in the required geography."""
     geo = rule.effects.region_filter.geo
@@ -77,15 +101,20 @@ def filter_services(
     rule_set: RuleSet,
     check_shape: bool,
     org_support: OrgSupportConfig | None = None,
+    scoring: ScoringConfig | None = None,
 ) -> tuple[list[ServiceEntry], list[FilterReason]]:
-    """Split services into survivors and removal reasons (all reasons per service, not just the first)."""
+    """Split services into survivors and removal reasons (all reasons per service, not just the first).
+
+    With shape checks on and `scoring` given, multi-engine survivors are narrowed to the engines
+    that suit the data shape.
+    """
     survivors: list[ServiceEntry] = []
     removed: list[FilterReason] = []
     shapes = values.get("data.shape") or []
     for service in services:
         reasons = rule_reasons(service, rules, values, regions)
         if check_shape:
-            shape_problem = shape_reason(service, shapes, rule_set)
+            shape_problem = shape_reason(service, shapes, rule_set) or engine_shape_reason(service, values, scoring)
             if shape_problem is not None:
                 reasons.insert(0, shape_problem)
             special_problem = special_case_reason(service, values, org_support)
@@ -93,6 +122,8 @@ def filter_services(
                 reasons.insert(0, special_problem)
         if reasons:
             removed.extend(reasons)
+        elif check_shape:
+            survivors.append(narrowed_to_shape(service, values, scoring))
         else:
             survivors.append(service)
     return survivors, removed

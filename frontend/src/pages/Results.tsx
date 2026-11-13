@@ -1,45 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { PageLoader } from "../components/Loader";
 import { Link, useParams } from "react-router-dom";
-import { CSP_LABELS, ROLE_LABELS, fetchAssessment, type AssessmentResult, type Baseline, type Recommendation } from "../api/assessments";
+import { CSP_LABELS, ROLE_LABELS, fetchAssessment, type AssessmentResult, type Baseline, type CostLine, type Recommendation, type ServiceChoice } from "../api/assessments";
 import { fetchIntake, type IntakeConfig } from "../api/intake";
 import { describeValue, fetchQuestions, type PrioritySlider, type Question } from "../api/questions";
-import type { RankMove, WhatIfResult } from "../api/whatif";
+import Disclosure from "../components/Disclosure";
+import SetupGuide, { SETUP_GUIDE_ID } from "../components/SetupGuide";
 import { useAuth } from "../auth/AuthProvider";
 import { READINESS_STYLES, type Readiness } from "../api/intake";
 import { engineLabel } from "../api/labels";
 import { COMMERCIAL_ENGINES } from "../api/requests";
-import CostTiers, { formatMoney, type Currency } from "../components/CostTiers";
+import CostTiers, { formatMoney, formatUnitPrice, type Currency } from "../components/CostTiers";
 import ScoreRadar from "../components/ScoreRadar";
 import WhyNotPanel from "../components/WhyNotPanel";
 import ExplanationPanel from "../components/ExplanationPanel";
 import ExportMenu from "../components/ExportMenu";
-import WhatIfPanel from "../components/WhatIfPanel";
 
 interface CardProps {
   recommendation: Recommendation;
   currency: Currency;
   inrPerUsd: number | null;
-  move?: RankMove;
   planLink?: string; // existing application: plan the migration to this option
+  onSetupGuide?: () => void; // new application: open this option's setup guide
 }
 
 function optionTitle(recommendation: Recommendation): string {
   return recommendation.components.map((component) => component.service_name).join(" + ");
-}
-
-function MoveBadge({ move }: { move?: RankMove }) {
-  if (!move || move.after_rank === null) return null;
-  if (move.before_rank === null) {
-    return <span className="rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-bold text-gold-800">New</span>;
-  }
-  if (move.before_rank === move.after_rank) return null;
-  const up = move.after_rank < move.before_rank;
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${up ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
-      {up ? "▲" : "▼"} was #{move.before_rank}
-    </span>
-  );
 }
 
 function ReadinessPanel({ readiness }: { readiness: Readiness }) {
@@ -62,60 +48,70 @@ function ReadinessPanel({ readiness }: { readiness: Readiness }) {
   );
 }
 
-function VersusBaseline({ recommendation, currency, inrPerUsd }: { recommendation: Recommendation; currency: Currency; inrPerUsd: number | null }) {
-  const versus = recommendation.versus_baseline;
-  if (!versus) return null;
-  if (versus.same_service) {
-    return (
-      <p className="mt-3 rounded-xl border-2 border-sand-300 bg-sand-50 px-3 py-2 text-sm font-semibold text-slate-700">
-        Like-for-like: this is staying on {versus.engine_label}
-      </p>
-    );
-  }
-  if (versus.delta_usd === null) {
-    return <p className="mt-3 rounded-xl border border-sand-200 bg-sand-50 px-3 py-2 text-xs text-slate-600">Versus staying on {versus.engine_label}: {versus.message}</p>;
-  }
-  const cheaper = versus.delta_usd < 0;
-  const same = Math.abs(versus.delta_usd) < 1;
-  const tone = same ? "border-sand-300 bg-sand-50 text-slate-800" : cheaper ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-rose-300 bg-rose-50 text-rose-900";
-  const percent = versus.baseline_core_usd ? Math.round((Math.abs(versus.delta_usd) / versus.baseline_core_usd) * 100) : null;
+function lineLabel(line: CostLine): string {
+  const parts = line.component.split(" · ");
+  const kind = parts[parts.length - 1];
+  if (kind === "licence") return "Licence";
+  if (kind === "compute") return "Servers (compute)";
+  const words = kind.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** One side of the comparison: its compute and licence lines, the environments factor and the total. */
+function CoreBreakdown({ title, name, lines, multiplier, total, tone, currency, inrPerUsd }: {
+  title: string; name: string; lines: CostLine[]; multiplier: number; total: number; tone: "stay" | "move";
+  currency: Currency; inrPerUsd: number | null;
+}) {
+  const subtotal = lines.reduce((sum, line) => sum + line.monthly_usd, 0);
   return (
-    <div className={`mt-3 rounded-xl border-2 px-3 py-2 ${tone}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide opacity-80">vs staying on {versus.engine_label}</p>
-      <p className="text-2xl font-extrabold tabular-nums leading-tight">
-        {same ? "About the same" : `${cheaper ? "−" : "+"}${formatMoney(Math.abs(versus.delta_usd), currency, inrPerUsd)}`}
-        {!same && <span className="text-sm font-semibold"> / month{percent !== null ? ` (${cheaper ? "−" : "+"}${percent}%)` : ""}</span>}
-      </p>
-      {!same && <p className="text-xs font-medium opacity-80">{cheaper ? "Saves" : "Costs"} {formatMoney(Math.abs(versus.delta_usd) * 12, currency, inrPerUsd)} a year on compute and licences</p>}
+    <div className={`rounded-xl border p-3 ${tone === "stay" ? "border-sand-300 bg-sand-50" : "border-coral-200 bg-coral-50/50"}`}>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{title}</p>
+      <p className="font-semibold text-slate-900">{name}</p>
+      <table className="mt-2 w-full text-xs">
+        <tbody>
+          {lines.map((line) => (
+            <tr key={`${line.component}-${line.description}`} className="border-t border-sand-200/70 align-top">
+              <td className="py-1 pr-2">
+                <span className="font-semibold text-slate-800">{lineLabel(line)}</span>
+                <span className="block text-slate-500">{line.description}</span>
+                <span className="block text-slate-400">
+                  {line.quantity.toLocaleString()} {line.unit} × {formatUnitPrice(line.unit_usd, currency, inrPerUsd)}
+                </span>
+              </td>
+              <td className="py-1 text-right font-semibold tabular-nums text-slate-800">{formatMoney(line.monthly_usd, currency, inrPerUsd)}</td>
+            </tr>
+          ))}
+          {multiplier !== 1 && (
+            <tr className="border-t border-sand-200/70">
+              <td className="py-1 pr-2 text-slate-600">
+                {formatMoney(subtotal, currency, inrPerUsd)} × {multiplier.toFixed(2)} for your environments
+                <span className="block text-slate-400">Production counts once; each other environment adds its share.</span>
+              </td>
+              <td />
+            </tr>
+          )}
+          <tr className="border-t-2 border-sand-300">
+            <td className="py-1.5 font-bold text-slate-900">Per month</td>
+            <td className="py-1.5 text-right text-base font-extrabold tabular-nums text-slate-900">{formatMoney(total, currency, inrPerUsd)}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function ComparisonBar({ label, value, max, tone, currency, inrPerUsd }: { label: string; value: number; max: number; tone: string; currency: Currency; inrPerUsd: number | null }) {
-  const width = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
-  return (
-    <div className="text-xs">
-      <div className="flex justify-between gap-2 text-slate-600">
-        <span className="truncate">{label}</span>
-        <span className="tabular-nums font-semibold text-slate-800">{formatMoney(value, currency, inrPerUsd)}</span>
-      </div>
-      <div className="mt-0.5 h-2.5 w-full rounded-full bg-sand-100">
-        <div className={`h-2.5 rounded-full ${tone}`} style={{ width: `${width}%` }} />
-      </div>
-    </div>
-  );
-}
-
-/** The headline comparison with staying on the current engine, shown above the recommendation cards (M9). */
+/** The comparison with staying on the current engine, with the full working (M9, redone in M11). */
 function PriceDifferenceBanner({ recommendations, baselines, currency, inrPerUsd }: { recommendations: Recommendation[]; baselines: Record<string, Baseline>; currency: Currency; inrPerUsd: number | null }) {
   const compared = recommendations.filter((item) => item.versus_baseline && !item.versus_baseline.same_service && item.versus_baseline.delta_usd !== null);
+  const likeForLike = recommendations.filter((item) => item.versus_baseline?.same_service);
+  const unpriced = recommendations.filter((item) => item.versus_baseline && !item.versus_baseline.same_service && item.versus_baseline.delta_usd === null);
   const entries = Object.values(baselines);
   if (!entries.length) return null;
   const engine = entries[0].engine_label;
   const bestSaving = compared.reduce((best, item) => Math.min(best, item.versus_baseline?.delta_usd ?? 0), 0);
   return (
-    <section className="card overflow-hidden border-2 border-emerald-200">
-      <div className="bg-gradient-to-r from-emerald-50 to-white p-5">
+    <section className="card overflow-hidden">
+      <div className="bg-gradient-to-r from-coral-50 to-white p-5">
         <p className="eyebrow">Price difference against staying on {engine}</p>
         <h2 className="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">
           {bestSaving < -1 ? (
@@ -129,45 +125,90 @@ function PriceDifferenceBanner({ recommendations, baselines, currency, inrPerUsd
             <>Staying on {engine} cannot be priced for comparison</>
           )}
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Compute and licences at the Balanced tier, compared with running {engine} on the same cloud. Storage, backup and network would be about the
-          same either way and are left out. On-prem costs are not needed.
-        </p>
+        <ol className="mt-3 grid gap-3 text-sm text-slate-700 md:grid-cols-3">
+          <li className="rounded-xl bg-white/80 p-3 ring-1 ring-sand-200">
+            <span className="font-bold text-coral-700">1. What "staying" means.</span> Keep {engine} but move it to the same cloud as the option, on the
+            cheapest {engine} service there that has a list price. It gets the same size and the same high-availability layout as the option.
+          </li>
+          <li className="rounded-xl bg-white/80 p-3 ring-1 ring-sand-200">
+            <span className="font-bold text-coral-700">2. What is compared.</span> Only the monthly cost of the servers and the database licences, at
+            the Balanced tier list price. Storage, backup and network cost about the same either way, so they are left out.
+          </li>
+          <li className="rounded-xl bg-white/80 p-3 ring-1 ring-sand-200">
+            <span className="font-bold text-coral-700">3. The result.</span> Difference = option per month minus staying per month. A minus sign
+            means the option is cheaper. A year is 12 months. List prices only: no enterprise discounts or taxes.
+          </li>
+        </ol>
       </div>
+
       {compared.length > 0 && (
-        <div className="grid gap-4 border-t border-emerald-100 p-5 md:grid-cols-3">
+        <div className="space-y-4 border-t border-sand-200 p-5">
           {compared.map((item) => {
             const versus = item.versus_baseline!;
+            const baseline = baselines[item.csp];
             const delta = versus.delta_usd ?? 0;
             const cheaper = delta < 0;
-            const baseline = versus.baseline_core_usd ?? 0;
-            const option = versus.recommendation_core_usd ?? 0;
-            const max = Math.max(baseline, option);
-            const percent = baseline ? Math.round((Math.abs(delta) / baseline) * 100) : null;
+            const percent = versus.baseline_core_usd ? Math.round((Math.abs(delta) / versus.baseline_core_usd) * 100) : null;
             return (
-              <div key={`${item.rank}-${item.components[0].service_id}`} className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">#{item.rank} · {CSP_LABELS[item.csp]}</p>
-                <p className="font-semibold text-slate-900">{optionTitle(item)}</p>
-                <p className={`text-3xl font-extrabold tabular-nums ${cheaper ? "text-emerald-700" : "text-rose-700"}`}>
-                  {cheaper ? "−" : "+"}{formatMoney(Math.abs(delta), currency, inrPerUsd)}
-                  <span className="text-sm font-semibold text-slate-500"> / month{percent !== null ? ` · ${cheaper ? "−" : "+"}${percent}%` : ""}</span>
+              <div key={`${item.rank}-${item.components[0].service_id}`} className="rounded-2xl border border-sand-200 p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-semibold text-slate-900">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500">#{item.rank} · {CSP_LABELS[item.csp]} · </span>
+                    {optionTitle(item)}
+                  </p>
+                  <p className={`text-2xl font-extrabold tabular-nums ${cheaper ? "text-emerald-700" : "text-rose-700"}`}>
+                    {cheaper ? "−" : "+"}{formatMoney(Math.abs(delta), currency, inrPerUsd)}
+                    <span className="text-sm font-semibold text-slate-500">
+                      {" "}/ month{percent !== null ? ` (${cheaper ? "−" : "+"}${percent}%)` : ""} · {cheaper ? "saves" : "costs"} {formatMoney(Math.abs(delta) * 12, currency, inrPerUsd)} a year
+                    </span>
+                  </p>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
+                  <CoreBreakdown
+                    title={`Staying on ${engine}`} name={versus.baseline_service_name} tone="stay"
+                    lines={baseline?.core_lines ?? []} multiplier={baseline?.environment_multiplier ?? 1} total={versus.baseline_core_usd ?? 0}
+                    currency={currency} inrPerUsd={inrPerUsd}
+                  />
+                  <div className="grid place-items-center text-xl font-bold text-slate-400" aria-hidden="true">vs</div>
+                  <CoreBreakdown
+                    title="Moving to this option" name={optionTitle(item)} tone="move"
+                    lines={versus.recommendation_core_lines ?? []} multiplier={versus.recommendation_environment_multiplier ?? 1} total={versus.recommendation_core_usd ?? 0}
+                    currency={currency} inrPerUsd={inrPerUsd}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-600">
+                  {formatMoney(versus.recommendation_core_usd ?? 0, currency, inrPerUsd)} − {formatMoney(versus.baseline_core_usd ?? 0, currency, inrPerUsd)} ={" "}
+                  <span className="font-semibold">{cheaper ? "−" : "+"}{formatMoney(Math.abs(delta), currency, inrPerUsd)}</span> a month.
                 </p>
-                <ComparisonBar label={`Staying: ${versus.baseline_service_name}`} value={baseline} max={max} tone="bg-slate-400" currency={currency} inrPerUsd={inrPerUsd} />
-                <ComparisonBar label={`Moving: ${optionTitle(item)}`} value={option} max={max} tone={cheaper ? "bg-emerald-500" : "bg-rose-500"} currency={currency} inrPerUsd={inrPerUsd} />
               </div>
             );
           })}
         </div>
       )}
-      <ul className="space-y-1 border-t border-emerald-100 bg-white px-5 py-3 text-xs text-slate-500">
-        {entries.map((baseline) => (
-          <li key={baseline.csp}>
-            <span className="font-semibold text-slate-700">{CSP_LABELS[baseline.csp]} baseline:</span>{" "}
-            {baseline.core_monthly_usd !== null ? `${formatMoney(baseline.core_monthly_usd, currency, inrPerUsd)} a month on ${baseline.service_name}. ` : ""}
-            {baseline.note}
-          </li>
-        ))}
-      </ul>
+
+      {(likeForLike.length > 0 || unpriced.length > 0) && (
+        <ul className="space-y-1 border-t border-sand-200 px-5 py-3 text-xs text-slate-600">
+          {likeForLike.map((item) => (
+            <li key={`same-${item.rank}`}>#{item.rank} {optionTitle(item)} is staying on {engine} itself, so there is no difference to show.</li>
+          ))}
+          {unpriced.map((item) => (
+            <li key={`unpriced-${item.rank}`}>#{item.rank} {optionTitle(item)}: {item.versus_baseline?.message}</li>
+          ))}
+        </ul>
+      )}
+
+      <div className="border-t border-sand-200 bg-white px-5 py-3 text-xs text-slate-500">
+        <p className="font-semibold text-slate-700">How the "staying" price was found</p>
+        <ul className="mt-1 space-y-1">
+          {entries.map((baseline) => (
+            <li key={baseline.csp}>
+              <span className="font-semibold text-slate-700">{CSP_LABELS[baseline.csp]}:</span>{" "}
+              {baseline.core_monthly_usd !== null ? `${formatMoney(baseline.core_monthly_usd, currency, inrPerUsd)} a month on ${baseline.service_name}. ` : ""}
+              {baseline.note}
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -206,14 +247,61 @@ function AddOnsPanel({ result, intake }: { result: AssessmentResult; intake: Int
   );
 }
 
-function RecommendationCard({ recommendation, currency, inrPerUsd, move, planLink }: CardProps) {
+function AboutService({ component }: { component: ServiceChoice }) {
+  const about = component.about;
+  if (!about) return null;
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="font-semibold text-slate-900">{about.title}</p>
+        <p className="mt-1 text-slate-700">{about.summary}</p>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">The cloud provider handles</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+            {about.provider_handles.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">Your team handles</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+            {about.team_handles.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      {about.facts.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{component.service_name}</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-700">
+            {about.facts.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {about.source_url && (
+        <a href={about.source_url} target="_blank" rel="noreferrer" className="link-underline text-xs font-semibold text-coral-700">
+          Shared responsibility model
+        </a>
+      )}
+    </div>
+  );
+}
+
+function RecommendationCard({ recommendation, currency, inrPerUsd, planLink, onSetupGuide }: CardProps) {
+  const primary = recommendation.components[0];
+  const aboutTitle = primary.about?.deployment === "iaas" ? "About self-managed" : primary.about?.deployment === "serverless" ? "About this serverless service" : "About this managed service";
   return (
     <article className={`card card-hover flex flex-col p-5 ${recommendation.rank === 1 ? "border-t-4 border-t-coral-500" : ""}`}>
       <header className="flex items-start justify-between gap-2">
         <div>
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
             #{recommendation.rank} · {CSP_LABELS[recommendation.csp]}
-            <MoveBadge move={move} />
           </p>
           <h2 className="mt-1 font-semibold text-slate-900">
             {recommendation.components.map((component) => component.service_name).join(" + ")}
@@ -223,8 +311,6 @@ function RecommendationCard({ recommendation, currency, inrPerUsd, move, planLin
           {recommendation.total_score.toFixed(1)}
         </span>
       </header>
-
-      <VersusBaseline recommendation={recommendation} currency={currency} inrPerUsd={inrPerUsd} />
 
       <ScoreRadar scores={recommendation.dimension_scores} />
 
@@ -253,22 +339,33 @@ function RecommendationCard({ recommendation, currency, inrPerUsd, move, planLin
         </div>
       </dl>
 
-      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Why this</h3>
-      <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-slate-700">
-        {recommendation.why.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
-
-      {recommendation.design_guidance.length > 0 && (
-        <>
-          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Design notes</h3>
-          <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-slate-700">
-            {recommendation.design_guidance.map((line) => (
+      <div className="mt-4 space-y-2">
+        {primary.about && (
+          <Disclosure title={aboutTitle} hint={primary.about.title}>
+            <AboutService component={primary} />
+          </Disclosure>
+        )}
+        <Disclosure title="Why this" hint={`${recommendation.why.length} reasons`}>
+          <ul className="list-disc space-y-1 pl-4 text-slate-700">
+            {recommendation.why.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
-        </>
+        </Disclosure>
+        {recommendation.design_guidance.length > 0 && (
+          <Disclosure title="Design notes" hint={`${recommendation.design_guidance.length} notes`}>
+            <ul className="list-disc space-y-1 pl-4 text-slate-700">
+              {recommendation.design_guidance.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </Disclosure>
+        )}
+      </div>
+      {onSetupGuide && (recommendation.setup_guide ?? []).length > 0 && (
+        <button type="button" onClick={onSetupGuide} className="btn-ghost mt-4 justify-center px-3 py-1.5 text-sm">
+          Setup guide for this option
+        </button>
       )}
       {planLink && (
         <Link to={planLink} className="btn-ghost mt-4 justify-center px-3 py-1.5 text-sm hover:border-slate-500">
@@ -318,6 +415,52 @@ function NextSteps({ result }: { result: AssessmentResult }) {
   );
 }
 
+function YourAnswers({ result, questions, sliders }: { result: AssessmentResult; questions: Map<string, Question>; sliders: PrioritySlider[] }) {
+  const answered = Object.entries(result.input.answers).filter(([fieldId]) => questions.has(fieldId));
+  const assumed = result.trace.assumed_fields;
+  const priorities = sliders;
+  return (
+    <Disclosure title="Review your answers" hint={`${answered.length} answered · ${assumed.length} assumed · the inputs these recommendations are based on`}>
+      <div className="space-y-4">
+        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+          {answered.map(([fieldId, value]) => (
+            <div key={fieldId} className="flex justify-between gap-3 border-b border-sand-100 py-1.5">
+              <span className="text-slate-500">{questions.get(fieldId)?.label}</span>
+              <span className="text-right font-medium text-slate-800">{describeValue(questions.get(fieldId), value)}</span>
+            </div>
+          ))}
+        </div>
+        {priorities.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">What matters most</p>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {priorities.map((slider) => (
+                <span key={slider.id} className="rounded-full border border-sand-200 bg-sand-50 px-2.5 py-0.5 text-xs text-slate-700">
+                  {slider.label} <span className="font-semibold tabular-nums">{result.input.priorities?.[slider.id] ?? slider.default}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {assumed.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Assumed ({assumed.length}): fields you left empty, filled from defaults</p>
+            <ul className="mt-1 space-y-1 text-slate-700">
+              {assumed.map((field) => (
+                <li key={field.field_id}>
+                  {questions.get(field.field_id)?.label ?? field.field_id}:{" "}
+                  <span className="font-medium">{describeValue(questions.get(field.field_id), field.value)}</span>
+                  <span className="text-xs text-slate-500"> ({field.reason})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </Disclosure>
+  );
+}
+
 export default function Results() {
   const { id = "" } = useParams();
   const { getAccessToken } = useAuth();
@@ -326,8 +469,8 @@ export default function Results() {
   const [error, setError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<Currency>("usd");
   const [sliders, setSliders] = useState<PrioritySlider[]>([]);
-  const [scenario, setScenario] = useState<WhatIfResult | null>(null);
   const [intake, setIntake] = useState<IntakeConfig | null>(null);
+  const [guideRank, setGuideRank] = useState(1);
 
   useEffect(() => {
     fetchAssessment(id, getAccessToken)
@@ -344,16 +487,7 @@ export default function Results() {
     fetchIntake(getAccessToken).then(setIntake).catch(() => setIntake(null));
   }, [id, getAccessToken]);
 
-  const view: AssessmentResult | null = useMemo(
-    () => (result && scenario ? { ...result, ...scenario.outcome, input: scenario.input } : result),
-    [result, scenario],
-  );
-
-  const moves = useMemo(() => {
-    const byTitle = new Map<string, RankMove>();
-    scenario?.changes.rank_moves.forEach((move) => byTitle.set(`${move.option}|${move.csp}`, move));
-    return byTitle;
-  }, [scenario]);
+  const view: AssessmentResult | null = result;
 
   const recommendedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -390,7 +524,7 @@ export default function Results() {
                   type="button"
                   aria-pressed={currency === option}
                   onClick={() => setCurrency(option)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${currency === option ? "bg-teal-600 text-white shadow-soft" : "text-slate-600 hover:bg-sand-50"}`}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${currency === option ? "bg-coral-500 text-white shadow-soft" : "text-slate-600 hover:bg-sand-50"}`}
                 >
                   {option.toUpperCase()}
                 </button>
@@ -416,6 +550,15 @@ export default function Results() {
         </p>
       )}
 
+      {(view.notices ?? []).map((notice) => (
+        <div key={notice} role="alert" className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Check your answers</p>
+          <p className="mt-1">{notice}</p>
+        </div>
+      ))}
+
+      <YourAnswers result={result} questions={questions} sliders={sliders} />
+
       <NextSteps result={result} />
 
       {(view.readiness || typeof result.input.answers["app.notes"] === "string") && (
@@ -434,11 +577,6 @@ export default function Results() {
         <PriceDifferenceBanner recommendations={view.recommendations} baselines={view.baselines} currency={currency} inrPerUsd={result.pricing?.inr_per_usd ?? null} />
       )}
 
-      {scenario && (
-        <p className="flex items-center gap-2 text-sm font-semibold text-coral-700">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-coral-500" /> Showing the what-if scenario. The saved result is unchanged.
-        </p>
-      )}
 
       {view.recommendations.length === 0 ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -447,43 +585,32 @@ export default function Results() {
           ))}
         </div>
       ) : (
-        <div key={scenario ? JSON.stringify(scenario.input) : "saved"} className="stagger grid gap-5 lg:grid-cols-3">
+        <div className="stagger grid items-start gap-5 lg:grid-cols-3">
           {view.recommendations.map((recommendation) => (
             <RecommendationCard
               key={`${optionTitle(recommendation)}|${recommendation.csp}`}
               recommendation={recommendation}
-              move={moves.get(`${optionTitle(recommendation)}|${recommendation.csp}`)}
               currency={currency}
               inrPerUsd={result.pricing?.inr_per_usd ?? null}
-              planLink={!scenario && isExisting ? `/migrations/new?assessment=${result.id}&target=${recommendation.components[0].service_id}` : undefined}
+              onSetupGuide={() => {
+                setGuideRank(recommendation.rank);
+                document.getElementById(SETUP_GUIDE_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              planLink={isExisting ? `/migrations/new?assessment=${result.id}&target=${recommendation.components[0].service_id}` : undefined}
             />
           ))}
         </div>
       )}
 
-      {sliders.length > 0 && <WhatIfPanel result={result} sliders={sliders} questions={questions} scenario={scenario} onScenario={setScenario} />}
+      {!isExisting && view.recommendations.length > 0 && (
+        <SetupGuide recommendations={view.recommendations} selectedRank={guideRank} onSelect={setGuideRank} />
+      )}
 
       <AddOnsPanel result={view} intake={intake} />
 
-      <ExplanationPanel assessmentId={result.id} scenarioActive={scenario !== null} />
+      <ExplanationPanel assessmentId={result.id} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <WhyNotPanel filteredOut={view.trace.filtered_out} scores={view.trace.scores} recommendedIds={recommendedIds} />
-
-        <section className="card p-4">
-          <h2 className="font-medium text-slate-900">Assumptions ({view.trace.assumed_fields.length})</h2>
-          <p className="mt-1 text-sm text-slate-600">Fields you left empty, filled from defaults.</p>
-          <ul className="mt-3 space-y-1 text-sm text-slate-700">
-            {view.trace.assumed_fields.map((field) => (
-              <li key={field.field_id}>
-                {questions.get(field.field_id)?.label ?? field.field_id}:{" "}
-                <span className="font-medium">{describeValue(questions.get(field.field_id), field.value)}</span>
-                <span className="text-xs text-slate-500"> ({field.reason})</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+      <WhyNotPanel filteredOut={view.trace.filtered_out} scores={view.trace.scores} recommendedIds={recommendedIds} />
     </div>
   );
 }

@@ -13,10 +13,14 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel
 
+from app.engine.defaults import OWNED_LICENCE_OPTION_BY_ENGINE
+from app.engine.setup_guide import BUILT_IN_PLACEHOLDERS, placeholders
 from app.config import get_settings
 from app.knowledge.catalog import AnswerError, validate_answer
 from app.knowledge.loader import (
     ENGINE_FEATURES_FILE,
+    SERVICE_MODELS_FILE,
+    SETUP_GUIDE_FILE,
     EXPLAINER_FILE,
     ORG_SUPPORT_FILE,
     JUSTIFICATION_FILE,
@@ -43,6 +47,8 @@ from app.models.knowledge import (
     RuleSet,
     ScoringConfig,
     ServiceEntry,
+    ServiceModels,
+    SetupGuideConfig,
     ServicePredicate,
     SizingConstants,
 )
@@ -321,7 +327,7 @@ def check_hardware(hardware: HardwareProfiles) -> list[str]:
         if family.ladder not in hardware.ladders:
             problems.append(f"hardware family '{family_name}': unknown ladder '{family.ladder}'")
     for ladder_name, steps in hardware.ladders.items():
-        for previous, current in zip(steps, steps[1:]):
+        for previous, current in zip(steps, steps[1:], strict=False):
             if current.vcpu < previous.vcpu or current.memory_gb < previous.memory_gb:
                 problems.append(f"ladder '{ladder_name}' is not ordered smallest first at '{current.size}'")
     return problems
@@ -420,6 +426,10 @@ def check_licensing(licensing: LicensingConfig, services: dict[Path, ServiceEntr
     for vendor, option in licensing.owned_licence_options.items():
         if option not in known_options:
             problems.append(f"licensing.yaml: owned_licence_options.{vendor} '{option}' is not an eco.licenses option")
+    owned_options = set(licensing.owned_licence_options.values())
+    for engine, option in OWNED_LICENCE_OPTION_BY_ENGINE.items():
+        if option not in owned_options:
+            problems.append(f"engine/defaults.py: owned-licence option '{option}' for {engine} is not in licensing.yaml owned_licence_options")
     return problems
 
 
@@ -465,7 +475,6 @@ def check_intake(org_support: OrgSupportConfig, features: EngineFeaturesConfig, 
     """Support-list engines and special-case conditions are catalog entries; every checklist feature is a data.special_features option."""
     problems: list[str] = []
     engines = {option.value for option in catalog.engine_options}
-    questions = catalog.questions_by_id()
     for engine in org_support.engines:
         if engine not in engines:
             problems.append(f"org_support.yaml: '{engine}' is not a catalog engine")
@@ -506,6 +515,8 @@ def run_all_checks(kb_dir: Path) -> list[str]:
         load_model(kb_dir / EXPLAINER_FILE, ExplainerConfig)
         org_support = load_model(kb_dir / ORG_SUPPORT_FILE, OrgSupportConfig)
         engine_features = load_model(kb_dir / ENGINE_FEATURES_FILE, EngineFeaturesConfig)
+        service_models = load_model(kb_dir / SERVICE_MODELS_FILE, ServiceModels)
+        setup_guide = load_model(kb_dir / SETUP_GUIDE_FILE, SetupGuideConfig)
     except KnowledgeBaseError as error:
         return str(error).split("\n")
 
@@ -525,6 +536,50 @@ def run_all_checks(kb_dir: Path) -> list[str]:
     problems.extend(check_justification(justification, catalog))
     problems.extend(check_intake(org_support, engine_features, catalog))
     problems.extend(check_catalog_against_support_list(org_support, services))
+    problems.extend(check_service_models(service_models, services))
+    problems.extend(check_setup_guide(setup_guide, services, catalog))
+    return problems
+
+
+def check_service_models(service_models: ServiceModels, services: dict[Path, ServiceEntry]) -> list[str]:
+    """Every deployment model used by a service is described, so "About this service" is never empty."""
+    problems: list[str] = []
+    for path, service in services.items():
+        if service.deployment not in service_models.deployments:
+            problems.append(f"service_models.yaml: no description for deployment '{service.deployment}' ({path.name})")
+    return problems
+
+
+def setup_guide_placeholders(guide: SetupGuideConfig) -> set[str]:
+    """Every placeholder the guide can fill: built-in ones plus every lookup key."""
+    known = set(BUILT_IN_PLACEHOLDERS)
+    for lookup in (guide.csp_terms, guide.engine_terms, guide.service_terms):
+        for terms in lookup.values():
+            known.update(terms)
+    return known
+
+
+def check_setup_guide(guide: SetupGuideConfig, services: dict[Path, ServiceEntry], catalog: QuestionCatalog) -> list[str]:
+    """Known services, languages and placeholders; step conditions use real fields."""
+    problems: list[str] = []
+    service_ids = {service.id for service in services.values()}
+    for service_id in guide.service_terms:
+        if service_id not in service_ids:
+            problems.append(f"setup_guide.yaml: unknown service '{service_id}' in service_terms")
+    language_question = catalog.questions_by_id().get("eco.languages")
+    languages = set(language_question.option_values()) if language_question else set()
+    for engine, by_language in guide.drivers.items():
+        for language in by_language:
+            if language not in languages:
+                problems.append(f"setup_guide.yaml: drivers.{engine}.{language} is not an eco.languages option")
+    known = setup_guide_placeholders(guide)
+    for phase in guide.phases:
+        for step in phase.steps:
+            for name in placeholders(step.text):
+                if name not in known:
+                    problems.append(f"setup_guide.yaml: phase {phase.id} uses unknown placeholder '{{{name}}}'")
+            for condition in step.when:
+                problems += check_condition(f"setup_guide.yaml phase {phase.id}", condition, catalog)
     return problems
 
 

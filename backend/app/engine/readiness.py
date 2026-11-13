@@ -1,7 +1,8 @@
 """Team readiness (M8): can the application team carry out the migration without outside help?
 
-Deterministic and answer-driven. Applies only when there is a source database. A vendor that will
-support the migration makes the team ready; otherwise the three team.* answers decide.
+Deterministic and answer-driven. Applies only when there is a source database and the application
+comes from a vendor (internal teams are not asked since M11). A vendor that will support the
+migration makes the team ready; otherwise the three team.* answers decide.
 """
 
 from typing import Any
@@ -70,8 +71,8 @@ def verdict_for(values: dict[str, Any]) -> ReadinessVerdict:
 
 
 def assess_readiness(values: dict[str, Any]) -> Readiness | None:
-    """Readiness for an existing database; None for a new application."""
-    if not has_source_database(values):
+    """Readiness for an existing vendor application; None for a new or internally built application (M11)."""
+    if not has_source_database(values) or values.get("app.origin") == "internal":
         return None
     verdict = verdict_for(values)
     reasons: list[str] = []

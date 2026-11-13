@@ -1,0 +1,60 @@
+# What each deployment model means for an application team: shown on every recommendation as
+# "About this service" (M10). Based on each cloud's shared responsibility model for databases.
+version: 1
+last_verified: 2026-11-13
+source_url: https://aws.amazon.com/compliance/shared-responsibility-model/
+csp_sources:
+  aws: https://aws.amazon.com/compliance/shared-responsibility-model/
+  azure: https://learn.microsoft.com/en-us/azure/security/fundamentals/shared-responsibility
+  gcp: https://cloud.google.com/architecture/framework/security/shared-responsibility-shared-fate
+
+deployments:
+  managed:
+    title: Managed database service
+    summary: >-
+      The cloud provider runs the database software for you on servers it operates. Your team
+      chooses the size and settings and owns the data, schema and access; nobody in the org logs
+      in to an operating system.
+    provider_handles:
+      - Hardware, operating system and database installation
+      - Minor version patching in a maintenance window you choose
+      - Automated backups and point-in-time restore
+      - Standby replica and automatic failover when Multi-AZ is chosen
+      - Encryption at rest and in transit, built-in monitoring
+    team_handles:
+      - Instance size, storage and parameter settings
+      - Schema, indexes and query tuning
+      - Users, roles and network access (private endpoints, firewall rules)
+      - "Major version upgrades: the provider offers them, the team plans and tests them"
+      - Testing restores and failover, and cost reviews
+  serverless:
+    title: Serverless database service
+    summary: >-
+      The provider runs the database and also scales capacity up and down with load. There is no
+      instance to size; you pay for capacity or requests actually used.
+    provider_handles:
+      - Everything a managed service handles
+      - Scaling capacity automatically within the limits you set
+      - Spreading data across zones for availability
+    team_handles:
+      - Capacity limits and budget alerts, so a traffic spike cannot run up the bill
+      - Data model, partition keys and query patterns
+      - Users, roles and network access
+      - Testing restores and reviewing usage-based cost
+  iaas:
+    title: Self-managed database on virtual machines
+    summary: >-
+      The cloud provides virtual machines and disks only. Your DBA team installs and runs the
+      database exactly as it would on-prem: full control and any engine version or option, but
+      every operational task stays with the team. Licensed engines (Oracle, SQL Server, Db2) need
+      your own licences.
+    provider_handles:
+      - Physical servers, virtual machines and disks
+      - Infrastructure availability (the VM and disk SLA, not the database's)
+    team_handles:
+      - Installing, configuring and patching the operating system and the database
+      - Backups, restore tests and disaster recovery copies
+      - "High availability: standby setup (for example Data Guard, Always On or Patroni) and failover"
+      - Monitoring, alerting, capacity and performance tuning
+      - Database licences and staying compliant with the vendor's cloud licensing rules
+      - Security hardening, encryption keys and audit configuration

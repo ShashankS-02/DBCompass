@@ -82,6 +82,33 @@ def vendor_certified_engine(values: dict[str, Any]) -> str | None:
     return None
 
 
+# Answering "we already own enough licences" for a commercial engine counts as the matching
+# eco.licenses option, so costing (BYOL) and scoring see it. Values match licensing.yaml owned_licence_options.
+OWNED_LICENCE_OPTION_BY_ENGINE = {"oracle": "oracle_byol", "sql_server": "sql_server_hybrid_benefit"}
+
+
+def intended_engine(values: dict[str, Any]) -> str | None:
+    """Engine the team has in mind: the vendor-certified one, else the requested one."""
+    certified = vendor_certified_engine(values)
+    if certified:
+        return certified
+    requested = values.get("app.requested_engine")
+    if requested and requested.get("engine") not in (None, "none", "other", "unknown"):
+        return requested["engine"]
+    return None
+
+
+def licences_with_owned_answer(values: dict[str, Any]) -> list[str]:
+    """eco.licenses plus the owned-licence option implied by pref.licence_status = owned."""
+    licences = list(values.get("eco.licenses") or [])
+    if values.get("pref.licence_status") != "owned":
+        return licences
+    option = OWNED_LICENCE_OPTION_BY_ENGINE.get(intended_engine(values) or "")
+    if option and option not in licences:
+        licences.append(option)
+    return licences
+
+
 PERSONAL_DATA_FIELD_ID = "sec.personal_data"
 PERSONAL_DATA_VALUES = ("customers", "employees", "both")
 PERSONAL_DATA_DEFAULTS = {"sec.cmk": True, "sec.audit": True, "sec.masking_rls": True}
@@ -116,6 +143,9 @@ def derive_fields(values: dict[str, Any], sizing: SizingConstants) -> None:
     values["ha.sla_percent"] = sla_percent(values.get("ha.sla"))
     values["mig.source_engine_family"] = source_engine_family(values)
     values["app.vendor_certified_engine"] = vendor_certified_engine(values)
+    licences = licences_with_owned_answer(values)
+    if licences:
+        values["eco.licenses"] = licences
 
 
 def resolve_requirements(

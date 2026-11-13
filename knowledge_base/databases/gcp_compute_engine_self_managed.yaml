@@ -3,6 +3,7 @@
 id: gcp.compute_engine_self_managed
 csp: gcp
 name: Self-managed database on Compute Engine + Hyperdisk
+host_label: Compute Engine + Hyperdisk
 family: relational
 secondary_families:
 - document

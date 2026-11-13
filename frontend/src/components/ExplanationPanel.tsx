@@ -114,7 +114,7 @@ function AskBox({ assessmentId }: { assessmentId: string }) {
 }
 
 /** "Explain this result": saved AI explanation, or generate one on request; plus grounded Q&A. */
-export default function ExplanationPanel({ assessmentId, scenarioActive }: { assessmentId: string; scenarioActive: boolean }) {
+export default function ExplanationPanel({ assessmentId }: { assessmentId: string }) {
   const { getAccessToken } = useAuth();
   const [explanation, setExplanation] = useState<Explanation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,7 +146,6 @@ export default function ExplanationPanel({ assessmentId, scenarioActive }: { ass
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Explanation</h2>
-          {scenarioActive && <p className="text-xs text-slate-500">Describes the saved result, not the what-if scenario.</p>}
         </div>
         {explanation && <SourceBadge explanation={explanation} />}
       </div>

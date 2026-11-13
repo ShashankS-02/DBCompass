@@ -63,6 +63,13 @@ class Question(BaseModel):
             values.append(option.value)
         return values
 
+    def option_label(self, value: str) -> str:
+        """Label of one option, falling back to the value."""
+        for option in self.options:
+            if option.value == value:
+                return option.label
+        return value
+
 
 class Section(BaseModel):
     """A group of questions, e.g. 'Workload'. Section id is the field id prefix."""
@@ -98,6 +105,7 @@ class QuestionCatalog(BaseModel):
     default_tier: str
     engine_options: list[QuestionOption] = []
     priority_sliders: list[PrioritySlider]
+    retired_priority_sliders: list[str] = []
     fixed_dimension_weights: dict[str, float]
     sections: list[Section]
 

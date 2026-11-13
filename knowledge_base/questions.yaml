@@ -43,19 +43,14 @@ priority_sliders:
     dimension: reliability
     default: 80
     description: SLA headroom, RPO/RTO capability, multi-region support.
-  - id: simplicity
-    label: Simplicity
-    dimension: ops
-    default: 60
-    description: Less to operate, closer to your team's existing skills.
-  - id: portability
-    label: Portability
-    dimension: portability
-    default: 20
-    description: Open engines and less lock-in to one cloud.
+
+# Sliders that existed before M10. Saved assessments may still carry them; they are ignored.
+# Simplicity became a fixed ops weight; portability is not scored (teams stay on one cloud).
+retired_priority_sliders: [simplicity, portability]
 
 # Dimensions not driven by a slider keep a fixed weight. Sliders share the remainder.
 fixed_dimension_weights:
+  ops: 0.10
   ecosystem: 0.10
   compliance: 0.10
 

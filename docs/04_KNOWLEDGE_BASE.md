@@ -59,6 +59,8 @@ sketch. Differences:
 - New: `secondary_families` (e.g. Aurora PostgreSQL also serves `vector` via pgvector),
   `regions` (ids from `regions.yaml`, only the India / EU / US / APAC geographies),
   `lifecycle` (`active | not_for_new_projects | retiring`) with `status_note`.
+- `host_label` (optional, self-managed only): what the engine is installed on, e.g. `Amazon EC2 + EBS`.
+  Results title the service "<engine> on <host_label> (self-managed)".
 - `special_case` (M9, optional): `caching | vector_search | analytics`. Marks a service kept only for
   one job. It is filtered out as the main database (filter id `SPECIAL-CASE`) unless the answers meet
   `org_support.yaml` `special_cases.<kind>.primary_when`; it can always be an add-on component. The
@@ -199,3 +201,27 @@ The engines the database team supports: `engines.<id>: {status: strategic|suppor
 Per-engine checklist for the intake: `engines.<id>.features[] = {feature, label, how_to_check}` where
 `feature` is a `data.special_features` option and `how_to_check` is a catalog query that returns
 metadata only. `sticky_features` feeds rule R-FEAT-STICKY-001. The checker verifies every feature id.
+
+
+## service_models.yaml (M10)
+
+Plain-language description of each deployment model (`managed`, `serverless`, `iaas`): a title, a
+summary, what the cloud provider handles and what the team handles. Shown on every recommendation as
+"About this service", together with facts from the service entry (SLA for the chosen layout, storage
+limit, read replicas, cross-region option, operating effort, own licences on VMs). `csp_sources`
+links each cloud's shared responsibility model. The knowledge check fails if a service uses a
+deployment model the file does not describe.
+
+
+## setup_guide.yaml (M10)
+
+Basic steps to stand up a recommended option for a NEW application, in phases: cloud foundation,
+create the database, secure access, connect the application, schema, add-ons (cache, vector,
+search, analytics, time series) and go-live. Each step is a template with `{placeholders}` and
+optional filters: `deployments`, `engines`, `needs` (an add-on role, `replicas` or
+`vector_in_primary`) and `when` (answer conditions in the rules.yaml grammar). Lookups fill the
+placeholders: `csp_terms` (secrets store, KMS, monitoring, private access), `engine_terms` (pooler,
+HA tooling, backup tool, schema migration tool, vector step), `service_terms` (per-service
+overrides such as RDS Proxy) and `drivers` (engine x eco.languages). A step whose placeholder has
+no value is dropped, never guessed. The knowledge check rejects unknown placeholders, services,
+languages and condition fields.

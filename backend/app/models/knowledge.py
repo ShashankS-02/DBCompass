@@ -142,6 +142,7 @@ class ServiceEntry(StrictModel):
     good_for: list[str] = []
     avoid_when: list[str] = []
     special_case: SpecialCase | None = None
+    host_label: str | None = None  # self-managed only: what the engine is installed on, for titles
     lifecycle: Lifecycle = "active"
     status_note: str | None = None
     review_status: ReviewStatus
@@ -394,11 +395,11 @@ class ScoringConfig(StrictModel):
     max_auto_read_replicas: int = Field(ge=0)
     rpo_seconds: dict[str, int]
     complexity_points: dict[Level, float]
-    lock_in_points: dict[Level, float]
     default_management_pref: str
     management_fit: dict[str, dict[Deployment, float]]
     skills_points: dict[Literal["match", "no_match", "unknown"], float]
     shape_engine_preference: dict[str, list[Engine]]
+    engine_shapes: dict[Engine, list[str]] = {}
     open_engines: list[Engine]
     cost: CostConfig
     combination: CombinationConfig
@@ -443,3 +444,59 @@ class HardwareProfiles(StrictModel):
     unsized_families: list[str]
     storage_tiers: dict[str, StorageTier]
     edition_requirements: list[EditionRequirement]
+
+
+# ---------- service models (M10: "About this service") ----------
+
+
+class DeploymentModel(StrictModel):
+    """What one deployment model means for the team: who handles what."""
+
+    title: str
+    summary: str
+    provider_handles: list[str]
+    team_handles: list[str]
+
+
+class ServiceModels(StrictModel):
+    """Contents of knowledge_base/service_models.yaml."""
+
+    version: int
+    last_verified: date
+    source_url: str
+    csp_sources: dict[Csp, str]
+    deployments: dict[Deployment, DeploymentModel]
+
+
+# ---------- setup guide (M10: steps to stand up the database for a new application) ----------
+
+SetupNeed = Literal["cache", "search", "analytics", "vector", "time_series", "replicas", "vector_in_primary"]
+
+
+class SetupStepTemplate(StrictModel):
+    """One step: a template with {placeholders}, kept only when its filters match."""
+
+    text: str
+    deployments: list[Deployment] = []
+    engines: list[str] = []
+    needs: SetupNeed | None = None
+    when: list[Condition] = []
+
+
+class SetupPhaseTemplate(StrictModel):
+    id: str
+    title: str
+    steps: list[SetupStepTemplate]
+
+
+class SetupGuideConfig(StrictModel):
+    """Contents of knowledge_base/setup_guide.yaml."""
+
+    version: int
+    last_verified: date
+    source_url: str
+    csp_terms: dict[Csp, dict[str, str]]
+    engine_terms: dict[str, dict[str, str]] = {}
+    service_terms: dict[str, dict[str, str]] = {}
+    drivers: dict[str, dict[str, str]] = {}
+    phases: list[SetupPhaseTemplate]

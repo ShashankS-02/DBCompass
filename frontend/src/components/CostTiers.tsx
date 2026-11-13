@@ -52,6 +52,15 @@ export type Currency = "usd" | "inr";
 const TIER_ORDER = ["budget", "balanced", "performance"];
 const TERM_LABELS: Record<string, string> = { on_demand: "on-demand", "1yr": "1-year", "3yr": "3-year" };
 
+/** A unit price: enough decimals that quantity × price visibly matches the line total. */
+export function formatUnitPrice(usd: number, currency: Currency, inrPerUsd: number | null): string {
+  if (currency === "inr" && inrPerUsd) {
+    const inr = usd * inrPerUsd;
+    return `₹${inr.toLocaleString("en-IN", { maximumFractionDigits: inr < 10 ? 4 : 2 })}`;
+  }
+  return `$${usd.toLocaleString("en-US", { maximumFractionDigits: usd < 1 ? 5 : 2 })}`;
+}
+
 export function formatMoney(usd: number, currency: Currency, inrPerUsd: number | null): string {
   if (currency === "inr" && inrPerUsd) {
     return `₹${Math.round(usd * inrPerUsd).toLocaleString("en-IN")}`;

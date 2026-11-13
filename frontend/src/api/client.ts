@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 
-type TokenGetter = () => Promise<string | null>;
+export type TokenGetter = () => Promise<string | null>;
 
 async function authHeaders(getAccessToken: TokenGetter, json: boolean): Promise<Record<string, string>> {
   const headers: Record<string, string> = { Accept: json ? "application/json" : "*/*" };

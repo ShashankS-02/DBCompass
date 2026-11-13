@@ -24,7 +24,7 @@ Give any application team a defensible, explainable answer to:
 ### Flow A — Form based assessment
 Login (Entra ID) → New Assessment → choose Quick or Expert mode → answer questions
 (with tooltips explaining why each matters) → set priority sliders (Performance / Cost /
-Reliability / Simplicity / Portability) → Results page.
+Reliability; operations effort, ecosystem and compliance carry fixed weights) → Results page.
 
 ### Flow B — Repo based assessment (removed in M9)
 Removed: sending internal application code to an AI is a security violation. The guided intake
@@ -43,7 +43,8 @@ Migration Plan page.
 4. Design guidance: schema/data modelling notes, indexing, partitioning, caching,
    read replicas, connection pooling, backup/PITR, encryption.
 5. Assumptions list (fields that were defaulted).
-6. What-if sliders: change peak TPS, region count, SLA, budget and see ranking update.
+6. Your answers (the Review step) on the results page, and per option "About this service":
+   what the cloud provider runs and what the team runs (managed, serverless or self-managed).
 7. Export: Markdown / PDF design document.
 
 ## MVP (hackathon, 2 weeks)

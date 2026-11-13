@@ -16,6 +16,8 @@ from app.models.knowledge import (
     RuleSet,
     ScoringConfig,
     ServiceEntry,
+    ServiceModels,
+    SetupGuideConfig,
     SizingConstants,
 )
 from app.models.explain import ExplainerConfig
@@ -42,6 +44,8 @@ JUSTIFICATION_FILE = "justification.yaml"
 EXPLAINER_FILE = "explainer.yaml"
 ORG_SUPPORT_FILE = "org_support.yaml"
 ENGINE_FEATURES_FILE = "engine_features.yaml"
+SERVICE_MODELS_FILE = "service_models.yaml"
+SETUP_GUIDE_FILE = "setup_guide.yaml"
 SERVICES_DIR = "databases"
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
@@ -181,6 +185,18 @@ def get_engine_features() -> EngineFeaturesConfig:
 
 
 @lru_cache
+def get_service_models() -> ServiceModels:
+    """Return the cached deployment model descriptions (managed, serverless, self-managed)."""
+    return load_model(knowledge_base_dir() / SERVICE_MODELS_FILE, ServiceModels)
+
+
+@lru_cache
+def get_setup_guide() -> SetupGuideConfig:
+    """Return the cached setup guide templates for new applications."""
+    return load_model(knowledge_base_dir() / SETUP_GUIDE_FILE, SetupGuideConfig)
+
+
+@lru_cache
 def get_price_index() -> PriceIndex:
     """Return the cached index over knowledge_base/price_snapshots/*.json."""
     return PriceIndex(read_snapshots(knowledge_base_dir()))
@@ -201,6 +217,8 @@ class KnowledgeBundle:
     prices: PriceIndex
     licensing: LicensingConfig | None = None
     org_support: OrgSupportConfig | None = None
+    service_models: ServiceModels | None = None
+    setup_guide: SetupGuideConfig | None = None
     inr_per_usd: float | None = None
     inr_rate_date: str = ""
 
@@ -219,6 +237,8 @@ def get_knowledge() -> KnowledgeBundle:
         prices=get_price_index(),
         licensing=get_licensing_config(),
         org_support=get_org_support(),
+        service_models=get_service_models(),
+        setup_guide=get_setup_guide(),
         inr_per_usd=get_settings().inr_per_usd,
         inr_rate_date=get_settings().inr_rate_date,
     )

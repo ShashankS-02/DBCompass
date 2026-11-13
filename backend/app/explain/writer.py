@@ -1,6 +1,6 @@
 """Explanation of a result: LLM prose that passed the fact check, else rule-based text.
 
-The LLM only rewrites the fact sheet (CLAUDE.md principle 1). Its draft is checked with
+The LLM only rewrites the fact sheet (CONTRIBUTING.md principle 1). Its draft is checked with
 grounding.check_text; a failing draft is retried once with the problems listed, then dropped.
 """
 

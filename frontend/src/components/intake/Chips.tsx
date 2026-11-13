@@ -22,7 +22,7 @@ export function SingleChips({ options, value, onChange }: SingleProps) {
             onClick={() => onChange(selected ? undefined : option.value)}
             className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition duration-200 ${
               selected
-                ? "scale-[1.03] border-teal-600 bg-teal-600 text-white shadow-soft"
+                ? "scale-[1.03] border-coral-500 bg-coral-500 text-white shadow-soft"
                 : "border-sand-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-coral-300 hover:text-coral-700 hover:shadow-soft"
             }`}
           >
@@ -54,7 +54,7 @@ export function MultiChips({ options, value, onChange }: MultiProps) {
             onClick={() => toggle(option.value)}
             className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition duration-200 ${
               selected
-                ? "scale-[1.03] border-teal-600 bg-teal-600 text-white shadow-soft"
+                ? "scale-[1.03] border-coral-500 bg-coral-500 text-white shadow-soft"
                 : "border-sand-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-coral-300 hover:text-coral-700 hover:shadow-soft"
             }`}
           >

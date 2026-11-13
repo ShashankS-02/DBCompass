@@ -1,7 +1,7 @@
 """Shared Azure AI Foundry / Azure OpenAI client used by the explainer.
 
 The model is called in JSON mode only. Callers validate every answer; nothing the model
-returns is trusted without a check (CLAUDE.md principles 1 and 2).
+returns is trusted without a check (CONTRIBUTING.md principles 1 and 2).
 """
 
 import logging

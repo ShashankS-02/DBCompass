@@ -124,17 +124,6 @@ def score_compliance(service: ServiceEntry, values: dict[str, Any]) -> float:
     return GOOD * supported / len(features_to_check)
 
 
-def score_portability(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig, engine: str) -> float:
-    """Open engine, and proprietary lock-in measured against the user's tolerance."""
-    engine_points = GOOD if engine in scoring.open_engines else 20.0
-    if values.get("pref.lock_in") == "high":
-        lock_in = GOOD
-    else:
-        lock_in = scoring.lock_in_points[service.proprietary_lock_in]
-    parts = {"engine": engine_points, "lock_in": lock_in}
-    return blend(scoring.dimension_parts["portability"], parts)
-
-
 def score_cost(cost: float | None, cheapest: float | None, unknown_points: float = 50.0) -> float:
     """Inverse of cost, normalised so the cheapest candidate scores 100; unknown cost is neutral."""
     if cost is None or cheapest is None:
@@ -167,7 +156,7 @@ def score_service(
     rules: list[Rule],
     scoring: ScoringConfig,
 ) -> ServiceScore:
-    """All seven dimensions, the weighted score, adjustments and the clipped total."""
+    """All six dimensions, the weighted score, adjustments and the clipped total."""
     engine = sizing.engine
     dimension_scores = {
         "performance": score_performance(service, resolved_values, scoring),
@@ -176,7 +165,6 @@ def score_service(
         "ops": score_ops(service, resolved_values, scoring, engine),
         "ecosystem": score_ecosystem(service, resolved_values),
         "compliance": score_compliance(service, resolved_values),
-        "portability": score_portability(service, resolved_values, scoring, engine),
     }
     weighted_score = 0.0
     for dimension in DIMENSIONS:

@@ -58,25 +58,51 @@ class InstancePick:
     memory_gb: float | None = None
 
 
+def engine_fits_shapes(engine: str, shapes: list[str], scoring: ScoringConfig) -> bool:
+    """True when the engine can be the primary for at least one selected shape (or no shape limits it)."""
+    fitting_shapes = scoring.engine_shapes.get(engine)
+    if not shapes or fitting_shapes is None:
+        return True
+    for shape in shapes:
+        if shape in fitting_shapes:
+            return True
+    return False
+
+
+def shape_fitting_engines(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig) -> list[str]:
+    """Engines of the service that suit the selected data shapes (empty when none does)."""
+    shapes = values.get("data.shape") or []
+    fitting: list[str] = []
+    for engine in service.engines:
+        if engine_fits_shapes(engine, shapes, scoring):
+            fitting.append(engine)
+    return fitting
+
+
 def chosen_engine(service: ServiceEntry, values: dict[str, Any], scoring: ScoringConfig) -> str:
-    """Engine to run: vendor-certified engine, else the source engine, else a team skill, else the best for the shape, else an open one."""
+    """Engine to run, among the engines that suit the data shape.
+
+    Order: vendor-certified engine, the source engine, a team skill, the best for the shape, an open one.
+    A multi-engine service never runs an engine that does not suit the data shape it was chosen for.
+    """
+    candidates = shape_fitting_engines(service, values, scoring) or list(service.engines)
     certified_engine = values.get("app.vendor_certified_engine")
-    if certified_engine in service.engines:
+    if certified_engine in candidates:
         return certified_engine
     source_engine = values.get("mig.source_engine_family")
-    if source_engine in service.engines:
+    if source_engine in candidates:
         return source_engine
     for skill in values.get("ops.skills") or []:
-        if skill in service.engines:
+        if skill in candidates:
             return skill
     for shape in values.get("data.shape") or []:
         for engine in scoring.shape_engine_preference.get(shape, []):
-            if engine in service.engines:
+            if engine in candidates:
                 return engine
-    for engine in service.engines:
+    for engine in candidates:
         if engine in scoring.open_engines:
             return engine
-    return service.engines[0]
+    return candidates[0]
 
 
 def required_resources(

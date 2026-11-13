@@ -1,9 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 
-// Brand palette: coral #F96246, deep teal #486061, sand #E9D3C3 are the main colours;
-// snow #FBFCFC and mist #EFFEFC are accents. Brown and gold support the sand tones.
+// Brand palette: coral #F96246 is THE main colour (actions, selection, highlights, hero).
+// Sand #E9D3C3 and the warm "ink" neutrals carry surfaces and text. Deep teal #486061 and
+// mist #EFFEFC are used sparingly, for small accents only. Brown and gold support the sand tones.
 // The stock slate / emerald / rose / amber / sky / indigo scales are remapped so every
-// existing utility class picks up the theme without per-page colour edits.
+// existing utility class picks up the theme: slate is now the warm ink scale, not teal.
 
 const teal = {
   50: "#F3F6F6",
@@ -17,6 +18,21 @@ const teal = {
   800: "#2E3F40",
   900: "#223132",
   950: "#162122",
+};
+
+// Warm neutral for text, borders and dark surfaces (a brown-black, so teal stays an accent).
+const ink = {
+  50: "#FAF7F5",
+  100: "#F3EEEA",
+  200: "#E6DDD7",
+  300: "#D1C5BD",
+  400: "#AC9E95",
+  500: "#85776E",
+  600: "#665A52",
+  700: "#4D433D",
+  800: "#362E2A",
+  900: "#251F1C",
+  950: "#171210",
 };
 
 const coral = {
@@ -90,7 +106,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        slate: teal,
+        slate: ink,
+        ink,
         teal,
         coral,
         sand,
@@ -109,8 +126,8 @@ export default {
         display: ["Sora", "Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(34, 49, 50, 0.04), 0 4px 16px -6px rgba(34, 49, 50, 0.10)",
-        lift: "0 2px 4px rgba(34, 49, 50, 0.05), 0 18px 36px -14px rgba(34, 49, 50, 0.28)",
+        soft: "0 1px 2px rgba(37, 31, 28, 0.04), 0 4px 16px -6px rgba(37, 31, 28, 0.10)",
+        lift: "0 2px 4px rgba(37, 31, 28, 0.05), 0 18px 36px -14px rgba(37, 31, 28, 0.26)",
         glow: "0 10px 30px -10px rgba(249, 98, 70, 0.55)",
       },
       keyframes: {

@@ -414,7 +414,8 @@ export default function Intake() {
   if (step.id === "ownership") {
     const origin = answers["app.origin"] as string | undefined;
     const vendorSupport = answers["app.vendor_migration_support"] as string | undefined;
-    const askTeam = origin === "internal" || (origin === "vendor" && vendorSupport === "no_support");
+    // Team readiness is asked only when a vendor will not (or may not) help; internal teams are not asked (M11).
+    const askTeam = origin === "vendor" && vendorSupport === "no_support";
     const vendorNamed = origin !== "vendor" || Boolean((answers["app.vendor_name"] as string | undefined)?.trim());
     body = frame({
       title: "Who owns and supports it",
@@ -426,7 +427,7 @@ export default function Intake() {
           <Block title="Who builds and supports the application?">
             <ChoiceCards
               value={origin}
-              onChange={(value) => setAnswers({ "app.origin": value, ...(value === "internal" ? { "app.vendor_name": undefined, "app.vendor_migration_support": undefined } : {}) })}
+              onChange={(value) => setAnswers({ "app.origin": value, ...(value === "internal" ? { "app.vendor_name": undefined, "app.vendor_migration_support": undefined, "team.source_skills": undefined, "team.target_skills": undefined, "team.capacity": undefined } : {}) })}
               choices={[
                 { value: "internal", title: "Internal team", text: "We own the code and the schema." },
                 { value: "vendor", title: "A vendor", text: "Bought or built for us; the vendor owns the code." },
@@ -541,7 +542,7 @@ export default function Intake() {
     const vendorChoseEngine = Boolean(engineOf(answers["app.vendor_certified_db"]));
     body = frame({
       title: "The essentials",
-      lead: "Rough answers are fine; everything can be refined later with the what-if sliders.",
+      lead: "Rough answers are fine. Anything you skip is assumed from the criticality tier and listed with the results.",
       children: (
         <>
           <Block title="How critical will the application be?">

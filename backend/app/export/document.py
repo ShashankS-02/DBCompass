@@ -41,7 +41,30 @@ class Table:
     numeric_columns: list[int] = field(default_factory=list)
 
 
-Block = Heading | Paragraph | Bullets | Table
+@dataclass
+class ChartSeries:
+    name: str
+    values: list[float]
+
+
+@dataclass
+class Chart:
+    """A chart: drawn in the PDF, written as a table in Markdown (M11)."""
+
+    kind: str  # radar | bar
+    title: str
+    categories: list[str]
+    series: list[ChartSeries]
+    value_label: str = ""  # e.g. "USD a month"; empty for 0-100 scores
+    colours: list[str] = field(default_factory=list)  # hex per series; empty = the theme palette
+
+
+Block = Heading | Paragraph | Bullets | Table | Chart
+
+DIMENSION_LABELS = {
+    "performance": "Performance", "cost": "Cost", "reliability": "Reliability",
+    "ops": "Operations", "ecosystem": "Ecosystem", "compliance": "Compliance",
+}
 
 
 @dataclass
@@ -177,6 +200,56 @@ def recommendation_blocks(recommendation: Recommendation, vocabulary: Vocabulary
     return blocks
 
 
+def series_name(recommendation: Recommendation) -> str:
+    return f"#{recommendation.rank} {option_title(recommendation)}"
+
+
+def comparison_charts(result: AssessmentResult) -> list[Block]:
+    """Score radar, monthly cost per tier and, for an existing database, staying versus moving (M11)."""
+    recommendations = result.recommendations
+    if not recommendations:
+        return []
+    dimensions = [dimension for dimension in DIMENSION_LABELS if dimension in recommendations[0].dimension_scores]
+    score_series = []
+    for recommendation in recommendations:
+        values = [round(recommendation.dimension_scores.get(dimension, 0.0), 1) for dimension in dimensions]
+        score_series.append(ChartSeries(series_name(recommendation), values))
+    blocks: list[Block] = [
+        Heading(2, "Options compared"),
+        Chart("radar", "Scores by dimension (0-100)", [DIMENSION_LABELS[dimension] for dimension in dimensions], score_series),
+    ]
+    tier_labels = []
+    cost_series = []
+    for recommendation in recommendations:
+        values = []
+        for tier_name in TIER_ORDER:
+            estimate = recommendation.cost_tiers.get(tier_name)
+            values.append(round(estimate.monthly_usd, 0) if estimate is not None else 0.0)
+            if estimate is not None and estimate.label not in tier_labels:
+                tier_labels.append(estimate.label)
+        cost_series.append(ChartSeries(series_name(recommendation), values))
+    if any(value > 0 for series in cost_series for value in series.values):
+        blocks.append(Chart("bar", "Monthly list price by tier", tier_labels, cost_series, "USD a month"))
+    staying = []
+    moving = []
+    names = []
+    for recommendation in recommendations:
+        versus = recommendation.versus_baseline
+        if versus is None or versus.delta_usd is None or versus.same_service:
+            continue
+        names.append(f"#{recommendation.rank}")
+        staying.append(round(versus.baseline_core_usd or 0.0, 0))
+        moving.append(round(versus.recommendation_core_usd or 0.0, 0))
+    if names:
+        engine = recommendations[0].versus_baseline.engine_label if recommendations[0].versus_baseline else "the current engine"
+        blocks.append(Chart(
+            "bar", f"Servers and licences a month: staying on {engine} vs moving", names,
+            [ChartSeries(f"Staying on {engine}", staying), ChartSeries("Moving to the option", moving)], "USD a month",
+            colours=["#CDA285", "#F96246"],
+        ))
+    return blocks
+
+
 def explanation_section(explanation: Explanation) -> list[Block]:
     if explanation.source == "llm":
         note = "Written by AI from this result's facts and checked against them: every number and service name appears in the result."
@@ -215,10 +288,10 @@ def migration_section(plan: MigrationPlan) -> list[Block]:
     for option in plan.strategies:
         strategies.append([
             option.label + (" (recommended)" if option.recommended else ""), option.target_name, usd(option.monthly_usd),
-            usd(option.one_off_cost_usd), usd(option.total_cost_usd), option.finish_date.isoformat(),
+            usd(option.total_cost_usd), option.finish_date.isoformat(),
             "yes" if option.fits_deadline else "no",
         ])
-    blocks.append(Table(["Strategy", "Target", "Monthly", "One-off effort", "3-year total", "Finish", "On time"], strategies, numeric_columns=[2, 3, 4]))
+    blocks.append(Table(["Strategy", "Target", "Monthly", "3-year running cost", "Finish", "On time"], strategies, numeric_columns=[2, 3]))
     if plan.two_step:
         blocks.append(Paragraph(f"Two-step option: {plan.two_step}", "callout"))
     phases = []
@@ -279,6 +352,7 @@ def build_document(
     blocks.extend(summary_section(result))
     blocks.extend(requirements_section(result, vocabulary))
     blocks.append(Heading(1, "3. Recommended options"))
+    blocks.extend(comparison_charts(result))
     for recommendation in result.recommendations:
         blocks.extend(recommendation_blocks(recommendation, vocabulary))
     blocks.extend(explanation_section(explanation))

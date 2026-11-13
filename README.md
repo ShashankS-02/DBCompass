@@ -1,7 +1,7 @@
 # DBCompass
 
 Internal portal that recommends databases, cloud provider (AWS / GCP / Azure), sizing and design
-for an application, and plans migrations. See `CLAUDE.md` and `docs/` for the full picture.
+for an application, and plans migrations. See `CONTRIBUTING.md` and `docs/` for the full picture.
 
 ## Quick setup (teammates start here)
 You need **Python 3.11+** and **Node.js 20+**. The scripts check for them and offer to install them
@@ -83,6 +83,30 @@ or `GCP_BILLING_API_KEY` in `.env`. A `dba_admin` can refresh Azure live with
   licence-free option and gives an advisory verdict. A user with the `db_approver` Entra app role
   approves, sends back or rejects; every step is in the audit trail and the packet exports as Markdown.
 
+## Help, price working and charts (M11)
+- **Help** (top right): guides (how recommendations work, technical reference) and, for every
+  supported database, general discovery queries plus a query or command per engine-specific
+  feature. Hierarchy: Help > Databases > database > Features > query. Search and copy buttons.
+- **Price difference against staying**: every option shows the staying side and the moving side
+  line by line (servers and licences, environments factor, total) and the difference. It is shown
+  once, above the options.
+- **Migration plan**: the 3-year figure is the running cost only; the one-off effort cost is gone.
+- **Design document PDF** includes charts: scores by dimension, monthly price by tier, and staying
+  versus moving. The Markdown export carries the same numbers as tables.
+- Guides: [docs/10_HOW_RECOMMENDATIONS_WORK.md](docs/10_HOW_RECOMMENDATIONS_WORK.md) (plain
+  language) and [docs/11_TECHNICAL_REFERENCE.md](docs/11_TECHNICAL_REFERENCE.md) (API, modules,
+  diagrams).
+
+## Results page and setup guide (M10)
+- **What matters most** has three sliders: Performance, Cost, Reliability. Operations effort,
+  ecosystem and compliance carry fixed weights; portability is not scored (teams stay on one cloud).
+- **Review your answers**: the inputs and assumptions behind the result, at the top of the page.
+- Each option has dropdowns for **About this service** (what the cloud runs and what your team
+  runs: managed, serverless or self-managed), **Why this** and **Design notes**.
+- **Set up your database** (new applications): phased steps to stand up the chosen option and
+  connect the application, including drivers for your languages, connection pooling, and any cache,
+  vector or search add-on. Templates live in `knowledge_base/setup_guide.yaml`.
+
 ## Supported engines, application questions and price difference (M9)
 
 - **Supported engines only.** The service catalog holds managed services for Oracle, PostgreSQL,
@@ -114,8 +138,8 @@ or `GCP_BILLING_API_KEY` in `.env`. A `dba_admin` can refresh Azure live with
 "I don't know" on every step, drafts kept in the browser). It branches on *existing* vs *new*
 application: an existing database gets an engine-specific feature checklist
 (`knowledge_base/engine_features.yaml`, each item with a catalog query that returns metadata only),
-an ownership check (internal or vendor; will the vendor help?) and a three-question team readiness
-check; a new application asks who builds it and which database the vendor certifies. The old form
+an ownership check (internal or vendor; will the vendor help?) and, when a vendor will not help, a
+three-question team readiness check; a new application asks who builds it and which database the vendor certifies. The old form
 is gone (M9).
 
 `knowledge_base/org_support.yaml` lists the engines the database team supports (strategic,
@@ -131,8 +155,8 @@ Couchbase are accepted as migration sources.
   service name against that sheet before showing it; otherwise it is built from the rule trace.
   **Ask about this result** answers follow-up questions the same way, and says so when the result
   does not contain the answer.
-- **What-if**: change peak traffic, availability, user regions, budget cap or priorities and the
-  ranking re-runs straight away, with what moved and why. Save a scenario as a new assessment.
+- **What-if**: removed from the Results page in M10 (it confused readers); `POST /api/assessments/{id}/whatif`
+  still exists. To try other inputs, start a new assessment.
 - **Export**: design document as Markdown or PDF (requirements, options, costs, explanation, services
   ruled out, the latest migration plan, prices and the rule trace).
 

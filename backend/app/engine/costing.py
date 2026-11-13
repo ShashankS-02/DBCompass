@@ -2,7 +2,8 @@
 
 from typing import Any
 
-from app.engine.sizer import SizingOptions, size_service
+from app.engine.naming import service_display_name
+from app.engine.sizer import SizingOptions, chosen_engine, size_service
 from app.knowledge.loader import KnowledgeBundle
 from app.models.knowledge import ServiceEntry
 from app.models.pricing import TierSpec
@@ -184,7 +185,8 @@ def recommendation_tiers(
     for tier_name in TIER_ORDER:
         parts = []
         for service, role in components:
-            parts.append((service.name, service_estimate(service, values, tier_name, role, knowledge)))
+            name = service_display_name(service, chosen_engine(service, values, knowledge.scoring), knowledge)
+            parts.append((name, service_estimate(service, values, tier_name, role, knowledge)))
         tiers[tier_name] = combine_estimates(tier_name, knowledge.pricing.tiers[tier_name].label, parts)
     return tiers
 

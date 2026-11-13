@@ -28,6 +28,23 @@ export interface ServiceChoice {
   replicas: number;
   sizing: SizingResult;
   reason: string;
+  about?: ServiceAbout | null;
+}
+
+export interface SetupPhase {
+  id: string;
+  title: string;
+  steps: string[];
+}
+
+export interface ServiceAbout {
+  deployment: string;
+  title: string;
+  summary: string;
+  provider_handles: string[];
+  team_handles: string[];
+  facts: string[];
+  source_url: string | null;
 }
 
 export interface CostLine {
@@ -75,6 +92,8 @@ export interface Baseline {
   total_monthly_usd: number | null;
   priced: boolean;
   note: string;
+  core_lines?: CostLine[];
+  environment_multiplier?: number;
 }
 
 export interface BaselineDelta {
@@ -86,6 +105,8 @@ export interface BaselineDelta {
   delta_usd: number | null;
   same_service: boolean;
   message: string;
+  recommendation_core_lines?: CostLine[];
+  recommendation_environment_multiplier?: number;
 }
 
 export interface PricingSummary {
@@ -108,6 +129,7 @@ export interface Recommendation {
   why: string[];
   explanation: string;
   versus_baseline: BaselineDelta | null;
+  setup_guide?: SetupPhase[];
 }
 
 export interface FilterReason {
@@ -144,6 +166,7 @@ export interface AssessmentResult {
   pricing: PricingSummary | null;
   readiness: Readiness | null;
   baselines: Record<string, Baseline>;
+  notices?: string[];
 }
 
 export interface AssessmentSummary {

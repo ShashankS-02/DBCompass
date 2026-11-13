@@ -220,6 +220,8 @@ def validate_priorities(
         normalised_priorities[slider.id] = slider.default
 
     for slider_id, value in priorities.items():
+        if slider_id in catalog.retired_priority_sliders:
+            continue  # saved before the slider was removed; ignored
         if slider_id not in slider_ids:
             errors.append(FieldError(field_id=f"priority.{slider_id}", message="unknown priority"))
         elif not 0 <= value <= 100:

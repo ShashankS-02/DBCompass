@@ -101,11 +101,11 @@ def test_default_slider_positions_reproduce_doc_05_weights(catalog: QuestionCata
     )
 
     assert weights == {
-        "performance": 0.20,
-        "cost": 0.20,
-        "reliability": 0.20,
-        "ops": 0.15,
-        "portability": 0.05,
+        "performance": 0.2333,
+        "cost": 0.2333,
+        "reliability": 0.2333,
+        "ops": 0.10,
         "ecosystem": 0.10,
         "compliance": 0.10,
     }
+    assert "portability" not in weights

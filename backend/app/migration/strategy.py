@@ -1,7 +1,7 @@
 """Doc 07 step 1: strategy (7 Rs). Rehost, Replatform and Refactor are priced side by side against the
 best-ranked target for each; the others are listed with whether they apply.
 
-total cost = Balanced monthly cost (incl. licences) × months_compared + effort mid-point × day rate
+total cost = Balanced monthly cost (incl. licences) × months_compared (no one-off effort cost since M11)
 duration   = the runbook's total for that strategy (see runbook.py), so the table and the runbook agree
 """
 
@@ -12,6 +12,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from app.engine.costing import service_estimate
+from app.engine.naming import service_display_name
 from app.engine.sizer import chosen_engine
 from app.knowledge.loader import KnowledgeBundle
 from app.models.knowledge import ServiceEntry
@@ -95,17 +96,16 @@ def option_for(strategy: StrategyId, service: ServiceEntry, engine: str, inputs:
     estimate = service_estimate(service, inputs.values, "balanced", "primary_oltp", inputs.knowledge)
     licence_monthly = sum(line.monthly_usd for line in estimate.lines if line.component == "licence")
     effort, notes = strategy_effort(strategy, inputs)
-    one_off = (effort[0] + effort[1]) / 2 * settings.day_rate_usd
     weeks = inputs.duration_for(strategy, service, engine, effort)
     finish = inputs.start_date + timedelta(days=math.ceil(weeks * DAYS_PER_WEEK))
     if not estimate.complete:
         notes.append("Monthly cost is incomplete (some parts are not priced).")
     return StrategyOption(
         strategy=strategy, label=inputs.migration.strategies[strategy].label,
-        target_service_id=service.id, target_name=service.name, csp=service.csp, engine=engine,
+        target_service_id=service.id, target_name=service_display_name(service, engine, inputs.knowledge), csp=service.csp, engine=engine,
         monthly_usd=estimate.monthly_usd, licence_monthly_usd=round(licence_monthly, 2), cost_complete=estimate.complete,
-        effort_person_days=effort, one_off_cost_usd=round(one_off, 2),
-        total_cost_usd=round(estimate.monthly_usd * settings.months_compared + one_off, 2),
+        effort_person_days=effort,
+        total_cost_usd=round(estimate.monthly_usd * settings.months_compared, 2),
         duration_weeks=weeks, finish_date=finish, fits_deadline=finish <= settings.migration_deadline,
         risk_level=risk_level(strategy, inputs.values), notes=notes,
     )

@@ -6,9 +6,11 @@
 # counts, settings): it never reads table rows, so it is safe to run and to paste the result into a
 # ticket. Teams run these themselves; DBCompass never connects to a database.
 #
+# `discovery` (M11) lists general metadata queries per engine (version, size, load), shown in Help.
+#
 # python -m app.knowledge.check verifies that every `feature` is an option of data.special_features.
 version: 1
-last_verified: 2026-11-11
+last_verified: 2026-11-13
 
 # Features that make staying on the same engine materially easier (rules.yaml R-FEAT-STICKY-001).
 sticky_features: [advanced_queuing, clr_or_java, flashback, scheduler_jobs, replication, rac, db_links, sql_agent_jobs]
@@ -16,6 +18,14 @@ sticky_features: [advanced_queuing, clr_or_java, flashback, scheduler_jobs, repl
 engines:
   oracle:
     discovery_note: "DBA_FEATURE_USAGE_STATISTICS lists every licensed option the database has ever used; start there."
+    discovery:
+      - {label: "Version", query: "SELECT banner FROM v$version;"}
+      - {label: "Database size (GB)", query: "SELECT ROUND(SUM(bytes)/1024/1024/1024, 1) AS size_gb FROM dba_segments;"}
+      - {label: "20 largest tables", query: "SELECT owner, segment_name, ROUND(SUM(bytes)/1024/1024/1024, 2) AS size_gb FROM dba_segments WHERE segment_type LIKE 'TABLE%' GROUP BY owner, segment_name ORDER BY size_gb DESC FETCH FIRST 20 ROWS ONLY;"}
+      - {label: "Character set", query: "SELECT value FROM nls_database_parameters WHERE parameter = 'NLS_CHARACTERSET';"}
+      - {label: "Current load (transactions per second)", query: "SELECT metric_name, ROUND(value, 1) AS value FROM v$sysmetric WHERE metric_name IN ('User Transaction Per Sec', 'Executions Per Sec') AND group_id = 2;", note: "Run at peak time. DBA_HIST_* views give history but need the Diagnostics Pack licence."}
+      - {label: "User sessions", query: "SELECT COUNT(*) AS user_sessions FROM v$session WHERE type = 'USER';"}
+      - {label: "PL/SQL code objects", query: "SELECT owner, object_type, COUNT(*) FROM dba_objects WHERE object_type IN ('PACKAGE BODY', 'PROCEDURE', 'FUNCTION', 'TRIGGER') AND owner NOT IN ('SYS', 'SYSTEM') GROUP BY owner, object_type ORDER BY owner;"}
     features:
       - {feature: rac, label: "RAC (Real Application Clusters)", how_to_check: "SELECT name, value FROM v$parameter WHERE name = 'cluster_database';"}
       - {feature: partitioning, label: "Partitioning", how_to_check: "SELECT COUNT(*) FROM dba_part_tables WHERE owner NOT IN ('SYS','SYSTEM');"}
@@ -37,6 +47,14 @@ engines:
 
   sql_server:
     discovery_note: "Run these against each user database; msdb holds Agent jobs and SSIS packages."
+    discovery:
+      - {label: "Version and edition", query: "SELECT @@VERSION AS version, SERVERPROPERTY('Edition') AS edition;"}
+      - {label: "Database sizes (GB)", query: "SELECT DB_NAME(database_id) AS database_name, CAST(SUM(size) * 8 / 1024.0 / 1024 AS DECIMAL(10, 2)) AS size_gb FROM sys.master_files GROUP BY database_id;"}
+      - {label: "20 largest tables", query: "SELECT TOP 20 s.name AS schema_name, t.name AS table_name, SUM(a.total_pages) * 8 / 1024 AS size_mb FROM sys.tables t JOIN sys.schemas s ON t.schema_id = s.schema_id JOIN sys.partitions p ON t.object_id = p.object_id JOIN sys.allocation_units a ON p.partition_id = a.container_id GROUP BY s.name, t.name ORDER BY size_mb DESC;"}
+      - {label: "Collation", query: "SELECT SERVERPROPERTY('Collation') AS server_collation;"}
+      - {label: "Current load (batch requests)", query: "SELECT cntr_value FROM sys.dm_os_performance_counters WHERE counter_name = 'Batch Requests/sec';", note: "The counter is cumulative: run it twice, 60 seconds apart, and divide the difference by 60."}
+      - {label: "User sessions", query: "SELECT COUNT(*) AS user_sessions FROM sys.dm_exec_sessions WHERE is_user_process = 1;"}
+      - {label: "T-SQL code objects", query: "SELECT type_desc, COUNT(*) FROM sys.objects WHERE type IN ('P', 'FN', 'IF', 'TF', 'TR') GROUP BY type_desc;", note: "Run in each user database."}
     features:
       - {feature: sql_agent_jobs, label: "SQL Server Agent jobs", how_to_check: "SELECT name, enabled FROM msdb.dbo.sysjobs;"}
       - {feature: db_links, label: "Linked servers", how_to_check: "SELECT name, product, data_source FROM sys.servers WHERE is_linked = 1;"}
@@ -57,6 +75,15 @@ engines:
 
   postgresql:
     discovery_note: "Extensions are the main portability question; managed services allow only a fixed list."
+    discovery:
+      - {label: "Version", query: "SELECT version();"}
+      - {label: "Database size", query: "SELECT pg_size_pretty(pg_database_size(current_database()));"}
+      - {label: "20 largest tables", query: "SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) AS total_size FROM pg_catalog.pg_statio_user_tables ORDER BY pg_total_relation_size(relid) DESC LIMIT 20;"}
+      - {label: "Encoding", query: "SHOW server_encoding;"}
+      - {label: "Current load (transactions)", query: "SELECT xact_commit + xact_rollback AS transactions FROM pg_stat_database WHERE datname = current_database();", note: "The count is cumulative: run it twice, 60 seconds apart, and divide the difference by 60."}
+      - {label: "Client connections", query: "SELECT COUNT(*) AS connections FROM pg_stat_activity WHERE backend_type = 'client backend';"}
+      - {label: "Installed extensions", query: "SELECT extname, extversion FROM pg_extension;", note: "Managed services allow only a fixed list of extensions; compare with the target's list."}
+      - {label: "Functions and procedures", query: "SELECT n.nspname AS schema_name, COUNT(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname NOT IN ('pg_catalog', 'information_schema') GROUP BY n.nspname;"}
     features:
       - {feature: extensions, label: "Extensions (pg_cron, PostGIS, pg_partman, …)", how_to_check: "SELECT extname, extversion FROM pg_extension;"}
       - {feature: partitioning, label: "Declarative partitioning", how_to_check: "SELECT COUNT(*) FROM pg_partitioned_table;"}
@@ -72,6 +99,14 @@ engines:
 
   mysql:
     discovery_note: "Also covers MariaDB; check storage engines other than InnoDB."
+    discovery:
+      - {label: "Version", query: "SELECT VERSION();"}
+      - {label: "Schema sizes (GB)", query: "SELECT table_schema, ROUND(SUM(data_length + index_length) / 1024 / 1024 / 1024, 2) AS size_gb FROM information_schema.tables GROUP BY table_schema;"}
+      - {label: "20 largest tables", query: "SELECT table_schema, table_name, ROUND((data_length + index_length) / 1024 / 1024, 1) AS size_mb FROM information_schema.tables ORDER BY (data_length + index_length) DESC LIMIT 20;"}
+      - {label: "Character set and collation", query: "SELECT @@character_set_server, @@collation_server;"}
+      - {label: "Current load (queries)", query: "SHOW GLOBAL STATUS LIKE 'Questions';", note: "The count is cumulative: run it twice, 60 seconds apart, and divide the difference by 60."}
+      - {label: "Connected sessions", query: "SHOW GLOBAL STATUS LIKE 'Threads_connected';"}
+      - {label: "Stored routines", query: "SELECT routine_schema, routine_type, COUNT(*) FROM information_schema.routines GROUP BY routine_schema, routine_type;"}
     features:
       - {feature: partitioning, label: "Partitioned tables", how_to_check: "SELECT DISTINCT table_schema, table_name FROM information_schema.partitions WHERE partition_name IS NOT NULL;"}
       - {feature: scheduler_jobs, label: "Event Scheduler events", how_to_check: "SELECT event_schema, event_name, status FROM information_schema.events;"}
@@ -93,6 +128,13 @@ engines:
 
   db2:
     discovery_note: "Db2 LUW catalog views (SYSCAT); pureScale and federation are the big portability items."
+    discovery:
+      - {label: "Version", query: "SELECT service_level FROM TABLE(sysproc.env_get_inst_info());"}
+      - {label: "Database size", query: "CALL GET_DBSIZE_INFO(?, ?, ?, -1);"}
+      - {label: "20 largest tables", query: "SELECT tabschema, tabname, (data_object_p_size + index_object_p_size) / 1024 AS size_mb FROM sysibmadm.admintabinfo ORDER BY size_mb DESC FETCH FIRST 20 ROWS ONLY;"}
+      - {label: "Code set", query: "db2 get db cfg for <database> | grep -i \"code set\"", note: "Command line, not SQL."}
+      - {label: "Connections", query: "SELECT COUNT(*) AS connections FROM TABLE(MON_GET_CONNECTION(NULL, -2));"}
+      - {label: "Routines (SQL PL)", query: "SELECT routineschema, routinetype, COUNT(*) FROM syscat.routines WHERE routineschema NOT LIKE 'SYS%' GROUP BY routineschema, routinetype;"}
     features:
       - {feature: rac, label: "pureScale / HADR", how_to_check: "db2 get db cfg for <db> | grep -i hadr; db2pd -d <db> -cfinfo"}
       - {feature: partitioning, label: "Range partitioning / DPF", how_to_check: "SELECT tabschema, tabname FROM syscat.datapartitions GROUP BY tabschema, tabname;"}
@@ -107,6 +149,13 @@ engines:
 
   mongodb:
     discovery_note: "Run from mongosh; sharding, change streams and Atlas-only features decide the target."
+    discovery:
+      - {label: "Version", query: "db.version()"}
+      - {label: "Database size (GB)", query: "db.stats(1024 * 1024 * 1024)", note: "dataSize is the data, storageSize what it uses on disk."}
+      - {label: "20 largest collections", query: "db.getCollectionNames().map(name => ({ name, bytes: db.getCollection(name).stats().storageSize })).sort((a, b) => b.bytes - a.bytes).slice(0, 20)"}
+      - {label: "Current load (operations)", query: "db.serverStatus().opcounters", note: "Cumulative: run twice, 60 seconds apart, and divide the difference by 60."}
+      - {label: "Connections", query: "db.serverStatus().connections"}
+      - {label: "Indexes per collection", query: "db.getCollectionNames().map(name => ({ name, indexes: db.getCollection(name).getIndexes().length }))"}
     features:
       - {feature: sharding, label: "Sharded cluster", how_to_check: "sh.status()"}
       - {feature: replication, label: "Replica set topology", how_to_check: "rs.conf().members.map(m => ({host: m.host, priority: m.priority}))"}
@@ -120,6 +169,13 @@ engines:
 
   cassandra:
     discovery_note: "Use cqlsh; materialised views and SASI indexes are the portability risks on managed services."
+    discovery:
+      - {label: "Version", query: "nodetool version", note: "Command line on a node."}
+      - {label: "Cluster nodes and data per node", query: "nodetool status"}
+      - {label: "Table sizes", query: "nodetool tablestats <keyspace>", note: "Space used (live) is the size per table."}
+      - {label: "Keyspaces and replication", query: "SELECT keyspace_name, replication FROM system_schema.keyspaces;"}
+      - {label: "Current load (thread pools)", query: "nodetool tpstats"}
+      - {label: "Client connections", query: "nodetool clientstats"}
     features:
       - {feature: replication, label: "Multi-datacentre replication", how_to_check: "SELECT keyspace_name, replication FROM system_schema.keyspaces;"}
       - {feature: materialized_views, label: "Materialized views", how_to_check: "SELECT keyspace_name, view_name FROM system_schema.views;"}
@@ -131,6 +187,12 @@ engines:
 
   couchbase:
     discovery_note: "Use the REST API or Query Workbench; XDCR, Eventing and FTS have no direct equivalents on CSP services."
+    discovery:
+      - {label: "Version and cluster", query: "curl -u <admin> http://<host>:8091/pools", note: "REST call; implementationVersion is the server version."}
+      - {label: "Buckets and disk used", query: "curl -u <admin> http://<host>:8091/pools/default/buckets", note: "basicStats.diskUsed and itemCount per bucket."}
+      - {label: "Keyspaces (collections)", query: "SELECT RAW name FROM system:keyspaces;", note: "Query service (SQL++)."}
+      - {label: "Indexes", query: "SELECT name, keyspace_id, state FROM system:indexes;"}
+      - {label: "Current load (operations)", query: "curl -u <admin> http://<host>:8091/pools/default/buckets/<bucket>/stats", note: "ops is operations per second, sampled by the server."}
     features:
       - {feature: replication, label: "XDCR replication", how_to_check: "curl -u <user> http://<node>:8091/pools/default/remoteClusters"}
       - {feature: in_db_full_text, label: "Full Text Search indexes", how_to_check: "curl -u <user> http://<node>:8094/api/index"}
@@ -142,6 +204,12 @@ engines:
 
   sybase:
     discovery_note: "SAP ASE: stored procedures and replication server are the usual blockers."
+    discovery:
+      - {label: "Version", query: "SELECT @@version"}
+      - {label: "Database sizes", query: "sp_helpdb"}
+      - {label: "Sort order and character set", query: "sp_helpsort"}
+      - {label: "User connections", query: "SELECT COUNT(*) FROM master..sysprocesses WHERE suid > 0"}
+      - {label: "Procedures and triggers", query: "SELECT type, COUNT(*) FROM sysobjects WHERE type IN ('P', 'TR') GROUP BY type", note: "Run in each user database."}
     features:
       - {feature: db_links, label: "Remote servers / proxy tables", how_to_check: "sp_helpserver; SELECT name FROM sysobjects WHERE type = 'U' AND sysstat2 & 1024 = 1024;"}
       - {feature: replication, label: "Replication Server", how_to_check: "sp_helpdb; sp_config_rep_agent <db>"}
@@ -153,6 +221,11 @@ engines:
 
   informix:
     discovery_note: "Enterprise Replication and HDR are the main topology questions; datablades are the feature question."
+    discovery:
+      - {label: "Version", query: "SELECT DBINFO('version', 'full') FROM systables WHERE tabid = 1;"}
+      - {label: "Dbspaces and space used", query: "onstat -d", note: "Command line on the server."}
+      - {label: "20 largest tables (by row count)", query: "SELECT FIRST 20 tabname, nrows FROM systables WHERE tabid > 99 AND tabtype = 'T' ORDER BY nrows DESC;", note: "nrows comes from UPDATE STATISTICS; refresh it first."}
+      - {label: "Sessions", query: "onstat -g ses", note: "Command line on the server."}
     features:
       - {feature: rac, label: "HDR / RSS / SDS secondaries", how_to_check: "onstat -g dri; onstat -g rss"}
       - {feature: replication, label: "Enterprise Replication (ER)", how_to_check: "cdr list server"}
@@ -166,6 +239,12 @@ engines:
 
   vertica:
     discovery_note: "Projections and flex tables have no equivalent on cloud warehouses; list them before choosing a target."
+    discovery:
+      - {label: "Version", query: "SELECT version();"}
+      - {label: "Storage used (GB)", query: "SELECT SUM(used_bytes) / 1024 ^ 3 AS used_gb FROM v_monitor.projection_storage;"}
+      - {label: "20 largest tables", query: "SELECT anchor_table_schema, anchor_table_name, SUM(used_bytes) / 1024 ^ 3 AS used_gb FROM v_monitor.projection_storage GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 20;"}
+      - {label: "Nodes", query: "SELECT node_name, node_state FROM v_catalog.nodes;"}
+      - {label: "Sessions", query: "SELECT COUNT(*) FROM v_monitor.sessions;"}
     features:
       - {feature: materialized_views, label: "Projections (non-superprojection)", how_to_check: "SELECT anchor_table_name, projection_name FROM v_catalog.projections WHERE is_super_projection = false;"}
       - {feature: partitioning, label: "Partitioned tables", how_to_check: "SELECT table_schema, table_name, partition_expression FROM v_catalog.tables WHERE partition_expression <> '';"}

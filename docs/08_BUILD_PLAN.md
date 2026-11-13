@@ -1,13 +1,13 @@
-# 08 — Build Plan (2 weeks, 5 people, 3 with Claude Code)
+# 08 — Build Plan (2 weeks, 5 people)
 
 ## Roles
-| Person | Area | Claude Code? |
-|---|---|---|
-| P1 | Backend core: models, engine (filters, scorer, combiner, sizer) | Yes |
-| P2 | LLM integration + explainer (repo analyzer removed in M9) | Yes |
-| P3 | Frontend: form renderer, results, migration page | Yes |
-| P4 | Knowledge base YAML + rules + golden test cases (DBA expertise) | No |
-| P5 | Pricing snapshots, migration tool matrix, demo data, pitch deck | No |
+| Person | Area |
+|---|---|
+| P1 | Backend core: models, engine (filters, scorer, combiner, sizer) |
+| P2 | LLM integration + explainer (repo analyzer removed in M9) |
+| P3 | Frontend: form renderer, results, migration page |
+| P4 | Knowledge base YAML + rules + golden test cases (DBA expertise) |
+| P5 | Pricing snapshots, migration tool matrix, demo data, pitch deck |
 
 ## Milestones (do them in this order)
 | Day | Milestone | Done when |
@@ -24,12 +24,10 @@
 | 13 | Polish | Loading states, empty states, error handling, demo seed data |
 | 14 | Rehearse | Timed demo twice, backup video recorded |
 
-## Kick-off prompt for each Claude Code session
-```
-Read CLAUDE.md and every file in docs/ in order. Then summarise in 10 lines what you understood,
-list anything ambiguous, and propose a plan for milestone <Mx> listing the files you will create.
-Do not write code until I approve the plan.
-```
+## Kick-off for each milestone
+Read CONTRIBUTING.md and every file in docs/ in order. Summarise what the milestone needs, list
+anything ambiguous (decide it and log it in docs/OPEN_QUESTIONS.md), and get the plan with the
+files you will create or change approved before writing code.
 
 ## Demo script (7 minutes)
 1. Problem in one slide: cost of wrong DB choices and manual migration planning (use real anonymised numbers from the DBA team).

@@ -31,7 +31,7 @@
 ## Repo layout
 ```
 dbcompass/
-  CLAUDE.md
+  CONTRIBUTING.md
   docs/
   docker-compose.yml
   backend/
@@ -119,7 +119,7 @@ dbcompass/
 ## API contracts
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| POST | /api/assessments | RequirementsInput | AssessmentResult (201); 422 with ValidationReport in `detail` when input is invalid. M9: each `CostEstimate` has `components` [{id, label, status: priced\|included\|estimated\|not_priced\|not_applicable, monthly_usd, note, service}]; for an existing database the result has `baselines` {csp: Baseline} and each recommendation `versus_baseline` (compute + licence difference against staying on the current engine) |
+| POST | /api/assessments | RequirementsInput | AssessmentResult (201); 422 with ValidationReport in `detail` when input is invalid. M9: each `CostEstimate` has `components` [{id, label, status: priced\|included\|estimated\|not_priced\|not_applicable, monthly_usd, note, service}]; for an existing database the result has `baselines` {csp: Baseline} and each recommendation `versus_baseline` (compute + licence difference against staying on the current engine). Baselines carry `core_lines` and `environment_multiplier`, and each `versus_baseline` carries `recommendation_core_lines` and `recommendation_environment_multiplier` (M11), so the UI shows the working. Results also carry `notices` [string]: input conflicts to fix, e.g. a vendor-certified or requested engine that does not suit the chosen data shape. Self-managed components are titled with their engine ("Oracle on Amazon EC2 + EBS (self-managed)") |
 | GET | /api/assessments | ?limit=1..100 | list[AssessmentSummary] — caller's own, newest first |
 | GET | /api/assessments/{id} | | AssessmentResult; 404 if missing or not the caller's (dba_admin can read all) |
 | POST | /api/assessments/{id}/whatif | WhatIfRequest {answers (null clears a field), priorities} | WhatIfResult {base_assessment_id, input (merged), outcome (AssessmentOutcome), changes {changed_fields, top_changed, rank_moves, newly_filtered, no_longer_filtered, rules_added, rules_removed, summary}}; not stored; 422 invalid answers |
@@ -141,7 +141,9 @@ dbcompass/
 | GET | /api/pricing/status | | snapshot date, regions, price count and unmatched components per CSP; priced / not-priced service counts; INR rate |
 | POST | /api/pricing/refresh/{csp} | | dba_admin only; `azure` only (AWS and GCP via the CLI). Rebuilds and saves the snapshot |
 | GET | /api/questions?mode=quick\|expert | | QuestionSchema {mode, sections[questions], priority_sliders, fixed_dimension_weights, default_tier} |
-| GET | /api/intake | | IntakeConfig {org_support (statuses, engines, special_cases), engine_features (per-engine checklist with metadata-only `how_to_check` queries), commercial_engines} — what the guided intake needs beyond the catalog (M8) |
+| GET | /api/intake | | IntakeConfig {org_support (statuses, engines, special_cases), engine_features (per-engine checklist with metadata-only `how_to_check` queries), commercial_engines} — what the guided intake needs beyond the catalog (M8) ; engine entries also list `discovery` queries (version, size, load) shown in Help (M11) |
+| GET | /api/help/guides | | [{slug, title, summary}]: the Help guides (M11) |
+| GET | /api/help/guides/{slug} | | {slug, title, summary, markdown}: one guide, read from `DOCS_DIR` (default `docs/`); only listed guides can be read (M11) |
 | POST | /api/requirements/validate | RequirementsInput | ValidationReport {valid, errors, normalised, unanswered_quick_fields, assumed_fields, ignored_fields, dimension_weights} |
 | GET | /api/health | | HealthResponse {status, version, database} (no auth) |
 | GET | /api/me | | CurrentUser {user_id, name, email, roles, auth_mode} |
@@ -161,11 +163,12 @@ class Recommendation(BaseModel):
     components: list[ServiceChoice]          # 1 for single DB, >1 for polyglot
     csp: Literal["aws", "gcp", "azure"]
     total_score: float
-    dimension_scores: dict[str, float]       # performance, cost, reliability, ops, ecosystem, compliance, portability
+    dimension_scores: dict[str, float]       # performance, cost, reliability, ops, ecosystem, compliance (portability dropped in M10)
     cost_tiers: dict[str, CostEstimate]      # budget, balanced, performance
     ha_topology: str
     design_guidance: list[str]
     explanation: str
+    setup_guide: list[SetupPhase]           # M10, new applications only: [{id, title, steps: [str]}]
 
 class ServiceChoice(BaseModel):
     service_id: str                          # e.g. "aws.aurora_postgresql"
@@ -174,6 +177,16 @@ class ServiceChoice(BaseModel):
     instance_class: str
     storage_tier: str
     replicas: int
+    about: ServiceAbout | None               # M10: deployment model, provider vs team duties, service facts
+
+class ServiceAbout(BaseModel):               # from knowledge_base/service_models.yaml + the service entry
+    deployment: str                          # managed | serverless | iaas
+    title: str
+    summary: str
+    provider_handles: list[str]
+    team_handles: list[str]
+    facts: list[str]                         # SLA for the chosen layout, storage limit, replicas, licences
+    source_url: str | None                   # the cloud's shared responsibility page
 
 class Trace(BaseModel):
     filtered_out: list[FilterReason]         # service_id, rule_id, message

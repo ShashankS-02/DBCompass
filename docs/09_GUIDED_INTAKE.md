@@ -63,7 +63,8 @@ M8: `app.name`, `app.origin`, `app.vendor_name`, `app.vendor_certified_db`, `app
 −15 others) and the *vendor_certified* justification reason.
 
 ## Team readiness (`engine/readiness.py`)
-Only for an existing database. A vendor that will support the migration → *ready*. Otherwise the
+Only for an existing database built by a vendor (internal teams are not asked the three team
+questions since M11, and get no readiness verdict). A vendor that will support the migration → *ready*. Otherwise the
 three team answers score gaps (partial 1, no 2): any gap → *needs an SME*; no capacity or 4+ points →
 *needs a migration partner*; unanswered → *unknown* with the next question to ask. The verdict is on
 the result (`readiness`), in the fact sheet for the explainer, in the design document, and in the

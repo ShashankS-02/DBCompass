@@ -22,9 +22,9 @@ function CopyButton({ text }: { text: string }) {
 function FeatureRow({ feature, checked, onToggle }: { feature: EngineFeature; checked: boolean; onToggle: () => void }) {
   const [showHow, setShowHow] = useState(false);
   return (
-    <li className={`rounded-xl border transition ${checked ? "border-teal-300 bg-teal-50/60" : "border-sand-200 bg-white hover:border-coral-200"}`}>
+    <li className={`rounded-xl border transition ${checked ? "border-coral-300 bg-coral-50/60" : "border-sand-200 bg-white hover:border-coral-200"}`}>
       <div className="flex items-start gap-3 p-3">
-        <input type="checkbox" className="mt-1 h-4 w-4 accent-teal-600" checked={checked} onChange={onToggle} id={`feature-${feature.feature}`} />
+        <input type="checkbox" className="mt-1 h-4 w-4 accent-coral-500" checked={checked} onChange={onToggle} id={`feature-${feature.feature}`} />
         <label htmlFor={`feature-${feature.feature}`} className="flex-1 cursor-pointer text-sm font-medium text-slate-800">
           {feature.label}
         </label>
@@ -40,7 +40,7 @@ function FeatureRow({ feature, checked, onToggle }: { feature: EngineFeature; ch
       {showHow && (
         <div className="animate-fade-up border-t border-sand-100 px-3 py-2">
           <div className="flex items-start gap-2">
-            <code className="min-w-0 flex-1 whitespace-pre-wrap break-words rounded-lg bg-teal-800 px-3 py-2 font-mono text-[12px] leading-relaxed text-teal-50">{feature.how_to_check}</code>
+            <code className="min-w-0 flex-1 whitespace-pre-wrap break-words rounded-lg bg-ink-900 px-3 py-2 font-mono text-[12px] leading-relaxed text-sand-100">{feature.how_to_check}</code>
             <CopyButton text={feature.how_to_check} />
           </div>
           <p className="mt-1.5 text-[11px] text-slate-500">Returns object names and settings only; no table rows.</p>
